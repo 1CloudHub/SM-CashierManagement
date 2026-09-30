@@ -1,7 +1,7 @@
 ---
 id: SEC-002
 title: Access control
-version: 0.4.0
+version: 0.5.0
 status: Draft
 owner: TBD
 last_updated: 2026-10-01
@@ -44,6 +44,36 @@ and 3, properties P1, P11, P12. The matrix itself is design.md › RBAC matrix.
   with the user and the new role (a demo user's first choice provisions the account in
   the same single `user.created` event).
 
+## Cost visibility
+
+Implemented in task 21 (`packages/shared/src/cost.ts`, `api/src/http/cost.ts`,
+`frontend/src/features/cost`); requirement 25, properties P1 and P11.
+
+- **Policy (one, shared):** ₱ figures are reported at four levels — network, store,
+  department and individual (one cashier). EXE, PLN, HR and FIN see every level within
+  their scope; network cost needs a global or region scope, and a region-scoped role's
+  network figure is the total over its own regions only. A Store Manager sees store,
+  department and individual cost for their own store(s) only and never network cost.
+  Staff never see any cost, not even for their own shifts; ADM and RST have none.
+  `costLevelsFor(role)` and `canSeeCost(viewer, target)` hold the rule; `GET /me`
+  reports the active role's `costLevels`.
+- **Removed on the server, not hidden in the UI:** handlers build every ₱ field with
+  `costFigure(target, value)`, where the target names the level and, below network,
+  the store the cost belongs to. The router passes every response through
+  `shapeCost` with the request's active role and scope, which keeps a permitted
+  figure as its number and deletes any other field outright. A raw number under a
+  key containing "cost" fails the request (500) instead of leaking, and a figure
+  that skipped shaping serialises to nothing.
+- **New endpoints and screens must:** tag each ₱ field with `costFigure` (as an
+  object property, never a bare array element), declare it optional in the shared
+  DTO, and compute network figures from in-scope stores only. The SPA renders every
+  ₱ figure with `<CostValue value level>` (the shared Currency component, or a
+  "Hidden for your role" state with text and icon), and hides cost-only columns or
+  cards with `useCanSeeCost(level)`. The mock API applies the same `shapeCost`.
+- **Tests:** property tests over every role and scope assert that each cost field is
+  present iff permitted, that Staff responses carry no cost at all (P11), and that
+  every route in the app's route table obeys the policy.
+
 ## Authentication
 
 Implemented in task 7 (`infra/lib/auth-stack.ts`, `api/src/triggers/pre-sign-up.ts`,
@@ -84,3 +114,4 @@ Implemented in task 7 (`infra/lib/auth-stack.ts`, `api/src/triggers/pre-sign-up.
 | 0.2.0 | 2026-10-01 | Claude | Authentication section (task 7: Cognito passkeys, domain allowlist, sessions) |
 | 0.3.0 | 2026-10-01 | Claude | Permission matrix section (task 8.1: RBAC as data, route guards, active role, scope, no-leak 404) |
 | 0.4.0 | 2026-10-01 | Claude | SES sender for email one-time codes, custom-domain relying party, CORS allowlist |
+| 0.5.0 | 2026-10-01 | Claude | Cost visibility section (task 21: shared policy, server-side removal, CostValue) |
