@@ -124,6 +124,13 @@
   --container-laptop: var(--lw-container-laptop);
   --container-desktop: var(--lw-container-desktop);
 
+  /* Responsive breakpoints (design.md grid table). Base = mobile (< 600).
+   * These drive the tablet:/laptop:/desktop: variants used by the grid + shell
+   * so responsiveness is token-driven, not per-screen magic numbers. */
+  --breakpoint-tablet: 37.5rem; /* 600px */
+  --breakpoint-laptop: 64rem; /* 1024px */
+  --breakpoint-desktop: 90rem; /* 1440px */
+
   /* Radius — square by design; pill for avatars/chips only. */
   --radius-none: var(--lw-radius);
   --radius-sm: var(--lw-radius-sm);
@@ -156,6 +163,39 @@
   transition-duration: var(--lw-dur-slow);
 }
 
+/* -----------------------------------------------------------------------
+ * Layout system (design.md "Grid and layout system", task 1.6).
+ *
+ * The responsive grid and page container consume the layout tokens
+ * (--lw-gutter-*, --lw-margin-*, --lw-container-*) via the two custom
+ * properties below. They step at the design breakpoints so gutters, outer
+ * margins and container widths are driven by tokens, never ad-hoc px, and the
+ * grid primitives don't repeat the breakpoint logic per screen.
+ *
+ *   --lw-grid-gutter  — column/row gap for Grid (16 / 20 / 24)
+ *   --lw-page-margin  — Page outer inline padding (16 / 24 / 32)
+ * --------------------------------------------------------------------- */
+@layer base {
+  :root {
+    --lw-grid-gutter: var(--lw-gutter-mobile);
+    --lw-page-margin: var(--lw-margin-mobile);
+  }
+
+  @media (min-width: 37.5rem) {
+    :root {
+      --lw-grid-gutter: var(--lw-gutter-tablet);
+      --lw-page-margin: var(--lw-margin-tablet);
+    }
+  }
+
+  @media (min-width: 64rem) {
+    :root {
+      --lw-grid-gutter: var(--lw-gutter-desktop);
+      --lw-page-margin: var(--lw-margin-desktop);
+    }
+  }
+}
+
 @layer base {
   html {
     font-family: var(--lw-font-sans);
@@ -183,4 +223,23 @@
     outline: var(--lw-outline-w) solid var(--lw-focus-ring);
     outline-offset: 2px;
   }
+}
+
+/* -----------------------------------------------------------------------
+ * Grid + page utilities. Single source for the layout primitives so screens
+ * compose <Grid>/<Page> instead of hand-rolling grid-template-columns.
+ * --------------------------------------------------------------------- */
+
+/* The responsive 12/8/4 column grid with a token-driven gutter. Column count
+ * steps mobile (4) → tablet (8) → laptop+ (12); children span with col-* via
+ * the Col primitive. */
+@utility lw-grid {
+  display: grid;
+  gap: var(--lw-grid-gutter);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* Page outer margin (16 / 24 / 32) as inline padding, token-driven. */
+@utility lw-page-x {
+  padding-inline: var(--lw-page-margin);
 }

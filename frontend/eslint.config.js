@@ -68,6 +68,26 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+    rules: {
+      // Co-locating a component's cva variants or its context hook next to the
+      // component is an intentional design-system pattern (shadcn/ui style).
+      // Allow constant exports and the known helper hook/util export names
+      // that ship alongside their provider component (useToast, the a11y
+      // announcer hooks, the i18n context hooks).
+      'react-refresh/only-export-components': [
+        'warn',
+        {
+          allowConstantExport: true,
+          allowExportNames: [
+            'useToast',
+            'useAnnouncer',
+            'useAnnounce',
+            'useI18n',
+            'useT',
+          ],
+        },
+      ],
+    },
   },
   {
     // Token enforcement applies to app source, not the token definitions
@@ -75,6 +95,15 @@ export default defineConfig([
     files: ['src/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-syntax': ['error', ...tokenEnforcement],
+    },
+  },
+  {
+    // Tests exercise components with sample markup; token enforcement and
+    // fast-refresh rules don't apply to them.
+    files: ['src/**/*.{test,spec}.{ts,tsx}', 'src/test/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': 'off',
+      'react-refresh/only-export-components': 'off',
     },
   },
 ])
