@@ -4,6 +4,11 @@ All notable documentation and code changes. Format: `[doc-id or area] version �
 
 ## Unreleased
 
+- [DEP-001] 0.3.0, [repo] — added repository conventions and PR automation (spec task 2.2): `.github/PULL_REQUEST_TEMPLATE.md`, `.github/CODEOWNERS`, `.github/CONTRIBUTING.md`, and dependency-free `scripts/check-docs-conventions.mjs` + `scripts/check-spec-format.mjs` (with `scripts/README.md`) wired into the CodeBuild PR checks (lint/test steps, DEP-002 / task 3.3). DEP-001 documents the PR template/CODEOWNERS/CONTRIBUTING refs and a "Repository checks" section. (2026-10-01)
+- [DEP-001] 0.2.0, [DEP-002] 0.2.0 — documented the git workflow (GitHub Flow, commit/PR conventions, applied `main` branch protection) and the AWS CodePipeline + CodeBuild CI/CD pipeline (CodeStar Connection source, PR CodeBuild checks, merge-to-main deploy). (2026-10-01)
+- [GOV-003] 0.3.0 — added R-007: repo made public to enable branch protection while it still carries the SM name/branding pending legal sign-off (Q28). [ADR-0004] context updated to note the repo is now public. (2026-10-01)
+- [ADR-0004] 2.0.0 — switched CI/CD from GitHub Actions + OIDC to AWS CodePipeline + CodeBuild via a CodeStar (GitHub) Connection (private Free-plan repo cannot use GitHub branch protection; keep CI/CD in AWS). Updated spec tasks 3.2-3.4, 2.2, 24; made the repo public and applied branch protection on `main` (require PR + 1 review, no direct/force pushes, linear history). (2026-10-01)
+
 - [DOM-001] 0.3.0 — added parity fixtures A–C from the prototype v3 report: Erlang C worked example (λ=240, h=2.5 → 13 cashiers), demo dataset shape (47,548 rows / 8 stores / 24 depts), and scenario outputs (QC Dec 19 19-peak; network Dec 19 254-peak / 555 rostered / ₱322k). Wired into spec task 6.4. (2026-09-30)
 - [docs] prototype-v3 reference README updated to note captured parity anchors. (2026-09-30)
 - [brand] Adopted "LaneWise by SM Retail" design system v0.5 as the working design system. Renamed the product from "SM Cashier Planner" across spec, wireframes, docs, README and app shell. Saved brand reference in docs/references/brand/. (2026-09-30)
