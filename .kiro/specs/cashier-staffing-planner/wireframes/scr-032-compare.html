@@ -1,0 +1,88 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Compare scenarios — Wireframe</title><link rel="stylesheet" href="wireframe.css"><script src="wireframe.js" defer></script></head>
+<body data-page-roles="exe pln hr fin" data-mobile-ro><a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+<button class="iconbtn menu-toggle" id="menu-toggle" aria-controls="sidenav" aria-expanded="false" aria-label="Open navigation">≡</button>
+<a class="brand" href="scr-010-home.html">LaneWise <span class="brand-sub">by SM Retail</span></a>
+<form class="search" id="searchform" role="search" action="scr-041-search.html"><label class="sr-only" for="q">Search</label>
+<input id="q" name="q" type="search" placeholder="Search stores, departments, scenarios, staff…  ( / )"></form>
+<button class="iconbtn search-toggle" id="search-toggle" aria-controls="searchform" aria-label="Search">⌕</button>
+<div class="row" style="margin-left:auto;gap:8px">
+<label for="lang" class="sr-only">Language</label><select id="lang" title="Language"><option value="en">EN</option><option value="fil">FIL</option></select>
+<label for="role" style="color:#ddd">Viewing as</label>
+<select id="role" title="Demo mode: switch role">
+<option value="adm">System Admin</option><option value="exe">Executive</option><option value="pln">Planner</option>
+<option value="stm">Store Manager</option><option value="hr">HR</option><option value="fin">Finance</option><option value="rst">Rules Steward</option><option value="stf">Staff</option></select>
+<div class="menu"><button class="iconbtn" aria-haspopup="true" aria-expanded="false" aria-controls="bellpop">🔔 <span class="badge" aria-label="3 unread">3</span><span class="sr-only">Notifications</span></button>
+<div class="pop" id="bellpop" hidden><ul>
+<li data-roles="adm exe pln stm hr fin rst">⚠ <b>Offers due in 5 days</b><br><span class="muted">Christmas 2026 v3 · <a href="scr-023-hiring.html">Hiring plan</a></span></li>
+<li data-roles="exe">✓ <b>Plan ready for your approval</b><br><span class="muted">Headcount and budget secured · <a href="scr-033-approval.html">Review</a></span></li>
+<li data-roles="hr">✓ <b>Headcount approval requested</b><br><span class="muted">Christmas 2026 v4 · <a href="scr-033-approval.html">Review</a></span></li>
+<li data-roles="fin">✓ <b>Budget approval requested</b><br><span class="muted">Christmas 2026 v4 · <a href="scr-033-approval.html">Review</a></span></li>
+<li data-roles="stf">✎ <b>Your Sat Dec 19 shift changed</b><br><span class="muted">Now 12p–9p · <a href="scr-025-my-roster.html">My roster</a></span></li>
+<li data-roles="stm pln">⚠ <b>2 unfilled shifts Sat Dec 19</b><br><span class="muted">QC main lanes · <a href="scr-022-roster.html">Roster</a></span></li>
+<li data-roles="pln rst">ⓘ <b>POS data refreshed</b> — 2 scenarios stale<br><span class="muted"><a href="scr-030-scenarios.html">Scenarios</a></span></li>
+</ul><p><a href="scr-040-notifications.html">See all notifications</a></p></div></div>
+<div class="menu"><button class="iconbtn" aria-haspopup="true" aria-expanded="false" aria-controls="userpop">JD ▾<span class="sr-only"> User menu</span></button>
+<div class="pop" id="userpop" hidden style="width:220px"><ul>
+<li><b>Juan dela Cruz</b><br><span class="muted">juan@smretail.com</span></li>
+<li><a href="scr-080-profile.html">Profile, passkeys and preferences</a></li>
+<li><a href="scr-091-help.html">Help and keyboard shortcuts</a></li>
+<li><a href="scr-001-sign-in.html#signed-out">Sign out</a></li></ul></div></div>
+</div></header>
+<div class="layout"><nav class="sidenav" id="sidenav" aria-label="Main">
+<div data-roles="adm exe fin hr pln rst stf stm">
+<ul>
+<li data-roles="adm exe pln stm hr fin rst stf"><a href="scr-010-home.html"><span class="ico" aria-hidden="true">⌂</span><span class="lbl">Home</span></a></li>
+<li data-roles="stf"><a href="scr-025-my-roster.html"><span class="ico" aria-hidden="true">M</span><span class="lbl">My roster</span></a></li>
+</ul></div>
+<div data-roles="exe fin hr pln rst stm">
+<h2>Plan</h2>
+<ul>
+<li data-roles="exe pln stm hr fin rst"><a href="scr-020-network.html"><span class="ico" aria-hidden="true">N</span><span class="lbl">Network view</span></a></li>
+<li data-roles="exe pln stm hr"><a href="scr-026-map.html"><span class="ico" aria-hidden="true">◉</span><span class="lbl">Network map</span></a></li>
+<li data-roles="exe pln stm hr fin rst"><a href="scr-021-department.html"><span class="ico" aria-hidden="true">D</span><span class="lbl">Department day plan</span></a></li>
+<li data-roles="exe pln stm hr fin"><a href="scr-022-roster.html"><span class="ico" aria-hidden="true">R</span><span class="lbl">Weekly roster</span></a></li>
+<li data-roles="exe pln stm hr fin"><a href="scr-023-hiring.html"><span class="ico" aria-hidden="true">H</span><span class="lbl">Hiring plan</span></a></li>
+<li data-roles="exe pln hr fin"><a href="scr-024-summary.html"><span class="ico" aria-hidden="true">S</span><span class="lbl">Leadership summary</span></a></li>
+</ul></div>
+<div data-roles="exe fin hr pln rst stm">
+<h2>Scenarios</h2>
+<ul>
+<li data-roles="exe pln stm hr fin rst"><a href="scr-030-scenarios.html"><span class="ico" aria-hidden="true">☰</span><span class="lbl">All scenarios</span></a></li>
+<li data-roles="exe pln hr fin"><a href="scr-032-compare.html" aria-current="page"><span class="ico" aria-hidden="true">⇄</span><span class="lbl">Compare</span></a></li>
+<li data-roles="exe hr fin"><a href="scr-033-approval.html"><span class="ico" aria-hidden="true">✓</span><span class="lbl">Approvals</span></a></li>
+</ul></div>
+<div data-roles="adm exe hr pln rst stm">
+<h2>Data</h2>
+<ul>
+<li data-roles="rst pln adm"><a href="scr-050-data-sources.html"><span class="ico" aria-hidden="true">⇪</span><span class="lbl">Data sources</span></a></li>
+<li data-roles="exe pln stm hr rst"><a href="scr-052-master-data.html"><span class="ico" aria-hidden="true">▦</span><span class="lbl">Stores and lanes</span></a></li>
+<li data-roles="pln stm hr rst"><a href="scr-053-staff.html"><span class="ico" aria-hidden="true">☺</span><span class="lbl">Staff and availability</span></a></li>
+</ul></div>
+<div data-roles="exe fin hr pln rst">
+<h2>Rules</h2>
+<ul>
+<li data-roles="exe pln hr fin rst"><a href="scr-060-rule-sets.html"><span class="ico" aria-hidden="true">§</span><span class="lbl">Rule sets</span></a></li>
+</ul></div>
+<div data-roles="adm rst">
+<h2>Admin</h2>
+<ul>
+<li data-roles="adm"><a href="scr-070-users.html"><span class="ico" aria-hidden="true">U</span><span class="lbl">Users</span></a></li>
+<li data-roles="adm"><a href="scr-072-roles.html"><span class="ico" aria-hidden="true">P</span><span class="lbl">Roles and permissions</span></a></li>
+<li data-roles="adm rst"><a href="scr-073-audit.html"><span class="ico" aria-hidden="true">A</span><span class="lbl">Audit log</span></a></li>
+</ul></div>
+</nav>
+<main id="main" tabindex="-1">
+<nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="index.html">Screen map</a></li><li><a href="scr-030-scenarios.html">Scenarios</a></li><li>Compare</li></ol></nav>
+<p class="sample" role="note">⚠ Sample data — figures are simulated, not SM actuals.</p>
+<div class="noaccess" id="noaccess" hidden><h1>No access</h1><p>Your role doesn't include this screen. <a href="scr-010-home.html">Go to Home</a></p></div>
+<div id="content">
+<p class="ro-note" role="note">Read-only on a phone. Open on a tablet or computer to edit.</p>
+
+<h1>Compare scenarios</h1>
+<div class="ctx"><div><label for="ca">Scenario A</label><select id="ca"><option>★ Christmas 2026 v3 · Published</option></select></div><div><label for="cb">Scenario B</label><select id="cb"><option>5-day FT rule test · Draft</option></select></div><button class="btn">Swap</button></div>
+<div class="tablewrap"><table><caption>Headline differences</caption><thead><tr><th scope="col">Measure</th><th scope="col" class=num>A</th><th scope="col" class=num>B</th><th scope="col" class=num>Change</th></tr></thead><tbody><tr><th scope="row">Seasonal hires</th><td>284</td><td>251</td><td>−33</td></tr><tr><th scope="row">Peak-season team</th><td>744</td><td>799</td><td>+55</td></tr><tr><th scope="row">Season cost</th><td>₱13.6M</td><td>₱14.1M</td><td>+₱0.5M</td></tr><tr><th scope="row">First needed by</th><td>Nov 2</td><td>Nov 2</td><td>—</td></tr></tbody></table></div>
+<div class="tablewrap"><table><caption>Settings that differ</caption><thead><tr><th scope="col">Setting</th><th scope="col">A</th><th scope="col">B</th></tr></thead><tbody><tr><th scope="row">FT max days / week</th><td>6</td><td>5</td></tr><tr><th scope="row">FT max hours / week</th><td>48</td><td>40</td></tr><tr><th scope="row">Cebu main lanes handle time</th><td>2.5</td><td>2.7</td></tr></tbody></table></div>
+<div class="tablewrap"><table><caption>By store</caption><thead><tr><th scope="col"><button class=sort>Store</button></th><th scope="col" class=num><button class=sort>Hires A</button></th><th scope="col" class=num><button class=sort>Hires B</button></th><th scope="col" class=num><button class=sort>Δ</button></th><th scope="col" class=num><button class=sort>Cost A</button></th><th scope="col" class=num><button class=sort>Cost B</button></th></tr></thead><tbody><tr><th scope="row">SM Store – Manila</th><td>52</td><td>47</td><td>−5</td><td>2.9M</td><td>3.0M</td></tr></tbody></table></div>
+</div></main></div></body></html>
