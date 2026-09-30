@@ -1,7 +1,7 @@
 ---
 id: DOM-001
 title: Staffing methodology
-version: 0.2.0
+version: 0.3.0
 status: Draft
 owner: TBD
 last_updated: 2026-09-30
@@ -74,6 +74,55 @@ Notes:
 - Where v3 used a non-deterministic tie-break in roster assignment, parity is checked on the invariant outputs (shift set, hours, coverage), not the specific name-to-shift mapping.
 - Parity tests use the seeded demo snapshot so results are reproducible (see spec Requirement 19).
 
+## Parity fixtures (from prototype v3 report)
+
+These are the concrete anchors the parity suite (spec task 6.4) asserts against. Sourced from the SM Retail Cashier Staffing report (`docs/references/prototype-v3/`). All figures are from **synthetic sample data** (8 stores, 24 departments, 47,548 hourly rows, Aug 1 – Dec 31 2025).
+
+### Fixture A — Erlang C worked example (exact)
+
+Inputs: λ = 240 transactions/hour (4/min), average handle time h = 2.5 min (μ = 0.4/min), offered load A = λ·h = 10 Erlangs. A delay system needs strictly more than 10 lanes, so 11 is the stability floor.
+
+| Cashiers c | Utilization ρ | P(wait) | Avg queue wait | % served within 1 min |
+|---|---|---|---|---|
+| 11 | 0.91 | 0.68 | ~102 s | 54% |
+| 12 | 0.83 | 0.45 | ~34 s | 80% |
+| **13** | **0.77** | **0.28** | **~14 s** | **91%** |
+| 14 | 0.71 | 0.17 | ~7 s | 97% |
+| 15 | 0.67 | 0.10 | ~3 s | 99% |
+
+- **Assertion:** for a "90% within 60 s" target, the engine must return **13** cashiers (min c meeting the target). Utilization, P(wait) and % values match the table within rounding (utilization/P(wait) to 2 dp; avg wait is derivative and checked ±10%).
+- After choosing 13, shrinkage ×1.25–1.40 gives ~16–18 scheduled cashiers for that hour.
+
+### Fixture B — Demo dataset shape (exact)
+
+- 47,548 rows; 8 stores across 4 formats (Supermarket, Hypermarket, SM Store, SaveMore); 24 departments; hourly Aug 1 – Dec 31 2025.
+- Columns: store, format, region, department, date, day of week, day type, payday flag, day note, hour, transactions, items, sales, average handle time, lanes open, lanes installed.
+- Built-in understaffing pattern (last-year lanes-open template): ~19% of trading hours short in August rising to ~59% in December. This is a property of the simulation used to exercise the coverage check, **not** a claim about SM.
+
+### Fixture C — Scenario outputs (integers exact; cost ±0.5%)
+
+Season/date context: forecast window Oct–Dec 2026; growth and factors learned from 2025.
+
+| Scenario | Expected output |
+|---|---|
+| SM Supermarket – Quezon City, main lanes, Sat Dec 19 2026 | 3,863 forecast transactions (2.25× a normal weekday); **19** cashiers at the 1 PM peak (vs 12 on a normal weekday) |
+| SM Store – Manila, Kids & toys, Sun Dec 20 2026 | 3.9× a normal weekday |
+| Network (all 8 stores), Dec 19 2026 | **254** cashiers on lanes at the 5 PM peak; roster calls for **555** cashiers (**314** FT · **188** PT · **53** float); **3,688** paid hours; season cost ≈ **₱322,000** |
+| SM Hypermarket – Pampanga, Dec 19 2026 | busiest single store: **46** cashiers at noon |
+| Over-capacity flags, Christmas Eve | Pampanga main lanes need all **44** installed; Cebu City main lanes **26** vs **24** installed; SaveMore Iloilo **13** vs **12** installed |
+| Part-time saving, network Dec 19 | ~5% fewer paid hours with PT allowed (**3,688** vs **3,880** FT-only); QC main lanes Dec 19 ~3% (**296** vs **304**); QC Dec 20 no saving (**304** either way) |
+
+- **Consistency invariant:** the single-department view and the all-stores view must return identical figures for the same store/department/date (the report verified this across all 24 departments on 9 dates: incl. Christmas Eve, Christmas Day, Rizal Day, paydays).
+- **Roster invariant:** no hour left short; every full-time meal break placed inside its allowed window (holds in every tested scenario).
+
+### Notes on the v3 model (to reproduce)
+
+- Forecast factors: Mon–Thu baseline, day-of-week factors, payday factor, seasonal factors per sub-period (Aug–mid-Sep, late Sep, Oct, Nov 1–15, Nov 16–30, Dec 1–10, Dec 11–17, Dec 18–23, Dec 26–29) and per fixed holiday; hourly shapes for weekday / Saturday / Sunday-holiday (separate December shapes); handle times by period.
+- Lane sizing: Erlang C to a "% served within X s" target, then shrinkage, then a minimum-lane floor; flag hours where need > installed.
+- Shift builder: FT for base load, PT for short peaks, one 1-hour meal break per FT shift placed in the hour with most spare cover, relief shifts for gaps, float cashiers around the peak.
+- Cost: PH day-type multiplier + 10% night differential after 22:00.
+- v3 limitations to preserve/track: departments rostered independently (store peak = sum of department needs in the same hour); shifts start on the hour; no availability/rest-day/weekly-hour limits in v3 (the rebuild adds these — see spec Req 4/6/7).
+
 ## Known limitations
 
 - Public-transport travel times for cross-store matching are estimated with a speed factor until a transit data source is chosen (spec Q22).
@@ -86,3 +135,4 @@ Notes:
 |---|---|---|---|
 | 0.1.0 | 2026-09-30 | TBD | Initial scaffold |
 | 0.2.0 | 2026-09-30 | Kiro | Filled pipeline stages and added the parity tolerance table (supports spec Req 4.2 / Property 2) |
+| 0.3.0 | 2026-09-30 | Kiro | Added parity fixtures A–C from the prototype v3 report (Erlang example, dataset shape, scenario outputs) |

@@ -4,6 +4,8 @@ All notable documentation and code changes. Format: `[doc-id or area] version �
 
 ## Unreleased
 
+- [DOM-001] 0.3.0 — added parity fixtures A–C from the prototype v3 report: Erlang C worked example (λ=240, h=2.5 → 13 cashiers), demo dataset shape (47,548 rows / 8 stores / 24 depts), and scenario outputs (QC Dec 19 19-peak; network Dec 19 254-peak / 555 rostered / ₱322k). Wired into spec task 6.4. (2026-09-30)
+- [docs] prototype-v3 reference README updated to note captured parity anchors. (2026-09-30)
 - [brand] Adopted "LaneWise by SM Retail" design system v0.5 as the working design system. Renamed the product from "SM Cashier Planner" across spec, wireframes, docs, README and app shell. Saved brand reference in docs/references/brand/. (2026-09-30)
 - [SG-002, SG-003, SG-004, SG-007, SG-009] 0.3–0.4 — LaneWise tokens (`--lw-*`): blue/red palette with light+dark AA-verified semantic ramps, Okabe–Ito data-viz, system-font type scale with ₱/ñ fallback, motion tokens, square/no-shadow/2px-outline shape, dark mode as a value swap. (2026-09-30)
 - [GOV-003] 0.2.0 — logged brand/trademark/font/parity/deploy risks (R-001…R-006). [GOV-005] 0.2.0 — Q28 LaneWise brand+legal sign-off; Q8 superseded. [ADR-0003] 1.2.0 — LaneWise as design system of record. (2026-09-30)
