@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, type ReactNode } from 'react'
 import { AppShell } from '@/components/layout/app-shell'
 import { Stack } from '@/components/layout/stack'
 import { Alert, Input } from '@/components/ui'
@@ -55,19 +55,24 @@ function galleryNav(sections: readonly GallerySection[]): NavSection[] {
   ]
 }
 
-export function ComponentGallery() {
+export function ComponentGallery({
+  accountSlot,
+}: {
+  /** Signed-in account controls (profile / sign out) for the top bar. */
+  accountSlot?: ReactNode
+} = {}) {
   return (
     <I18nProvider>
       <AnnouncerProvider>
         <ToastProvider>
-          <GalleryApp />
+          <GalleryApp accountSlot={accountSlot} />
         </ToastProvider>
       </AnnouncerProvider>
     </I18nProvider>
   )
 }
 
-function GalleryApp() {
+function GalleryApp({ accountSlot }: { accountSlot?: ReactNode }) {
   const searchRef = useRef<HTMLInputElement>(null)
   return (
     <HelpProvider
@@ -80,15 +85,17 @@ function GalleryApp() {
         window.location.hash = anchor ? `#${anchor}` : ''
       }}
     >
-      <GalleryShell searchRef={searchRef} />
+      <GalleryShell searchRef={searchRef} accountSlot={accountSlot} />
     </HelpProvider>
   )
 }
 
 function GalleryShell({
   searchRef,
+  accountSlot,
 }: {
   searchRef: React.RefObject<HTMLInputElement | null>
+  accountSlot?: ReactNode
 }) {
   const { t } = useI18n()
 
@@ -121,6 +128,7 @@ function GalleryShell({
         <>
           <LanguageSwitcher />
           <HelpButton />
+          {accountSlot}
         </>
       }
     >
