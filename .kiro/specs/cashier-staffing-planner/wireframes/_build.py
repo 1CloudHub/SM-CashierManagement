@@ -26,16 +26,17 @@ def nav(cur):
     out.append('</nav>'); return "\n".join(out)
 TOP='''<header class="topbar">
 <button class="iconbtn menu-toggle" id="menu-toggle" aria-controls="sidenav" aria-expanded="false" aria-label="Open navigation">≡</button>
-<a class="brand" href="scr-010-home.html">LaneWise <span class="brand-sub">by SM Retail</span></a>
+<a class="brand" href="scr-010-home.html"><svg viewBox="0 0 250 64" role="img" aria-label="LaneWise by SM Retail" style="font-family:var(--lw-font-sans)"><style>.lg-a{fill:var(--lw-on-primary)}.lg-b{fill:var(--lw-primary)}</style><rect width="64" height="64" class="lg-a"/><rect x="16" y="30" width="8" height="18" class="lg-b"/><rect x="28" y="22" width="8" height="26" class="lg-b"/><rect x="40" y="14" width="8" height="34" class="lg-b"/><rect x="12" y="36" width="40" height="2" class="lg-a"/><text x="80" y="36" font-weight="700" font-size="29" letter-spacing="-1" class="lg-a">LaneWise</text><text x="81" y="54" font-size="12" class="lg-a">by SM Retail</text></svg></a>
 <form class="search" id="searchform" role="search" action="scr-041-search.html"><label class="sr-only" for="q">Search</label>
 <input id="q" name="q" type="search" placeholder="Search stores, departments, scenarios, staff…  ( / )"></form>
 <button class="iconbtn search-toggle" id="search-toggle" aria-controls="searchform" aria-label="Search">⌕</button>
 <div class="row" style="margin-left:auto;gap:8px">
 <label for="lang" class="sr-only">Language</label><select id="lang" title="Language"><option value="en">EN</option><option value="fil">FIL</option></select>
-<label for="role" style="color:#ddd">Viewing as</label>
+<label for="role" style="margin:0">Viewing as</label>
 <select id="role" title="Demo mode: switch role">
 <option value="adm">System Admin</option><option value="exe">Executive</option><option value="pln">Planner</option>
 <option value="stm">Store Manager</option><option value="hr">HR</option><option value="fin">Finance</option><option value="rst">Rules Steward</option><option value="stf">Staff</option></select>
+<button class="iconbtn theme-toggle" id="theme-toggle" type="button" aria-pressed="false" title="Toggle dark mode">◐<span class="sr-only"> Dark mode</span></button>
 <div class="menu"><button class="iconbtn" aria-haspopup="true" aria-expanded="false" aria-controls="bellpop">🔔 <span class="badge" aria-label="3 unread">3</span><span class="sr-only">Notifications</span></button>
 <div class="pop" id="bellpop" hidden><ul>
 <li data-roles="adm exe pln stm hr fin rst">⚠ <b>Offers due in 5 days</b><br><span class="muted">Christmas 2026 v3 · <a href="scr-023-hiring.html">Hiring plan</a></span></li>
@@ -56,7 +57,7 @@ TOP='''<header class="topbar">
 def page(fname,title,crumbs,body,page_roles=ALL,sample=True,mobile_ro=True):
     cr="".join(f'<li>{c}</li>' if not isinstance(c,tuple) else f'<li><a href="{c[1]}">{c[0]}</a></li>' for c in crumbs)
     doc=f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{html.escape(title)} — Wireframe</title><link rel="stylesheet" href="wireframe.css"><script src="wireframe.js" defer></script></head>
+<title>{html.escape(title)} — Wireframe</title><link rel="stylesheet" href="wireframe.css"><script>try{{var t=localStorage.getItem('wf-theme');if(t)document.documentElement.dataset.theme=t}}catch(e){{}}</script><script src="wireframe.js" defer></script></head>
 <body data-page-roles="{page_roles}"{" data-mobile-ro" if mobile_ro else ""}><a class="skip" href="#main">Skip to content</a>
 {TOP}
 <div class="layout">{nav(fname)}
@@ -146,7 +147,7 @@ def timeline(rows,deltas,caption,start=7,end=23,editable=True,cov=None):
         out.append(f'<div class="tl-row" style="min-height:40px"><div class="tl-meta"><b>Required on lanes</b><span class="muted">Erlang C</span></div><div class="tl-track">{cv}</div></div>')
     out.append('</div></div>')
     return ''.join(out)
-LEG='<div class="legend" aria-label="Legend"><span><i class="d-main"></i>Main lanes</span><span><i class="d-exp"></i>Express</span><span><i class="d-cs"></i>Customer service</span><span><i style="background:repeating-linear-gradient(45deg,#fff 0 3px,#999 3px 6px)"></i>Float</span><span><i style="background:#fff;border-style:dashed"></i>M Meal</span><span><i style="background:var(--a-train)"></i>T Training</span><span><i style="background:var(--a-huddle)"></i>H Huddle</span><span><i style="outline:2px dashed #111"></i>✎ Manager change</span><span><b style="color:var(--neg)">−2</b> short · <b>+1</b> surplus</span></div>'
+LEG='<div class="legend" aria-label="Legend"><span><i class="d-main"></i>Main lanes</span><span><i class="d-exp"></i>Express</span><span><i class="d-cs"></i>Customer service</span><span><i style="background:repeating-linear-gradient(45deg,var(--lw-surface) 0 3px,var(--lw-outline) 3px 6px)"></i>Float</span><span><i style="background:var(--lw-surface);border-style:dashed"></i>M Meal</span><span><i style="background:var(--a-train)"></i>T Training</span><span><i style="background:var(--a-huddle)"></i>H Huddle</span><span><i style="outline:2px dashed var(--lw-text)"></i>✎ Manager change</span><span><b style="color:var(--neg)">−2</b> short · <b>+1</b> surplus</span></div>'
 SHIFTPOP="""<dialog id="shiftpop" aria-labelledby="spp-h"><div class="row spread"><h2 id="spp-h">PT-02 Maria Santos</h2><button class="btn small" data-close aria-label="Close">×</button></div>
 <p class="muted">Sat, Dec 19, 2026 · 8 h paid · Main checkout lanes</p>
 <div class="seg" role="tablist" aria-label="Shift editor mode"><button role="tab" aria-selected="true" aria-controls="sp1">Edit shift</button><button role="tab" aria-selected="false" tabindex="-1" aria-controls="sp2">Emergency off / reassign</button></div>
@@ -238,7 +239,7 @@ def wkcell(c):
 days=["Mon 14","Tue 15","Wed 16","Thu 17","Fri 18","Sat 19","Sun 20"]
 WKT='<table class="wk"><caption class="sr-only">Week of Dec 14 to 20</caption><thead><tr><th scope="col"><span class="sr-only">Cashier</span></th>'+''.join(f'<th scope="col">{d}</th>' for d in days)+'</tr></thead><tbody>'
 WKT+=''.join(f'<tr><th scope="row" style="font-size:12px;text-align:left">{n}</th>'+''.join(f'<td>{wkcell(c)}</td>' for c in cells)+'</tr>' for n,cells in WK)
-WKT+='<tr><th scope="row" style="font-size:12px;text-align:left">Open shifts</th>'+''.join(f'<td>{E}</td>' for _ in range(5))+'<td><button class="chip" data-open="shiftpop" style="border:2px dashed var(--neg)"><b style="background:var(--neg);color:#fff">!</b><span>13:00<br>17:00 ×2</span></button></td><td>'+E+'</td></tr></tbody></table>'
+WKT+='<tr><th scope="row" style="font-size:12px;text-align:left">Open shifts</th>'+''.join(f'<td>{E}</td>' for _ in range(5))+'<td><button class="chip" data-open="shiftpop" style="border:2px dashed var(--neg)"><b style="background:var(--neg);color:var(--lw-on-danger)">!</b><span>13:00<br>17:00 ×2</span></button></td><td>'+E+'</td></tr></tbody></table>'
 MONTH='<div class="month" aria-label="December 2026">'+''.join(f'<div><b>{d}</b><br>{"112" if d%7 else "98"} shifts<br>'+('<span style="color:var(--neg)">−2 open</span>' if d in (19,24) else '✓ filled')+'</div>' for d in range(1,32))+'</div>'
 page("scr-022-roster.html","Roster",[("Plan","scr-020-network.html"),("SM Supermarket – QC","scr-020-network.html"),"Roster"],f'''
 <div class="row spread"><h1>Roster — Main checkout lanes</h1><div class="row"><button class="btn" data-roles="pln stm">Auto-build</button><button class="btn">Export ▾</button></div></div>
@@ -289,31 +290,31 @@ for sid,n,c,la,lo,g in STORES:
 mx,my=xy(14.585,121.056)
 R=[47,95,142]
 svg=[f'<svg viewBox="0 0 600 760" role="img" aria-labelledby="map-t map-d"><title id="map-t">Metro Manila network map</title><desc id="map-d">{len(STORES)} SM stores coloured by staffing gap, available cashiers by home area, and travel-time rings around the selected store. The table below the map lists the same information.</desc>',
- '<rect width="600" height="760" fill="#f7f7f7"/>',
- f'<polygon points="{P(bay)}" fill="#dfe6ea"/><text x="40" y="430" font-size="15" fill="#7d8a93" transform="rotate(-72 40 430)">Manila Bay</text>',
- f'<polygon points="{P(lake)}" fill="#dfe6ea"/><text x="470" y="700" font-size="12" fill="#7d8a93">Laguna de Bay</text>',
- f'<polygon points="{P(edge)}" fill="#fff" stroke="#b5b5b5" stroke-dasharray="5 4"/>',
- f'<polyline points="{P([(14.66,121.03),(14.62,121.056),(14.585,121.057),(14.555,121.03),(14.537,120.99)])}" fill="none" stroke="#d6d6d6" stroke-width="6"/><text x="{xy(14.60,121.06)[0]+8}" y="{xy(14.60,121.06)[1]}" font-size="10" fill="#999">EDSA</text>']
+ '<rect width="600" height="760" class="m-bg"/>',
+ f'<polygon points="{P(bay)}" class="m-water"/><text x="40" y="430" font-size="15" class="m-label" transform="rotate(-72 40 430)">Manila Bay</text>',
+ f'<polygon points="{P(lake)}" class="m-water"/><text x="470" y="700" font-size="12" class="m-label">Laguna de Bay</text>',
+ f'<polygon points="{P(edge)}" class="m-edge" stroke-width="2" stroke-dasharray="5 4"/>',
+ f'<polyline points="{P([(14.66,121.03),(14.62,121.056),(14.585,121.057),(14.555,121.03),(14.537,120.99)])}" fill="none" class="m-road" stroke-width="6"/><text x="{xy(14.60,121.06)[0]+8}" y="{xy(14.60,121.06)[1]}" font-size="10" class="m-label">EDSA</text>']
 for city,la,lo in [("Quezon City",14.70,121.07),("Manila",14.605,120.99),("Makati",14.555,121.02),("Pasig",14.575,121.085),("Taguig",14.52,121.06),("Parañaque",14.475,121.01),("Las Piñas",14.44,120.99),("Muntinlupa",14.40,121.035),("Caloocan",14.74,121.00),("Valenzuela",14.71,120.955),("Marikina",14.645,121.10),("Pasay",14.54,120.995),("Mandaluyong",14.59,121.035)]:
-    x,y=xy(la,lo); svg.append(f'<text x="{x}" y="{y}" font-size="10" fill="#aaa" text-anchor="middle">{city}</text>')
-svg.append(f'<g id="lyr-rings"><circle id="r45" cx="{mx}" cy="{my}" r="{R[2]}" fill="rgba(0,0,0,.025)" stroke="#888" stroke-dasharray="3 4"/><circle id="r30" cx="{mx}" cy="{my}" r="{R[1]}" fill="rgba(0,0,0,.035)" stroke="#888" stroke-dasharray="3 4"/><circle id="r15" cx="{mx}" cy="{my}" r="{R[0]}" fill="rgba(0,0,0,.05)" stroke="#666"/>'
+    x,y=xy(la,lo); svg.append(f'<text x="{x}" y="{y}" font-size="10" class="m-label" text-anchor="middle">{city}</text>')
+svg.append(f'<g id="lyr-rings"><circle id="r45" cx="{mx}" cy="{my}" r="{R[2]}" class="m-ring" stroke-width="2" stroke-dasharray="3 4"/><circle id="r30" cx="{mx}" cy="{my}" r="{R[1]}" class="m-ring" stroke-width="2" stroke-dasharray="3 4"/><circle id="r15" cx="{mx}" cy="{my}" r="{R[0]}" class="m-ring" stroke-width="2"/>'
            f'<text id="t15" x="{mx}" y="{my-R[0]-3}" font-size="10" text-anchor="middle">15 min</text><text id="t30" x="{mx}" y="{my-R[1]-3}" font-size="10" text-anchor="middle">30 min</text><text id="t45" x="{mx}" y="{my-R[2]-3}" font-size="10" text-anchor="middle">45 min</text></g>')
-svg.append('<g id="lyr-staff">'+''.join((f'<circle cx="{xy(a,b)[0]}" cy="{xy(a,b)[1]}" r="3.2" fill="#333"/>' if ok else f'<circle cx="{xy(a,b)[0]}" cy="{xy(a,b)[1]}" r="3.2" fill="#fff" stroke="#333"/>') for a,b,ok in dots)+'</g>')
+svg.append('<g id="lyr-staff">'+''.join((f'<circle cx="{xy(a,b)[0]}" cy="{xy(a,b)[1]}" r="3.2" class="m-staff"/>' if ok else f'<circle cx="{xy(a,b)[0]}" cy="{xy(a,b)[1]}" r="3.2" class="m-staff-lim" stroke-width="1.5"/>') for a,b,ok in dots)+'</g>')
 cand=[(14.575,121.045),(14.598,121.066),(14.570,121.070),(14.604,121.048)]
 lend=[("aura","mega"),("pasig","mega"),("mnl","sanl"),("aran","nedsa"),("shaw","mega"),("eort","mega")]
 L={sid:xy(la,lo) for sid,n,c,la,lo,g in STORES}
-svg.append('<g id="lyr-match" style="display:none">'+''.join(f'<line x1="{mx}" y1="{my}" x2="{xy(a,b)[0]}" y2="{xy(a,b)[1]}" stroke="#111" stroke-width="1.5"/>' for a,b in cand)
-           +''.join(f'<line x1="{L[f][0]}" y1="{L[f][1]}" x2="{L[t][0]}" y2="{L[t][1]}" stroke="#111" stroke-width="2.5" stroke-dasharray="6 3" marker-end="url(#arr)"/>' for f,t in lend)+'</g>')
-svg.insert(1,'<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#111"/></marker></defs>')
+svg.append('<g id="lyr-match" style="display:none">'+''.join(f'<line x1="{mx}" y1="{my}" x2="{xy(a,b)[0]}" y2="{xy(a,b)[1]}" class="m-link" stroke-width="2"/>' for a,b in cand)
+           +''.join(f'<line x1="{L[f][0]}" y1="{L[f][1]}" x2="{L[t][0]}" y2="{L[t][1]}" class="m-link" stroke-width="2.5" stroke-dasharray="6 3" marker-end="url(#arr)"/>' for f,t in lend)+'</g>')
+svg.insert(1,'<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" class="m-arrow"/></marker></defs>')
 pins=''
 for sid,n,c,la,lo,g in STORES:
     x,y=xy(la,lo)
-    fill='#b3261e' if g<0 else ('#f3e2a6' if g>0 else '#fff'); tc='#fff' if g<0 else '#111'
+    pc_='neg' if g<0 else ('pos' if g>0 else 'zero')
     lab=f'{g:+d}' if g else '✓'
     state='short by '+str(-g) if g<0 else ('surplus '+str(g) if g>0 else 'balanced')
     pins+=(f'<g class="pin" tabindex="0" role="button" data-store="{sid}" data-name="{n}" data-city="{c}" data-gap="{g}" data-x="{x}" data-y="{y}" aria-label="{n}, {c}: {state} cashiers, Sat Dec 19 1 to 5 PM">'
-           f'<circle class="ring-focus" cx="{x}" cy="{y}" r="11" fill="{fill}" stroke="#111" stroke-width="1.5"/><text x="{x}" y="{y+3.5}" font-size="9" font-weight="700" text-anchor="middle" fill="{tc}">{lab}</text>'
-           f'<text class="plabel" x="{x+13}" y="{y+3}" font-size="9" fill="#333">{n.replace("SM City ","").replace("SM Center ","").replace("SM ","")}</text></g>')
+           f'<circle class="ring-focus m-pin {pc_}" cx="{x}" cy="{y}" r="11" stroke-width="2"/><text x="{x}" y="{y+3.5}" font-size="9" font-weight="700" text-anchor="middle" class="m-pin-t {pc_}">{lab}</text>'
+           f'<text class="plabel" x="{x+13}" y="{y+3}" font-size="9">{n.replace("SM City ","").replace("SM Center ","").replace("SM ","")}</text></g>')
 svg.append(f'<g id="lyr-stores">{pins}</g></svg>')
 MAPSVG=''.join(svg)
 MAPJS="""<script>
@@ -324,7 +325,7 @@ document.addEventListener('DOMContentLoaded',function(){
     ['t15','t30','t45'].forEach(function(id,i){var t=document.getElementById(id);t.setAttribute('x',x);t.setAttribute('y',y-R[i]-3);});
     document.getElementById('sel-name').textContent=g.dataset.name+' · '+g.dataset.city;
     document.getElementById('sel-gap').textContent=gap<0?('Needs '+(-gap)+' more cashiers'):(gap>0?('Surplus of '+gap+' — can lend'):'Balanced');
-    document.querySelectorAll('.pin circle').forEach(function(c){c.setAttribute('stroke-width','1.5');});
+    document.querySelectorAll('.pin circle').forEach(function(c){c.setAttribute('stroke-width','2');});
     g.querySelector('circle').setAttribute('stroke-width','4');}
   document.querySelectorAll('.pin').forEach(function(g){g.addEventListener('click',function(){sel(g);});g.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();sel(g);}});});
   document.querySelectorAll('[data-layer]').forEach(function(cb){cb.addEventListener('change',function(){var l=document.getElementById(cb.dataset.layer);if(l)l.style.display=cb.checked?'':'none';});});
@@ -345,7 +346,7 @@ page("scr-026-map.html","Network map",[("Plan","scr-020-network.html"),"Network 
 <div class="map-layout"><div class="mapbox">{MAPSVG}
 <div class="maptools" role="group" aria-label="Layers"><b>Layers</b><label><input type="checkbox" checked data-layer="lyr-stores"> Stores (staffing gap)</label><label><input type="checkbox" checked data-layer="lyr-staff"> Available cashiers (home area)</label><label><input type="checkbox" checked data-layer="lyr-rings"> Travel-time rings</label>
 <p><button class="btn small primary" id="automatch" aria-pressed="false" data-roles="pln stm">Auto-match all gaps</button></p></div>
-<div class="maplegend"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#b3261e;border:1px solid #111"></span> Short (−n) · <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#f3e2a6;border:1px solid #111"></span> Surplus (+n) · ○ ✓ Balanced<br>● Available · ○ Near weekly limit · ⇢ Store lends to store · — Offer to cashier<br><span class="muted">Schematic map; store positions approximate. Home areas shown at barangay level.</span></div></div>
+<div class="maplegend"><span class="sw neg"></span> Short (−n) · <span class="sw pos"></span> Surplus (+n) · ○ ✓ Balanced<br>● Available · ○ Near weekly limit · ⇢ Store lends to store · — Offer to cashier<br><span class="muted">Schematic map; store positions approximate. Home areas shown at barangay level.</span></div></div>
 <aside><div class="card"><p class="muted">Selected store · Sat Dec 19 · 1–5 PM · Main lanes</p><h2 id="sel-name">SM Megamall · Mandaluyong</h2><p><b id="sel-gap" style="font-size:18px">Needs 4 more cashiers</b><br><span class="muted">26 needed on lanes · 22 rostered</span></p>
 <div class="alert info" id="matchsum" hidden role="status">Suggested: 6 moves across 5 stores cover 11 of 14 open shifts. Average travel 21 min. <button class="btn small primary" data-roles="pln">Send all offers</button></div>
 <h3 style="font-size:14px">Borrow from a nearby store</h3>
@@ -577,10 +578,10 @@ page("scr-091-help.html","Help and shortcuts",["Help and shortcuts"],f'''
 
 # ---------- Auth pages (no shell) ----------
 def bare(fname,title,body):
-    open(fname,"w").write(f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title} — Wireframe</title><link rel="stylesheet" href="wireframe.css"><script src="wireframe.js" defer></script></head><body><main id="main" style="max-width:560px;margin:48px auto">{body}</main></body></html>''')
+    open(fname,"w").write(f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title} — Wireframe</title><link rel="stylesheet" href="wireframe.css"><script>try{{var t=localStorage.getItem('wf-theme');if(t)document.documentElement.dataset.theme=t}}catch(e){{}}</script><script src="wireframe.js" defer></script></head><body><main id="main" style="max-width:560px;margin:48px auto">{body}</main></body></html>''')
 bare("scr-001-sign-in.html","Sign in",'''<p class="crumbs"><a href="index.html">Screen map</a></p>
 <div class="tabs" role="tablist" aria-label="Wireframe states"><button role="tab" aria-selected="true" aria-controls="st1">Default</button><button role="tab" aria-selected="false" tabindex="-1" aria-controls="st2">Domain not allowed</button><button role="tab" aria-selected="false" tabindex="-1" aria-controls="st3">Passkey failed</button><button role="tab" aria-selected="false" tabindex="-1" aria-controls="st4">Session expired</button><button role="tab" aria-selected="false" tabindex="-1" aria-controls="st5">No passkey support</button></div>
-<div class="card"><h1 style="text-align:center">LaneWise<br><span style="font-weight:400;font-size:13px;color:#666">by SM Retail</span></h1>
+<div class="card"><h1 class="sr-only">Sign in to LaneWise</h1><svg viewBox="0 0 250 64" width="220" role="img" aria-label="LaneWise by SM Retail" style="font-family:var(--lw-font-sans);display:block;margin:0 auto var(--lw-space-6)"><style>.lp-a{fill:var(--lw-primary)}.lp-b{fill:var(--lw-on-primary)}.lp-m{fill:var(--lw-text-muted)}</style><rect width="64" height="64" class="lp-a"/><rect x="16" y="30" width="8" height="18" class="lp-b"/><rect x="28" y="22" width="8" height="26" class="lp-b"/><rect x="40" y="14" width="8" height="34" class="lp-b"/><rect x="12" y="36" width="40" height="2" class="lp-a"/><text x="80" y="36" font-weight="700" font-size="29" letter-spacing="-1" class="lp-a">LaneWise</text><text x="81" y="54" font-size="12" class="lp-m">by SM Retail</text></svg>
 <div id="st2" role="tabpanel" hidden><p class="alert" role="alert">This work email domain isn't allowed. Use an @smretail.com or @1cloudhub.com address.</p></div>
 <div id="st3" role="tabpanel" hidden><p class="alert" role="alert">The passkey prompt was cancelled or didn't work. Try again, or set up a passkey on this device with an email code.</p></div>
 <div id="st4" role="tabpanel" hidden><p class="alert info">You were signed out after 60 minutes of inactivity. Unsaved changes were kept as a draft.</p></div>
@@ -613,9 +614,9 @@ rows="".join(f'<tr><th scope="row">{i}</th><td><a href="{f}">{n}</a></td><td>{r}
 journeys=[("J1 Headcount, budget and plan approval","HR: SCR-033 approve headcount · Finance: SCR-033 approve budget (or Executive records either as secured outside) → Executive: SCR-033 → SCR-024 → Approve"),("J2 Planner refreshes a plan","SCR-040 → SCR-030 → SCR-031 → SCR-023 → SCR-032 → Submit"),("J3 Capacity investigation","SCR-010 → SCR-020 heatmap → SCR-021 → Adjust settings"),
 ("J4 Store manager emergency off","Home (STM) → SCR-022 → shift cell → Emergency off → pick replacement → Save"),("J5 HR recruiting","SCR-040 → SCR-023 timeline → Export → SCR-053"),("J6 Rules steward publishes wages","SCR-060 → SCR-061 → Publish → SCR-030 (stale)"),("J7 First passkey sign-in","SCR-001 → SCR-002 (email code, create passkey, starting role) → SCR-010"),("J8 Staff checks roster","Notification → SCR-025 (phone)"),("J10 Cover a gap from nearby staff","SCR-022 open shift → SCR-026 map → pick candidates / borrow from store → offers → staff accepts on SCR-025 → roster shows borrowed cashier")]
 jr="".join(f'<li><b>{a}</b>: {b}</li>' for a,b in journeys)
-open("index.html","w").write(f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Screen map — Cashier Staffing Planner wireframes</title><link rel="stylesheet" href="wireframe.css"></head>
+open("index.html","w").write(f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Screen map — Cashier Staffing Planner wireframes</title><link rel="stylesheet" href="wireframe.css"><script>try{{var t=localStorage.getItem('wf-theme');if(t)document.documentElement.dataset.theme=t}}catch(e){{}}</script></head>
 <body><main id="main" style="max-width:1000px;margin:24px auto;padding:0 16px"><h1>Cashier Staffing Planner — wireframes</h1>
-<p class="wfnote">Low-fi, grayscale, structural only. Use “Viewing as” in the top bar (demo mode) to switch between the 8 roles. On a phone most screens are read-only; approvals, emergency offs and My roster stay interactive. Design: <code>../design.md</code>.</p>
+<p class="wfnote">Styled with the LaneWise brand and design system v0.5 (concept, pending SM brand sign-off — design.md Q8). Use ◐ in the top bar to switch light/dark. Use “Viewing as” in the top bar (demo mode) to switch between the 8 roles. On a phone most screens are read-only; approvals, emergency offs and My roster stay interactive. Design: <code>../design.md</code>.</p>
 <h2>Journeys</h2><ul>{jr}</ul>
 <div class="tablewrap"><table><caption>Screens</caption><thead><tr><th scope="col">ID</th><th scope="col">Screen</th><th scope="col">Roles</th></tr></thead><tbody>{rows}</tbody></table></div>
 <h2>Breakpoints</h2><p>Mobile &lt;600 · Tablet 600–1023 · Laptop 1024–1439 · Desktop ≥1440. Resize the browser to check each layout.</p></main></body></html>''')

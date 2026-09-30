@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="LaneWise">
+  <!--
+    Neutral placeholder brand mark (task 1.1). Legible at 16px, square corners
+    per the LaneWise design language (SG-004). The real mark and its full export
+    set land in task 1.3; the fill uses the primary brand blue (SG-004 #1d4ed8)
+    so it is theme-consistent and swaps when SM brand tokens arrive (Q8).
+    The single raw hex here is an intentional standalone asset, not a component.
+  -->
+  <rect width="32" height="32" fill="#1d4ed8"/>
+  <path fill="#ffffff" d="M8 7h3v14h9v3H8V7z"/>
+  <rect x="21" y="7" width="3" height="10" fill="#ffffff"/>
+</svg>

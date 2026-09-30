@@ -1,0 +1,27 @@
+# CODEOWNERS — default reviewers for LaneWise by SM Retail.
+# Every PR into `main` needs at least one approving review (DEP-001).
+# Owners listed here are requested automatically; branch protection enforces the review.
+#
+# Syntax: <path pattern>  <owner> [<owner> ...]
+# Owners are GitHub usernames/teams (@org/team). Later matches win.
+# TODO: replace the placeholder team with the real GitHub team/handles once assigned
+#       (owner fields across docs are still "TBD" — see GOV-002 RACI).
+
+# Fallback: everything is owned by the core team unless a more specific rule matches.
+*                               @1CloudHub/lanewise-maintainers
+
+# Documentation and governance — spec/docs owners.
+/docs/                          @1CloudHub/lanewise-maintainers
+/CHANGELOG.md                   @1CloudHub/lanewise-maintainers
+# References are read-only source material (GOV-000); guard them explicitly.
+/docs/references/               @1CloudHub/lanewise-maintainers
+
+# Feature specs.
+/.kiro/                         @1CloudHub/lanewise-maintainers
+
+# Repository automation, CI/CD and infrastructure.
+/.github/                       @1CloudHub/lanewise-maintainers
+/scripts/                       @1CloudHub/lanewise-maintainers
+
+# Application code.
+/frontend/                      @1CloudHub/lanewise-maintainers

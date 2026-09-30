@@ -1,0 +1,8 @@
+node_modules
+dist
+*.js
+*.d.ts
+!lambda/**/*.mjs
+cdk.out
+.cdk.staging
+*.tsbuildinfo

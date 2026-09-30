@@ -64,3 +64,13 @@
       var w=document.getElementById('reroster');if(w)w.hidden=false;});});
   });
 })();
+// Theme toggle (light/dark value swap). Early restore runs inline in <head>.
+(function(){
+  document.addEventListener('DOMContentLoaded',function(){
+    var b=document.getElementById('theme-toggle');if(!b)return;
+    function cur(){var t=document.documentElement.dataset.theme;if(t)return t;return window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}
+    function sync(){b.setAttribute('aria-pressed',String(cur()==='dark'));}
+    sync();
+    b.addEventListener('click',function(){var n=cur()==='dark'?'light':'dark';document.documentElement.dataset.theme=n;try{localStorage.setItem('wf-theme',n);}catch(e){}sync();});
+  });
+})();

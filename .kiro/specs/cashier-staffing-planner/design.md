@@ -25,7 +25,7 @@ A production rebuild of the SM Retail cashier staffing prototype (v3). The proto
 | No sharing of cashiers across departments or stores | Cross-store sharing: Metro Manila network map that matches open shifts to available cashiers by travel time from their home area, and surplus stores to short stores |
 | CSV export only | CSV per view plus a PDF/print leadership report generated from a scenario |
 
-**Out of scope for this design:** tech stack and hosting choices, visual brand (tracked as an open question). The wireframes are deliberately grayscale.
+**Out of scope for this design:** tech stack and hosting choices, visual brand (tracked as an open question). The wireframes use the LaneWise brand and design system v0.5 (concept: `--lw-*` tokens, square corners, 2px outlines, light and dark mode); this is a concept pending SM brand sign-off (Q8).
 
 ## Architecture
 
@@ -1100,7 +1100,7 @@ at most one offer per open shift can be accepted; all other offers for that shif
 | Q4 | Store managers see ₱ cost for their own store only |
 | Q6 | Wage/cost-affecting rule changes need Finance approval before publishing; other rules publish directly (rules steward), Finance notified |
 | Q7 | Amazon SES; notifications sent immediately, no daily digest |
-| Q8 | SM brand (colours, logo, typography) — needs SM brand guidelines; wireframes stay grayscale |
+| Q8 | SM brand (colours, logo, typography) — the wireframes use the LaneWise concept (v0.5); needs sign-off from SM brand and legal on the "by SM Retail" endorsement, the primary blue (#1d4ed8 vs SM navy) and a trademark search |
 | Q9 | English and Filipino from launch, with a language switcher; all strings externalised |
 | Q11 | File upload only in phase 1 (POS, master data, staff); integrations later |
 | Q12 | 60-minute idle timeout, 2-minute warning dialog |

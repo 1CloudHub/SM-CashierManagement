@@ -1,18 +1,19 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Compare scenarios — Wireframe</title><link rel="stylesheet" href="wireframe.css"><script src="wireframe.js" defer></script></head>
+<title>Compare scenarios — Wireframe</title><link rel="stylesheet" href="wireframe.css"><script>try{var t=localStorage.getItem('wf-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script><script src="wireframe.js" defer></script></head>
 <body data-page-roles="exe pln hr fin" data-mobile-ro><a class="skip" href="#main">Skip to content</a>
 <header class="topbar">
 <button class="iconbtn menu-toggle" id="menu-toggle" aria-controls="sidenav" aria-expanded="false" aria-label="Open navigation">≡</button>
-<a class="brand" href="scr-010-home.html">LaneWise <span class="brand-sub">by SM Retail</span></a>
+<a class="brand" href="scr-010-home.html"><svg viewBox="0 0 250 64" role="img" aria-label="LaneWise by SM Retail" style="font-family:var(--lw-font-sans)"><style>.lg-a{fill:var(--lw-on-primary)}.lg-b{fill:var(--lw-primary)}</style><rect width="64" height="64" class="lg-a"/><rect x="16" y="30" width="8" height="18" class="lg-b"/><rect x="28" y="22" width="8" height="26" class="lg-b"/><rect x="40" y="14" width="8" height="34" class="lg-b"/><rect x="12" y="36" width="40" height="2" class="lg-a"/><text x="80" y="36" font-weight="700" font-size="29" letter-spacing="-1" class="lg-a">LaneWise</text><text x="81" y="54" font-size="12" class="lg-a">by SM Retail</text></svg></a>
 <form class="search" id="searchform" role="search" action="scr-041-search.html"><label class="sr-only" for="q">Search</label>
 <input id="q" name="q" type="search" placeholder="Search stores, departments, scenarios, staff…  ( / )"></form>
 <button class="iconbtn search-toggle" id="search-toggle" aria-controls="searchform" aria-label="Search">⌕</button>
 <div class="row" style="margin-left:auto;gap:8px">
 <label for="lang" class="sr-only">Language</label><select id="lang" title="Language"><option value="en">EN</option><option value="fil">FIL</option></select>
-<label for="role" style="color:#ddd">Viewing as</label>
+<label for="role" style="margin:0">Viewing as</label>
 <select id="role" title="Demo mode: switch role">
 <option value="adm">System Admin</option><option value="exe">Executive</option><option value="pln">Planner</option>
 <option value="stm">Store Manager</option><option value="hr">HR</option><option value="fin">Finance</option><option value="rst">Rules Steward</option><option value="stf">Staff</option></select>
+<button class="iconbtn theme-toggle" id="theme-toggle" type="button" aria-pressed="false" title="Toggle dark mode">◐<span class="sr-only"> Dark mode</span></button>
 <div class="menu"><button class="iconbtn" aria-haspopup="true" aria-expanded="false" aria-controls="bellpop">🔔 <span class="badge" aria-label="3 unread">3</span><span class="sr-only">Notifications</span></button>
 <div class="pop" id="bellpop" hidden><ul>
 <li data-roles="adm exe pln stm hr fin rst">⚠ <b>Offers due in 5 days</b><br><span class="muted">Christmas 2026 v3 · <a href="scr-023-hiring.html">Hiring plan</a></span></li>
