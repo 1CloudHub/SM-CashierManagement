@@ -1,4 +1,4 @@
-import type { RoleAssignment, RoleCode } from '@lanewise/shared';
+import { isAllowedEmail, type RoleAssignment, type RoleCode } from '@lanewise/shared';
 import { errors } from './http/errors.js';
 import type { Logger } from './logger.js';
 
@@ -32,7 +32,13 @@ export interface RequestContext {
 /**
  * Builds a principal from verified authorizer claims (e.g.
  * `event.requestContext.authorizer.claims` for a Cognito user-pool
- * authorizer). Returns `null` unless both `sub` and `email` are present.
+ * authorizer). Returns `null` unless both `sub` and `email` are present and
+ * the email is on the smretail.com / 1cloudhub.com allowlist.
+ *
+ * The allowlist check is defence in depth for P13: the pre-sign-up trigger
+ * already refuses to create such accounts, but the API never trusts that a
+ * token for an out-of-allowlist email is legitimate (e.g. a pool
+ * misconfiguration or a user created before the trigger was attached).
  */
 export function principalFromClaims(claims: Readonly<Record<string, unknown>> | undefined | null): Principal | null {
   if (!claims) return null;
@@ -40,6 +46,7 @@ export function principalFromClaims(claims: Readonly<Record<string, unknown>> | 
   const email = claims.email;
   if (typeof sub !== 'string' || sub.length === 0) return null;
   if (typeof email !== 'string' || email.length === 0) return null;
+  if (!isAllowedEmail(email)) return null;
   return { userId: sub, email: email.toLowerCase(), activeRole: null, assignments: [] };
 }
 
