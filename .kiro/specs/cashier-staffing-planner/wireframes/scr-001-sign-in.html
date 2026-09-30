@@ -1,0 +1,13 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in — Wireframe</title><link rel="stylesheet" href="wireframe.css"><script src="wireframe.js" defer></script></head><body><main id="main" style="max-width:560px;margin:48px auto"><p class="crumbs"><a href="index.html">Screen map</a></p>
+<div class="tabs" role="tablist" aria-label="Wireframe states"><button role="tab" aria-selected="true" aria-controls="st1">Default</button><button role="tab" aria-selected="false" tabindex="-1" aria-controls="st2">Domain not allowed</button><button role="tab" aria-selected="false" tabindex="-1" aria-controls="st3">Passkey failed</button><button role="tab" aria-selected="false" tabindex="-1" aria-controls="st4">Session expired</button><button role="tab" aria-selected="false" tabindex="-1" aria-controls="st5">No passkey support</button></div>
+<div class="card"><h1 style="text-align:center">SM Cashier Planner</h1>
+<div id="st2" role="tabpanel" hidden><p class="alert" role="alert">This work email domain isn't allowed. Use an @smretail.com or @1cloudhub.com address.</p></div>
+<div id="st3" role="tabpanel" hidden><p class="alert" role="alert">The passkey prompt was cancelled or didn't work. Try again, or set up a passkey on this device with an email code.</p></div>
+<div id="st4" role="tabpanel" hidden><p class="alert info">You were signed out after 60 minutes of inactivity. Unsaved changes were kept as a draft.</p></div>
+<div id="st5" role="tabpanel" hidden><p class="alert">This browser doesn't support passkeys. Use a current version of Chrome, Edge, Safari or Firefox.</p></div>
+<div id="st1" role="tabpanel"></div>
+<label for="em">Work email</label><input id="em" type="email" value="juan@smretail.com" style="width:100%">
+<p><a class="btn primary" href="scr-010-home.html" style="width:100%;text-align:center">Sign in with a passkey</a></p>
+<p><a href="scr-002-first-sign-in.html">New here, or no passkey on this device? Set one up →</a></p>
+<p class="muted">Only smretail.com and 1cloudhub.com accounts. No passwords — you sign in with Face ID, fingerprint or your device PIN.</p></div>
+<p class="wfnote">Amazon Cognito user pool, passkey (WebAuthn) sign-in. The session-timeout warning appears inside the app 2 minutes before timeout.</p></main></body></html>
