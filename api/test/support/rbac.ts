@@ -10,6 +10,7 @@ import { createApp, type AppDeps } from '../../src/app.js';
 import { DEFAULT_RBAC_CONFIG } from '../../src/auth/config.js';
 import { scopeToColumns } from '../../src/db/repositories/users.js';
 import { createLambdaHandler } from '../../src/lambda.js';
+import type { Router } from '../../src/http/router.js';
 
 export const uniq = (): string => randomBytes(4).toString('hex');
 
@@ -29,7 +30,11 @@ export interface CallResult {
 
 export function makeClient(pool: pg.Pool, demoRoleSwitcher: boolean) {
   const deps: AppDeps = { db: () => pool, rbac: { ...DEFAULT_RBAC_CONFIG, demoRoleSwitcher } };
-  const router = createApp(deps);
+  return { ...routerClient(createApp(deps)), deps };
+}
+
+/** Calls `router` through the real Lambda handler (for app or test-only routers). */
+export function routerClient(router: Router) {
   const handler = createLambdaHandler({ router, env: 'test', logSink: () => undefined });
   const call = async (options: CallOptions): Promise<CallResult> => {
     const headers: Record<string, string> = {};
@@ -56,7 +61,7 @@ export function makeClient(pool: pg.Pool, demoRoleSwitcher: boolean) {
     const res = await handler(event, { awsRequestId: 'aws' } as Context);
     return { status: res.statusCode, body: JSON.parse(res.body) as unknown, raw: res.body };
   };
-  return { call, router, deps };
+  return { call, router };
 }
 
 export async function one<T extends pg.QueryResultRow>(db: pg.Pool, sql: string, values: unknown[] = []): Promise<T> {
