@@ -14,7 +14,7 @@ import { SpaHostingStack } from '../lib/spa-hosting-stack';
 
 function synth() {
   const app = new App();
-  const config = resolveEnvironment('prod');
+  const config = withDomain();
   const spa = new SpaHostingStack(app, 'Test-SpaHosting', { config });
   // Mirrors bin/infra.ts.
   const auth = new AuthStack(app, 'Test-Auth', {
@@ -50,6 +50,21 @@ function synth() {
 
 const DOMAIN = 'lanewise.prototypes.1cloudhub.com';
 const ZONE_ID = 'Z10306162UR77DOLJD1L3';
+
+/**
+ * Prod config with the custom domain switched on. Prod currently has the custom
+ * domain paused (config/environments.ts); these tests keep the domain code path
+ * covered so it can be re-enabled by config alone.
+ */
+function withDomain(): EnvironmentConfig {
+  const base = resolveEnvironment('prod');
+  return {
+    ...base,
+    domainName: DOMAIN,
+    hostedZone: { id: ZONE_ID, name: 'prototypes.1cloudhub.com' },
+    auth: { ...base.auth, relyingPartyId: DOMAIN },
+  };
+}
 
 /** Prod config with the custom domain, relying party and SES sender removed. */
 function withoutDomainOrEmail(): EnvironmentConfig {
@@ -162,14 +177,14 @@ describe('SPA custom domain (prod: lanewise.prototypes.1cloudhub.com)', () => {
     expect(
       () =>
         new SpaHostingStack(new App(), 'Test-Spa-WrongRegion', {
-          config: resolveEnvironment('prod'),
+          config: withDomain(),
           env: { region: 'ap-southeast-1' },
         }),
     ).toThrowError(/us-east-1/);
   });
 
   it('validates that a custom domain has a hosted zone and sits inside it', () => {
-    const base = resolveEnvironment('prod');
+    const base = withDomain();
     expect(() => validateDomain(base)).not.toThrow();
     expect(() => validateDomain({ ...base, hostedZone: undefined })).toThrowError(/hostedZone/);
     expect(() => validateDomain({ ...base, domainName: 'lanewise.1cloudhub.com' })).toThrowError(/not in hosted zone/);
@@ -328,9 +343,9 @@ describe('API stack', () => {
     expect(
       () =>
         new ApiStack(app, 'Test-Api-NoBundle', {
-          config: resolveEnvironment('prod'),
+          config: withDomain(),
           userPool: new AuthStack(app, 'Test-Auth-ForNoBundle', {
-            config: resolveEnvironment('prod'),
+            config: withDomain(),
             relyingPartyId: 'lanewise.example.com',
           }).userPool,
           apiBundleDir: path.join(os.tmpdir(), 'lanewise-missing-bundle'),
@@ -408,7 +423,7 @@ describe('auth stack (task 7)', () => {
 
   it('enables email OTP (sent through SES) when an SES identity is configured', () => {
     const app = new App();
-    const base = resolveEnvironment('prod');
+    const base = withDomain();
     const config = {
       ...base,
       auth: {
@@ -497,7 +512,7 @@ describe('auth stack (task 7)', () => {
     expect(
       () =>
         new AuthStack(new App(), 'Test-Auth-NoBundle', {
-          config: resolveEnvironment('prod'),
+          config: withDomain(),
           relyingPartyId: 'x.example.com',
           preSignUpBundleDir: path.join(os.tmpdir(), 'lanewise-missing-bundle'),
         }),
