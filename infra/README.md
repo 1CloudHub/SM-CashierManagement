@@ -12,12 +12,20 @@ the deployment topology from **ADR-0004** and docs **DEP-003 / DEP-004 / DEP-005
   SPA's origins. Runs the bundled
   `@lanewise/api` service (`/api`, built to `api/dist/lambda`) and exposes the
   public `/health` endpoint; every other route goes through the Cognito
-  user-pool authorizer (task 7). Data services are added in later phases.
+  user-pool authorizer (task 7). Runs in the data VPC (task 24).
   (`lib/api-stack.ts`)
 - **Auth** — Amazon Cognito user pool with passkey (WebAuthn) sign-in, email
   one-time codes for passkey bootstrap/recovery, the pre-sign-up domain
   allowlist trigger (`api/dist/pre-sign-up`) and the SPA app client
   (task 7). (`lib/auth-stack.ts`)
+- **Data** — VPC (isolated subnets + VPC endpoints), Aurora PostgreSQL
+  Serverless v2 with credentials in Secrets Manager, deploy-time migrations
+  (CDK Trigger running `api/dist/migrate`) and the ingestion uploads bucket
+  (task 24). (`lib/data-stack.ts`)
+- **Jobs** — SQS queue + dead-letter queue and the background-job worker
+  Lambda (skeleton until task 14.2). (`lib/jobs-stack.ts`)
+- **Location** — Amazon Location Service map + route calculator (tasks
+  16.1/16.2). (`lib/location-stack.ts`)
 - **Pipeline IAM** — the CodeStar (GitHub) Connection plus scoped IAM service
   roles for CodePipeline and CodeBuild. No stored AWS keys / GitHub credentials.
   The pipeline and build projects themselves are added in tasks 3.3/3.4.
@@ -35,7 +43,13 @@ infra/
   lib/spa-hosting-stack.ts     # S3 + CloudFront (OAC) SPA hosting
   lib/api-stack.ts             # Lambda + API Gateway (+ Cognito authorizer)
   lib/auth-stack.ts            # Cognito user pool (passkeys), pre-sign-up allowlist, SPA client
+  lib/data-stack.ts            # VPC, Aurora PostgreSQL, migrations Trigger, uploads bucket
+  lib/jobs-stack.ts            # SQS jobs queue + DLQ + worker Lambda
+  lib/location-stack.ts        # Amazon Location map + route calculator (+ scoped grants)
+  lib/notifications.ts         # SES send grant (verified identity only) + env
   lib/pipeline-iam-stack.ts    # CodeStar (GitHub) connection + pipeline/CodeBuild IAM roles
+  lambda/migrate-runner/       # deploy-time wrapper around api/dist/migrate
+  lambda/jobs-worker/          # worker skeleton (replaced in task 14.2)
   test/stacks.test.ts          # CDK assertion smoke tests
 ```
 
@@ -91,6 +105,9 @@ Prod: `lanewise.prototypes.1cloudhub.com` in zone `prototypes.1cloudhub.com`
 `https://<cloudfront domain>` — on the API Gateway preflight and on the
 function's responses (`CORS_ALLOWED_ORIGINS`). Without an allowlist it falls
 back to `*`.
+The stacks are `LaneWise-prod-SpaHosting`, `-Auth`, `-Data`, `-Jobs`,
+`-Location`, `-Api`, `-PipelineIam`, `-PipelinePrChecks` and
+`-DeployPipeline`.
 
 ## ⚠️ Manual step: authorise the GitHub App (one-time)
 
@@ -150,6 +167,55 @@ if the org/repo/connection name differs.
   client id, region, self sign-up flag, API URL) into the SPA bucket from the
   stack outputs. None of it depends on the SPA origin, so it is the same for
   the custom and CloudFront domains.
+
+## Data services (task 24)
+
+All settings live in `config/environments.ts` (`data`, `jobs`, `location`,
+`notifications`). Stacks: `LaneWise-<env>-Data`, `-Jobs`, `-Location`; the API
+stack consumes them (VPC placement, environment, scoped IAM grants in
+`bin/infra.ts`).
+
+- **Database.** Aurora PostgreSQL 16 Serverless v2, encrypted, `rds.force_ssl`
+  on, deletion protection + snapshot on delete + retained secret in prod.
+  Capacity is `0.5–2` ACU: the pinned `aws-cdk-lib` 2.170.0 rejects a 0 ACU
+  minimum, so scale-to-zero / auto-pause needs a CDK upgrade (then set
+  `data.minCapacity: 0`; engine 16.4 supports it).
+- **Credentials.** Generated into Secrets Manager (`lanewise/<env>/db-master`).
+  Functions get `DB_SECRET_ARN`, `DB_HOST`, `DB_PORT`, `DB_NAME`,
+  `DB_SSL_MODE=verify-full` and `NODE_EXTRA_CA_CERTS=/var/runtime/ca-cert.pem`
+  (the RDS CA bundle Node 20 Lambda runtimes don't load by default), and read
+  access to that one secret. Rotation is not enabled yet (it would drop the
+  pooled connections; add with an app-level user).
+- **RDS Proxy: not used.** A proxy on Serverless v2 bills a minimum of 8 ACUs
+  (more than the database itself at this scale); Lambda pools are kept small.
+- **Migrations.** `lanewise-<env>-db-migrate` runs in the VPC and wraps the
+  bundled migrate CLI. A CDK Trigger invokes it after the cluster and writer
+  exist, whenever its code (migrations, CLI or runner) changes. The CLI is
+  checksummed, forward-only and takes an advisory lock, so re-runs are no-ops.
+  A failure fails `cdk deploy` before the API/Jobs stacks update. Run it by
+  hand with `aws lambda invoke --function-name lanewise-prod-db-migrate`.
+- **Network.** Isolated subnets only; S3 gateway endpoint plus interface
+  endpoints from `data.interfaceEndpoints` (Secrets Manager, SQS, Location
+  routes). AZs are resolved at deploy time, so synth needs no lookups.
+- **Uploads bucket** (`UploadsBucketName` output, export
+  `lanewise-<env>-uploads-bucket`): private, SSE-S3, TLS-only, versioned,
+  CORS for the SPA origin, IA after 30 days, expiry after
+  `data.uploadRetentionDays`. The API may put/read; the worker may read.
+- **Jobs.** `lanewise-<env>-jobs` (+ `-dlq`), SSE, visibility 6x the worker
+  timeout, `maxReceiveCount` retries, worker concurrency capped. The API may
+  only send.
+- **Location.** HERE data (Metro Manila coverage); the API may read map tiles
+  and calculate routes/matrices on these two resources only.
+
+### ⚠️ Manual steps / decisions
+
+1. **SES.** The `1cloudhub.com` identity must be verified (and out of the SES
+   sandbox) in the deploy region, or set `notifications.sesRegion`. The SES
+   *API* has no PrivateLink endpoint, so functions in the isolated VPC cannot
+   reach it: before task 19 sends email, either set `data.natGateways: 1`
+   (~USD 33/month + data) or send from a function outside the VPC.
+2. **Browser map tiles** (task 16.1) need a Location API key or a Cognito
+   identity pool for the SPA; not created here.
 
 ## Adding `staging` later
 

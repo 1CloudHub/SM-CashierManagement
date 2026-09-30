@@ -45,6 +45,14 @@ export interface EnvironmentConfig {
    * when false, active roles come only from role assignments (SCR-070/071).
    */
   readonly demoRoleSwitcher: boolean;
+  /** Network + Aurora PostgreSQL + uploads bucket (task 24). */
+  readonly data: DataConfig;
+  /** SQS background-job queue + worker (task 24, for task 14.2). */
+  readonly jobs: JobsConfig;
+  /** Amazon Location Service map + route calculator (task 24, for tasks 16.1/16.2). */
+  readonly location: LocationConfig;
+  /** Amazon SES sending for the notifications service (task 24, for task 19). */
+  readonly notifications: NotificationsConfig;
   /** Tags applied to every stack/resource in this environment. */
   readonly tags: Record<string, string>;
 }
@@ -117,6 +125,61 @@ export interface AuthEmailConfig {
   readonly sesRegion: string;
 }
 
+/**
+ * Network and data services (task 24, ADR-0002). See infra/README.md
+ * "Data services" for the reasoning behind each default.
+ */
+export interface DataConfig {
+  /** Availability zones for the VPC (Aurora needs subnets in >= 2). */
+  readonly maxAzs: number;
+  /**
+   * NAT gateways. 0 => isolated subnets only: functions reach AWS services
+   * through the VPC endpoints below and nothing else. >0 adds public +
+   * private-with-egress subnets and runs the functions there (required for
+   * services without PrivateLink API endpoints, e.g. the SES API).
+   */
+  readonly natGateways: number;
+  /**
+   * Interface VPC endpoints (short service names, e.g. `secretsmanager`,
+   * `sqs`, `geo.routes`). The S3 gateway endpoint is always added (free).
+   */
+  readonly interfaceEndpoints: readonly string[];
+  /** Aurora Serverless v2 capacity in ACUs. */
+  readonly minCapacity: number;
+  readonly maxCapacity: number;
+  /** Initial database name created in the cluster. */
+  readonly databaseName: string;
+  /** Automated backup retention (days). */
+  readonly backupRetentionDays: number;
+  /** Days before an uploaded ingestion file is expired from the uploads bucket. */
+  readonly uploadRetentionDays: number;
+}
+
+export interface JobsConfig {
+  /** Worker Lambda timeout (seconds); the queue visibility timeout is 6x this. */
+  readonly workerTimeoutSeconds: number;
+  /** Receives before a message moves to the dead-letter queue. */
+  readonly maxReceiveCount: number;
+  /** Cap on concurrent worker invocations (protects the database). */
+  readonly maxConcurrency: number;
+}
+
+export interface LocationConfig {
+  /** Route/map data provider: `Esri` or `Here` (both cover Metro Manila). */
+  readonly dataSource: 'Esri' | 'Here';
+  /** Map style for the map resource (must match the data source). */
+  readonly mapStyle: string;
+}
+
+export interface NotificationsConfig {
+  /** Verified SES domain identity the notifications service sends from. */
+  readonly sesIdentity: string;
+  /** Default From address (must be within `sesIdentity`). */
+  readonly fromAddress: string;
+  /** Region hosting the verified identity. Undefined => the stack's region. */
+  readonly sesRegion?: string;
+}
+
 const BASE_TAGS: Record<string, string> = {
   Project: 'LaneWise',
   Application: 'cashier-staffing-planner',
@@ -156,6 +219,25 @@ export const environments: Record<EnvName, EnvironmentConfig> = {
     },
     // Demo deployment: the "Viewing as" role switcher is on.
     demoRoleSwitcher: true,
+    data: {
+      maxAzs: 2,
+      natGateways: 0,
+      interfaceEndpoints: ['secretsmanager', 'sqs', 'geo.routes'],
+      // The pinned aws-cdk-lib (2.170.0) accepts 0.5 ACU at minimum; scale to
+      // zero (0 ACU + auto-pause) needs a newer CDK — see infra/README.md.
+      minCapacity: 0.5,
+      maxCapacity: 2,
+      databaseName: 'lanewise',
+      backupRetentionDays: 7,
+      uploadRetentionDays: 365,
+    },
+    jobs: { workerTimeoutSeconds: 300, maxReceiveCount: 3, maxConcurrency: 2 },
+    location: { dataSource: 'Here', mapStyle: 'VectorHereExplore' },
+    notifications: {
+      sesIdentity: '1cloudhub.com',
+      fromAddress: 'noreply@1cloudhub.com',
+      sesRegion: undefined,
+    },
     tags: { ...BASE_TAGS, Environment: 'prod' },
   },
 
@@ -178,6 +260,10 @@ export const environments: Record<EnvName, EnvironmentConfig> = {
   //   },
   //   auth: { selfSignUp: true, relyingPartyId: undefined, email: undefined },
   //   demoRoleSwitcher: true,
+  //   data: { ...prod data, backupRetentionDays: 1, uploadRetentionDays: 30 },
+  //   jobs: { workerTimeoutSeconds: 300, maxReceiveCount: 3, maxConcurrency: 1 },
+  //   location: { dataSource: 'Here', mapStyle: 'VectorHereExplore' },
+  //   notifications: { sesIdentity: '1cloudhub.com', fromAddress: 'noreply@1cloudhub.com' },
   //   tags: { ...BASE_TAGS, Environment: 'staging' },
   // },
   //

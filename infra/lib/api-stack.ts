@@ -3,6 +3,7 @@ import * as path from 'node:path';
 import { CfnOutput, Duration, Fn, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import type * as cognito from 'aws-cdk-lib/aws-cognito';
+import type * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
@@ -27,6 +28,19 @@ export interface ApiStackProps extends StackProps {
    * Undefined or empty => any origin (`*`).
    */
   readonly allowedOrigins?: readonly string[];
+  /**
+   * Runs the API function inside the data VPC (task 24) so it can reach
+   * Aurora through the app security group. Omitted => no VPC.
+   */
+  readonly network?: ApiNetwork;
+  /** Extra function environment (data/jobs/location/SES settings, task 24). */
+  readonly serviceEnvironment?: Record<string, string>;
+}
+
+export interface ApiNetwork {
+  readonly vpc: ec2.IVpc;
+  readonly subnets: ec2.SubnetSelection;
+  readonly securityGroups: ec2.ISecurityGroup[];
 }
 
 /**
@@ -67,8 +81,9 @@ function assertApiBundle(dir: string): void {
  * (task 7.1) — secure by default: feature routes added to the in-process
  * router are protected without further infra changes, and the API re-checks
  * the verified claims (identity + domain allowlist, api/src/context.ts). The
- * data services (Aurora, S3, SQS, SES, Location Service) are added in later
- * phases (task 24) by extending this stack.
+ * data services (Aurora, S3, SQS, SES, Location Service) live in their own
+ * stacks (task 24); `network` + `serviceEnvironment` place the function in the
+ * data VPC and pass their settings, and bin/infra.ts adds the scoped grants.
  */
 export class ApiStack extends Stack {
   /** The invoke URL of the deployed REST API (e.g. https://xxxx.execute-api.../prod/). */
@@ -77,6 +92,8 @@ export class ApiStack extends Stack {
   public readonly authorizer: apigateway.CognitoUserPoolsAuthorizer;
   /** Method options that protect a route with the Cognito authorizer. */
   public readonly protectedMethodOptions: apigateway.MethodOptions;
+  /** The API function (grants for data services are added in bin/infra.ts). */
+  public readonly apiFunction: lambda.Function;
 
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
@@ -115,8 +132,15 @@ export class ApiStack extends Stack {
         // against the active role either way (P12).
         DEMO_ROLE_SWITCHER: config.demoRoleSwitcher ? 'true' : 'false',
         CORS_ALLOWED_ORIGINS: allowedOrigins ? Fn.join(',', allowedOrigins) : '*',
+        ...props.serviceEnvironment,
       },
+      ...(props.network && {
+        vpc: props.network.vpc,
+        vpcSubnets: props.network.subnets,
+        securityGroups: props.network.securityGroups,
+      }),
     });
+    this.apiFunction = apiFn;
 
     const api = new apigateway.RestApi(this, 'RestApi', {
       restApiName: `lanewise-${config.envName}-api`,
