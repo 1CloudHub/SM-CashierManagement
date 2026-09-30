@@ -32,6 +32,12 @@ export interface EnvironmentConfig {
   readonly github: GitHubSourceConfig;
   /** Cognito user pool / sign-in settings (task 7, requirement 1). */
   readonly auth: AuthConfig;
+  /**
+   * Demo role switcher (requirement 3, task 8.2): every signed-in user may
+   * switch between the 8 roles. Passed to the API as `DEMO_ROLE_SWITCHER`;
+   * when false, active roles come only from role assignments (SCR-070/071).
+   */
+  readonly demoRoleSwitcher: boolean;
   /** Tags applied to every stack/resource in this environment. */
   readonly tags: Record<string, string>;
 }
@@ -123,6 +129,8 @@ export const environments: Record<EnvName, EnvironmentConfig> = {
       // Set once an SES identity is verified (manual step) — see infra/README.md.
       email: undefined,
     },
+    // Demo deployment: the "Viewing as" role switcher is on.
+    demoRoleSwitcher: true,
     tags: { ...BASE_TAGS, Environment: 'prod' },
   },
 
@@ -143,6 +151,7 @@ export const environments: Record<EnvName, EnvironmentConfig> = {
   //     connectionName: 'lanewise-staging-github',
   //   },
   //   auth: { selfSignUp: true, relyingPartyId: undefined, email: undefined },
+  //   demoRoleSwitcher: true,
   //   tags: { ...BASE_TAGS, Environment: 'staging' },
   // },
   //
