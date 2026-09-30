@@ -1,0 +1,359 @@
+/**
+ * LaneWise design tokens — single source of truth.
+ *
+ * Namespace: --lw-*  (per ADR-0003, SG-002/004/005/007/009).
+ *
+ * Architecture (do not deviate):
+ *   1. Raw ramps below are PRIMITIVES. Never reference them directly in
+ *      components. They only feed the semantic tokens.
+ *   2. Semantic tokens (--lw-bg, --lw-primary, --lw-text, spacing, radius,
+ *      motion, ...) are what components and the Tailwind theme consume.
+ *   3. Dark mode (SG-009) is a VALUE SWAP of the semantic tokens only —
+ *      no component or Tailwind-utility change is required. The light block
+ *      lives in :root; the dark block re-declares the same semantic names.
+ *
+ * When SM brand guidelines land (SG-004, Q8), swap the ramp + semantic
+ * values here; nothing downstream changes.
+ */
+
+:root {
+  /* ---------------------------------------------------------------------
+   * Colour — raw ramps (PRIMITIVES, not for direct use in components)
+   * ------------------------------------------------------------------- */
+
+  /* primary (blue) */
+  --lw-blue-50: #eff6ff;
+  --lw-blue-100: #dbeafe;
+  --lw-blue-200: #bfdbfe;
+  --lw-blue-300: #93c5fd;
+  --lw-blue-400: #60a5fa;
+  --lw-blue-500: #3b82f6;
+  --lw-blue-600: #1d4ed8;
+  --lw-blue-700: #1e40af;
+  --lw-blue-800: #1e3a8a;
+  --lw-blue-900: #172554;
+
+  /* accent (red) — emphasis only, never status */
+  --lw-red-50: #fef2f2;
+  --lw-red-100: #fee2e2;
+  --lw-red-200: #fecaca;
+  --lw-red-300: #fca5a5;
+  --lw-red-400: #f87171;
+  --lw-red-500: #ef4444;
+  --lw-red-600: #dc2626;
+  --lw-red-700: #b91c1c;
+  --lw-red-800: #991b1b;
+  --lw-red-900: #7f1d1d;
+
+  /* slate (neutral) */
+  --lw-slate-0: #ffffff;
+  --lw-slate-50: #f8fafc;
+  --lw-slate-100: #f1f5f9;
+  --lw-slate-200: #e2e8f0;
+  --lw-slate-300: #cbd5e1;
+  --lw-slate-400: #94a3b8;
+  --lw-slate-500: #64748b;
+  --lw-slate-600: #475569;
+  --lw-slate-700: #334155;
+  --lw-slate-800: #1e293b;
+  --lw-slate-900: #0f172a;
+  --lw-slate-950: #020617;
+
+  /* status ramps */
+  --lw-green-50: #f0fdf4;
+  --lw-green-100: #dcfce7;
+  --lw-green-600: #15803d;
+  --lw-green-700: #166534;
+  --lw-green-800: #14532d;
+  --lw-green-400: #4ade80;
+
+  --lw-amber-50: #fffbeb;
+  --lw-amber-100: #fef3c7;
+  --lw-amber-400: #fbbf24;
+  --lw-amber-600: #b45309;
+  --lw-amber-700: #92400e;
+  --lw-amber-800: #78350f;
+
+  --lw-rose-50: #fef2f2;
+  --lw-rose-100: #fee2e2;
+  --lw-rose-600: #b91c1c;
+  --lw-rose-700: #991b1b;
+  --lw-rose-800: #7f1d1d;
+
+  --lw-cyan-50: #ecfeff;
+  --lw-cyan-100: #cffafe;
+  --lw-cyan-400: #22d3ee;
+  --lw-cyan-600: #0e7490;
+  --lw-cyan-700: #155e75;
+  --lw-cyan-800: #164e63;
+
+  /* ---------------------------------------------------------------------
+   * Colour — semantic tokens (light, default). AA-verified (SG-004).
+   * Every fill has a matching on-colour for accessible text/icons.
+   * ------------------------------------------------------------------- */
+  --lw-bg: var(--lw-slate-100);
+  --lw-surface: var(--lw-slate-0);
+  --lw-surface-2: var(--lw-slate-50);
+
+  --lw-text: var(--lw-slate-900);
+  --lw-text-muted: var(--lw-slate-600);
+
+  --lw-primary: var(--lw-blue-600);
+  --lw-on-primary: #ffffff;
+  --lw-primary-soft: var(--lw-blue-100);
+  --lw-on-primary-soft: var(--lw-blue-700);
+
+  --lw-accent: var(--lw-red-600);
+  --lw-on-accent: #ffffff;
+
+  --lw-success: var(--lw-green-600);
+  --lw-on-success: #ffffff;
+  --lw-success-soft: var(--lw-green-100);
+  --lw-on-success-soft: var(--lw-green-700);
+
+  --lw-warning: var(--lw-amber-600);
+  --lw-on-warning: #ffffff;
+  --lw-warning-soft: var(--lw-amber-100);
+  --lw-on-warning-soft: var(--lw-amber-700);
+
+  --lw-danger: var(--lw-rose-600);
+  --lw-on-danger: #ffffff;
+  --lw-danger-soft: var(--lw-rose-100);
+  --lw-on-danger-soft: var(--lw-rose-700);
+
+  --lw-info: var(--lw-cyan-600);
+  --lw-on-info: #ffffff;
+  --lw-info-soft: var(--lw-cyan-100);
+  --lw-on-info-soft: var(--lw-cyan-700);
+
+  --lw-outline: var(--lw-slate-500); /* 2px functional outline (AA on surface) */
+  --lw-outline-subtle: var(--lw-slate-300); /* decorative only, never for meaning */
+
+  --lw-focus-ring: var(--lw-blue-600);
+
+  /* Data-visualisation palette (SG-010) — Okabe–Ito, colour-blind safe.
+   * Kept separate from status colours; always paired with a label + marker. */
+  --lw-viz-1: #0060a8;
+  --lw-viz-2: #c24f00;
+  --lw-viz-3: #00795b;
+  --lw-viz-4: #b2548c;
+  --lw-viz-5: #1e293b;
+  --lw-viz-6: #2b8cc4;
+
+  /* ---------------------------------------------------------------------
+   * Typography (SG-002)
+   * ------------------------------------------------------------------- */
+  --lw-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans",
+    "Helvetica Neue", Arial, sans-serif;
+  --lw-font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Noto Sans Mono",
+    monospace;
+  /* Numeric/currency: same sans stack, but consumers apply tabular figures via
+   * --lw-numeric so ₱ columns align. Noto Sans supplies ₱ (U+20B1) + ñ. */
+  --lw-font-num: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans",
+    "Helvetica Neue", Arial, sans-serif;
+  --lw-numeric: tabular-nums;
+
+  --lw-weight-regular: 400;
+  --lw-weight-medium: 500;
+  --lw-weight-semibold: 600;
+  --lw-weight-bold: 700;
+
+  /* Type scale — size / line-height / weight / tracking as separate tokens
+   * so components never hardcode px font sizes. */
+  --lw-type-display-size: 2rem; /* 32px */
+  --lw-type-display-line: 2.5rem; /* 40px */
+  --lw-type-display-weight: var(--lw-weight-bold);
+  --lw-type-display-tracking: -0.02em;
+
+  --lw-type-h1-size: 1.5rem; /* 24px */
+  --lw-type-h1-line: 2rem; /* 32px */
+  --lw-type-h1-weight: var(--lw-weight-bold);
+  --lw-type-h1-tracking: -0.01em;
+
+  --lw-type-h2-size: 1.125rem; /* 18px */
+  --lw-type-h2-line: 1.625rem; /* 26px */
+  --lw-type-h2-weight: var(--lw-weight-bold);
+
+  --lw-type-h3-size: 1rem; /* 16px */
+  --lw-type-h3-line: 1.5rem; /* 24px */
+  --lw-type-h3-weight: var(--lw-weight-semibold);
+
+  --lw-type-body-size: 0.875rem; /* 14px */
+  --lw-type-body-line: 1.375rem; /* 22px */
+  --lw-type-body-weight: var(--lw-weight-regular);
+
+  --lw-type-body-sm-size: 0.8125rem; /* 13px */
+  --lw-type-body-sm-line: 1.25rem; /* 20px */
+  --lw-type-body-sm-weight: var(--lw-weight-regular);
+
+  --lw-type-label-size: 0.75rem; /* 12px */
+  --lw-type-label-line: 1rem; /* 16px */
+  --lw-type-label-weight: var(--lw-weight-semibold);
+  --lw-type-label-tracking: 0.06em;
+
+  --lw-type-caption-size: 0.6875rem; /* 11px */
+  --lw-type-caption-line: 1rem; /* 16px */
+  --lw-type-caption-weight: var(--lw-weight-regular);
+
+  --lw-type-kpi-size: 2rem; /* 32px */
+  --lw-type-kpi-line: 2.25rem; /* 36px */
+  --lw-type-kpi-weight: var(--lw-weight-bold);
+
+  /* ---------------------------------------------------------------------
+   * Spacing scale (SG-005) — single scale; margins, gutters, stack gaps and
+   * component padding all reference it. No ad-hoc px in components.
+   * ------------------------------------------------------------------- */
+  --lw-space-0: 0;
+  --lw-space-1: 0.25rem; /* 4px */
+  --lw-space-2: 0.5rem; /* 8px */
+  --lw-space-3: 0.75rem; /* 12px */
+  --lw-space-4: 1rem; /* 16px */
+  --lw-space-6: 1.5rem; /* 24px */
+  --lw-space-8: 2rem; /* 32px */
+  --lw-space-12: 3rem; /* 48px */
+
+  /* Minimum touch target (kept ≥ 44px even in dense/compact regions). */
+  --lw-tap-target: 2.75rem; /* 44px */
+
+  /* Grid / layout tokens (design.md grid table). */
+  --lw-gutter-mobile: 1rem; /* 16px */
+  --lw-gutter-tablet: 1.25rem; /* 20px */
+  --lw-gutter-desktop: 1.5rem; /* 24px */
+  --lw-margin-mobile: 1rem; /* 16px */
+  --lw-margin-tablet: 1.5rem; /* 24px */
+  --lw-margin-desktop: 2rem; /* 32px */
+  --lw-container-laptop: 80rem; /* 1280px */
+  --lw-container-desktop: 100rem; /* 1600px */
+
+  /* ---------------------------------------------------------------------
+   * Radius + elevation (SG-004 design language, SG-003 shape rules):
+   * square corners, no shadows. Kept as tokens so a future theme can adjust.
+   * ------------------------------------------------------------------- */
+  --lw-radius: 0px;
+  --lw-radius-sm: 0px;
+  --lw-radius-lg: 0px;
+  --lw-radius-full: 9999px; /* pills/avatars only */
+  --lw-outline-w: 2px; /* outlines are always 2px, never hairlines */
+
+  /* Elevation is expressed as surface stepping, not shadows. */
+  --lw-shadow: none;
+  --lw-shadow-sm: none;
+  --lw-shadow-lg: none;
+
+  /* ---------------------------------------------------------------------
+   * Motion (SG-007) — named durations + easings. Components must reference
+   * these, never ad-hoc timings. Reduced-motion swaps values at the bottom.
+   * ------------------------------------------------------------------- */
+  --lw-dur-instant: 0ms;
+  --lw-dur-fast: 120ms; /* hover, press, tab fill, every exit */
+  --lw-dur-base: 200ms; /* dialog + toast enter, drop snap */
+  --lw-dur-slow: 320ms; /* panels, drawers, theme change */
+  --lw-dur-shimmer: 1500ms; /* skeleton loop */
+  --lw-toast-hold: 5000ms; /* toast dwell */
+
+  --lw-ease-standard: cubic-bezier(0.2, 0, 0, 1); /* moves on screen */
+  --lw-ease-enter: cubic-bezier(0, 0, 0.2, 1); /* arriving, decelerate */
+  --lw-ease-exit: cubic-bezier(0.4, 0, 1, 1); /* leaving, accelerate */
+  --lw-ease-linear: linear; /* progress, skeleton shimmer */
+
+  /* Native form controls / scrollbars follow the theme. */
+  color-scheme: light;
+}
+
+/* -----------------------------------------------------------------------
+ * Dark mode (SG-009) — VALUE SWAP of semantic tokens only.
+ * Follows the device setting by default; data-theme on the root overrides.
+ * All pairings re-verified ≥ 4.5:1 (AA normal text) per SG-004.
+ * --------------------------------------------------------------------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --lw-bg: var(--lw-slate-950);
+    --lw-surface: var(--lw-slate-900);
+    --lw-surface-2: var(--lw-slate-800);
+
+    --lw-text: var(--lw-slate-100);
+    --lw-text-muted: var(--lw-slate-400);
+
+    --lw-primary: var(--lw-blue-400);
+    --lw-on-primary: var(--lw-slate-950);
+    --lw-primary-soft: var(--lw-blue-900);
+    --lw-on-primary-soft: var(--lw-blue-200);
+
+    --lw-accent: var(--lw-red-400);
+    --lw-on-accent: var(--lw-slate-950);
+
+    --lw-success: var(--lw-green-400);
+    --lw-on-success: var(--lw-slate-950);
+    --lw-warning: var(--lw-amber-400);
+    --lw-on-warning: var(--lw-slate-950);
+    --lw-danger: var(--lw-red-300);
+    --lw-on-danger: var(--lw-slate-950);
+    --lw-info: var(--lw-cyan-400);
+    --lw-on-info: var(--lw-slate-950);
+
+    --lw-outline: var(--lw-slate-400);
+
+    --lw-focus-ring: var(--lw-blue-400);
+
+    --lw-viz-1: #56b4e9;
+    --lw-viz-2: #ff8a4c;
+    --lw-viz-3: #2ec4a0;
+    --lw-viz-4: #e79cc7;
+    --lw-viz-5: #e2e8f0;
+    --lw-viz-6: #5fd3e0;
+
+    color-scheme: dark;
+  }
+}
+
+/* Explicit override: data-theme="dark" forces dark regardless of device. */
+:root[data-theme="dark"] {
+  --lw-bg: var(--lw-slate-950);
+  --lw-surface: var(--lw-slate-900);
+  --lw-surface-2: var(--lw-slate-800);
+
+  --lw-text: var(--lw-slate-100);
+  --lw-text-muted: var(--lw-slate-400);
+
+  --lw-primary: var(--lw-blue-400);
+  --lw-on-primary: var(--lw-slate-950);
+  --lw-primary-soft: var(--lw-blue-900);
+  --lw-on-primary-soft: var(--lw-blue-200);
+
+  --lw-accent: var(--lw-red-400);
+  --lw-on-accent: var(--lw-slate-950);
+
+  --lw-success: var(--lw-green-400);
+  --lw-on-success: var(--lw-slate-950);
+  --lw-warning: var(--lw-amber-400);
+  --lw-on-warning: var(--lw-slate-950);
+  --lw-danger: var(--lw-red-300);
+  --lw-on-danger: var(--lw-slate-950);
+  --lw-info: var(--lw-cyan-400);
+  --lw-on-info: var(--lw-slate-950);
+
+  --lw-outline: var(--lw-slate-400);
+  --lw-focus-ring: var(--lw-blue-400);
+
+  --lw-viz-1: #56b4e9;
+  --lw-viz-2: #ff8a4c;
+  --lw-viz-3: #2ec4a0;
+  --lw-viz-4: #e79cc7;
+  --lw-viz-5: #e2e8f0;
+  --lw-viz-6: #5fd3e0;
+
+  color-scheme: dark;
+}
+
+/* -----------------------------------------------------------------------
+ * Reduced motion (SG-007) — movement durations drop to 0; only short opacity
+ * fades remain. Nothing relies on motion alone (enforced in components too).
+ * --------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --lw-dur-fast: 0ms;
+    --lw-dur-base: 0ms;
+    --lw-dur-slow: 0ms;
+    --lw-dur-shimmer: 0ms;
+  }
+}

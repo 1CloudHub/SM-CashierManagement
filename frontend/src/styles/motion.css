@@ -1,0 +1,334 @@
+/**
+ * LaneWise motion + animation theme (SG-007).
+ *
+ * Builds on the motion PRIMITIVES defined in tokens.css:
+ *   durations  --lw-dur-instant / -fast / -base / -slow / -shimmer / --lw-toast-hold
+ *   easings    --lw-ease-standard / -enter / -exit / -linear
+ *
+ * This file adds the concrete, reusable MOTION LANGUAGE that consumes those
+ * tokens — keyframes and animation utilities for the standard transitions
+ * (fade, slide, expand, skeleton shimmer) and the component animations
+ * (dialogs, drawers, toasts, tab changes, timeline drag/resize feedback).
+ *
+ * Rules (SG-007, NFR-A11Y-001):
+ *   1. Every value here comes from a --lw-* token. No ad-hoc ms/s or beziers.
+ *   2. Motion is functional (feedback + continuity), never decorative-only.
+ *   3. Nothing conveys meaning by motion alone — every animated change also
+ *      shows as text, colour or position. Motion is the polish on top.
+ *   4. prefers-reduced-motion drops all movement to no-motion: transforms are
+ *      removed, only short opacity fades (≤ --lw-dur-fast) remain, the skeleton
+ *      shimmer becomes a static fill, and looping motion stops.
+ *
+ * Consumers use these as Tailwind utilities: animate-fade-in, animate-toast-in,
+ * animate-shimmer, transition-expand, etc. — never hand-rolled @keyframes in
+ * components (eslint blocks raw timings anyway).
+ */
+
+/* -----------------------------------------------------------------------
+ * Keyframes — all movement is expressed as transform/opacity so it stays
+ * cheap to composite and trivial to neutralise under reduced motion.
+ * --------------------------------------------------------------------- */
+
+/* Fade — the universal enter/exit. Also the reduced-motion fallback for
+ * everything that would otherwise move. */
+@keyframes lw-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes lw-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Slide — panels, drawers and menus arriving from an edge. Paired directions
+ * so a drawer can slide from left/right/top/bottom. Distance is a token. */
+@keyframes lw-slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(var(--lw-motion-slide));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes lw-slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(calc(-1 * var(--lw-motion-slide)));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes lw-slide-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(var(--lw-motion-slide));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes lw-slide-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-1 * var(--lw-motion-slide)));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Expand / collapse — accordions, disclosure sections, filter panels.
+ * grid-template-rows animation avoids measuring height in JS. */
+@keyframes lw-expand {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+  to {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+}
+
+@keyframes lw-collapse {
+  from {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+  to {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+
+/* Skeleton shimmer — the only sanctioned looping motion, and only while
+ * loading (SG-007, UX-010). Opacity pulse, linear, 1.5s loop. */
+@keyframes lw-shimmer {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* Dialog — enter is a fade + a small scale-up from 0.98; the backdrop just
+ * fades. Continuity: the dialog "settles" into place rather than popping. */
+@keyframes lw-dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes lw-dialog-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+/* Toast — rises 8px while fading in, then holds, then fades out. The rise is
+ * the token --lw-motion-rise. Announcement to SR is handled in the component;
+ * the motion is pure polish. */
+@keyframes lw-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--lw-motion-rise));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes lw-toast-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(var(--lw-motion-rise));
+  }
+}
+
+/* Timeline drop-snap — the feedback pulse when a dragged shift snaps to the
+ * grid on release. A brief scale nudge that reads as "landed". The dragged
+ * bar shows its new time as text (never motion alone). */
+@keyframes lw-snap {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* -----------------------------------------------------------------------
+ * Motion primitives feeding the keyframes above (distances live as tokens
+ * so no raw px leaks into the animation definitions).
+ * --------------------------------------------------------------------- */
+:root {
+  --lw-motion-slide: 1rem; /* 16px — drawer/panel travel */
+  --lw-motion-rise: 0.5rem; /* 8px — toast rise (SG-007) */
+}
+
+/* -----------------------------------------------------------------------
+ * Tailwind theme registration — exposes animate-* utilities keyed to the
+ * duration + easing tokens. This is the ONLY place keyframe names and token
+ * timings are bound together; components just use the utility.
+ * --------------------------------------------------------------------- */
+@theme {
+  --animate-fade-in: lw-fade-in var(--lw-dur-base) var(--lw-ease-enter);
+  --animate-fade-out: lw-fade-out var(--lw-dur-fast) var(--lw-ease-exit);
+
+  --animate-slide-in-right: lw-slide-in-right var(--lw-dur-slow)
+    var(--lw-ease-standard);
+  --animate-slide-in-left: lw-slide-in-left var(--lw-dur-slow)
+    var(--lw-ease-standard);
+  --animate-slide-in-up: lw-slide-in-up var(--lw-dur-slow)
+    var(--lw-ease-standard);
+  --animate-slide-in-down: lw-slide-in-down var(--lw-dur-slow)
+    var(--lw-ease-standard);
+
+  --animate-shimmer: lw-shimmer var(--lw-dur-shimmer) var(--lw-ease-linear)
+    infinite;
+
+  --animate-dialog-in: lw-dialog-in var(--lw-dur-base) var(--lw-ease-enter);
+  --animate-dialog-out: lw-dialog-out var(--lw-dur-fast) var(--lw-ease-exit);
+
+  --animate-toast-in: lw-toast-in var(--lw-dur-base) var(--lw-ease-enter);
+  --animate-toast-out: lw-toast-out var(--lw-dur-fast) var(--lw-ease-exit);
+
+  --animate-snap: lw-snap var(--lw-dur-base) var(--lw-ease-standard);
+}
+
+/* -----------------------------------------------------------------------
+ * Component / pattern utilities — the standard transitions, each a single
+ * class a component applies. All timings/easings come from tokens.
+ * --------------------------------------------------------------------- */
+
+/* Drawer + side panel: slide + fade at --lw-dur-slow (SG-007). Pick a side
+ * with the direction utilities above; this sets the shared easing/fill. */
+@utility motion-panel {
+  animation: lw-slide-in-right var(--lw-dur-slow) var(--lw-ease-standard);
+}
+
+/* Tab fill cross-fade (SG-007) — no sliding underline; the active fill
+ * cross-fades at --lw-dur-fast. The selected state is also conveyed by
+ * aria-selected + the fill itself, never by the motion. */
+@utility motion-tab {
+  transition:
+    background-color var(--lw-dur-fast) var(--lw-ease-standard),
+    color var(--lw-dur-fast) var(--lw-ease-standard);
+}
+
+/* Expand/collapse wrapper — the element is a grid whose single row animates
+ * between 0fr and 1fr. Add `motion-expandable` to the wrapper and toggle a
+ * data-state or the row template. */
+@utility motion-expandable {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition:
+    grid-template-rows var(--lw-dur-base) var(--lw-ease-standard),
+    opacity var(--lw-dur-base) var(--lw-ease-standard);
+}
+
+/* Skeleton loading fill — the pulsing placeholder. Under reduced motion it
+ * becomes a static fill (handled in the media block below). */
+@utility motion-skeleton {
+  animation: lw-shimmer var(--lw-dur-shimmer) var(--lw-ease-linear) infinite;
+}
+
+/* Timeline drag: the bar follows the pointer with no easing (instant), so the
+ * drag reads as direct manipulation. Apply while a shift is being dragged. */
+@utility motion-drag {
+  transition-duration: var(--lw-dur-instant);
+  transition-timing-function: var(--lw-ease-linear);
+}
+
+/* Timeline drop-snap feedback — the landed pulse on release. */
+@utility motion-snap {
+  animation: lw-snap var(--lw-dur-base) var(--lw-ease-standard);
+}
+
+/* Generic interactive feedback (hover/press) — fast, standard easing. */
+@utility motion-interactive {
+  transition:
+    background-color var(--lw-dur-fast) var(--lw-ease-standard),
+    border-color var(--lw-dur-fast) var(--lw-ease-standard),
+    color var(--lw-dur-fast) var(--lw-ease-standard),
+    opacity var(--lw-dur-fast) var(--lw-ease-standard),
+    transform var(--lw-dur-fast) var(--lw-ease-standard);
+}
+
+/* -----------------------------------------------------------------------
+ * Reduced motion (SG-007, NFR-A11Y-001).
+ *
+ * tokens.css already drops the movement DURATIONS to 0 under this query, so
+ * transition-based utilities settle instantly. Here we also neutralise the
+ * TRANSFORM component of the keyframe animations (so nothing slides/scales),
+ * keep only short opacity fades, and turn the skeleton loop into a static
+ * fill. Meaning is never lost: it was always carried by text/colour/position.
+ * --------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    /* Collapse motion distances so any residual transform is a no-op. */
+    --lw-motion-slide: 0px;
+    --lw-motion-rise: 0px;
+  }
+
+  /* Movement keyframes reduce to an instant, in-place fade. */
+  .motion-panel,
+  [class*='animate-slide'],
+  [class*='animate-dialog'],
+  [class*='animate-toast'] {
+    animation-name: lw-fade-in;
+    animation-duration: var(--lw-dur-fast);
+    animation-timing-function: var(--lw-ease-enter);
+  }
+
+  /* Scale/nudge feedback carries no meaning — drop it entirely. */
+  .motion-snap,
+  [class*='animate-snap'] {
+    animation: none;
+  }
+
+  /* Skeleton stops pulsing and holds a static fill (still says "Loading"). */
+  .motion-skeleton,
+  [class*='animate-shimmer'] {
+    animation: none;
+    opacity: 0.6;
+  }
+}

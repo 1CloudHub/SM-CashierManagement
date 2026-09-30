@@ -1,0 +1,186 @@
+@import "tailwindcss";
+@import "./styles/tokens.css";
+@import "./styles/motion.css";
+
+/**
+ * Tailwind theme mapping.
+ *
+ * This is the ONLY place raw token variables are wired into utilities.
+ * Components then use token-backed utilities (bg-primary, text-muted, p-4,
+ * rounded, duration-base, ...) and never raw hex, px font sizes or ad-hoc ms.
+ *
+ * @theme inline keeps the utilities pointing at the live CSS variables, so a
+ * dark-mode value swap (SG-009) needs no rebuild and no utility change.
+ */
+@theme inline {
+  /* Colours — semantic only (raw ramps stay out of the utility layer). */
+  --color-bg: var(--lw-bg);
+  --color-surface: var(--lw-surface);
+  --color-surface-2: var(--lw-surface-2);
+  --color-text: var(--lw-text);
+  --color-text-muted: var(--lw-text-muted);
+
+  --color-primary: var(--lw-primary);
+  --color-on-primary: var(--lw-on-primary);
+  --color-primary-soft: var(--lw-primary-soft);
+  --color-on-primary-soft: var(--lw-on-primary-soft);
+
+  --color-accent: var(--lw-accent);
+  --color-on-accent: var(--lw-on-accent);
+
+  --color-success: var(--lw-success);
+  --color-on-success: var(--lw-on-success);
+  --color-success-soft: var(--lw-success-soft);
+  --color-on-success-soft: var(--lw-on-success-soft);
+
+  --color-warning: var(--lw-warning);
+  --color-on-warning: var(--lw-on-warning);
+  --color-warning-soft: var(--lw-warning-soft);
+  --color-on-warning-soft: var(--lw-on-warning-soft);
+
+  --color-danger: var(--lw-danger);
+  --color-on-danger: var(--lw-on-danger);
+  --color-danger-soft: var(--lw-danger-soft);
+  --color-on-danger-soft: var(--lw-on-danger-soft);
+
+  --color-info: var(--lw-info);
+  --color-on-info: var(--lw-on-info);
+  --color-info-soft: var(--lw-info-soft);
+  --color-on-info-soft: var(--lw-on-info-soft);
+
+  --color-outline: var(--lw-outline);
+  --color-outline-subtle: var(--lw-outline-subtle);
+  --color-focus-ring: var(--lw-focus-ring);
+
+  --color-viz-1: var(--lw-viz-1);
+  --color-viz-2: var(--lw-viz-2);
+  --color-viz-3: var(--lw-viz-3);
+  --color-viz-4: var(--lw-viz-4);
+  --color-viz-5: var(--lw-viz-5);
+  --color-viz-6: var(--lw-viz-6);
+
+  /* Fonts */
+  --font-sans: var(--lw-font-sans);
+  --font-mono: var(--lw-font-mono);
+  --font-num: var(--lw-font-num);
+
+  /* Type scale — exposed as text-* utilities with paired line-heights. */
+  --text-display: var(--lw-type-display-size);
+  --text-display--line-height: var(--lw-type-display-line);
+  --text-display--font-weight: var(--lw-type-display-weight);
+  --text-display--letter-spacing: var(--lw-type-display-tracking);
+
+  --text-h1: var(--lw-type-h1-size);
+  --text-h1--line-height: var(--lw-type-h1-line);
+  --text-h1--font-weight: var(--lw-type-h1-weight);
+  --text-h1--letter-spacing: var(--lw-type-h1-tracking);
+
+  --text-h2: var(--lw-type-h2-size);
+  --text-h2--line-height: var(--lw-type-h2-line);
+  --text-h2--font-weight: var(--lw-type-h2-weight);
+
+  --text-h3: var(--lw-type-h3-size);
+  --text-h3--line-height: var(--lw-type-h3-line);
+  --text-h3--font-weight: var(--lw-type-h3-weight);
+
+  --text-body: var(--lw-type-body-size);
+  --text-body--line-height: var(--lw-type-body-line);
+  --text-body--font-weight: var(--lw-type-body-weight);
+
+  --text-body-sm: var(--lw-type-body-sm-size);
+  --text-body-sm--line-height: var(--lw-type-body-sm-line);
+  --text-body-sm--font-weight: var(--lw-type-body-sm-weight);
+
+  --text-label: var(--lw-type-label-size);
+  --text-label--line-height: var(--lw-type-label-line);
+  --text-label--font-weight: var(--lw-type-label-weight);
+  --text-label--letter-spacing: var(--lw-type-label-tracking);
+
+  --text-caption: var(--lw-type-caption-size);
+  --text-caption--line-height: var(--lw-type-caption-line);
+  --text-caption--font-weight: var(--lw-type-caption-weight);
+
+  --text-kpi: var(--lw-type-kpi-size);
+  --text-kpi--line-height: var(--lw-type-kpi-line);
+  --text-kpi--font-weight: var(--lw-type-kpi-weight);
+
+  --font-weight-regular: var(--lw-weight-regular);
+  --font-weight-medium: var(--lw-weight-medium);
+  --font-weight-semibold: var(--lw-weight-semibold);
+  --font-weight-bold: var(--lw-weight-bold);
+
+  /* Spacing scale — drives p-*, m-*, gap-* utilities from the token scale. */
+  --spacing-0: var(--lw-space-0);
+  --spacing-1: var(--lw-space-1);
+  --spacing-2: var(--lw-space-2);
+  --spacing-3: var(--lw-space-3);
+  --spacing-4: var(--lw-space-4);
+  --spacing-6: var(--lw-space-6);
+  --spacing-8: var(--lw-space-8);
+  --spacing-12: var(--lw-space-12);
+  --spacing-tap: var(--lw-tap-target);
+
+  /* Layout container widths. */
+  --container-laptop: var(--lw-container-laptop);
+  --container-desktop: var(--lw-container-desktop);
+
+  /* Radius — square by design; pill for avatars/chips only. */
+  --radius-none: var(--lw-radius);
+  --radius-sm: var(--lw-radius-sm);
+  --radius-lg: var(--lw-radius-lg);
+  --radius-full: var(--lw-radius-full);
+
+  /* Elevation — no shadows (surface stepping does the work). */
+  --shadow-none: var(--lw-shadow);
+
+  /* Motion — duration-* and ease-* utilities from tokens. */
+  --animate-duration-instant: var(--lw-dur-instant);
+  --animate-duration-fast: var(--lw-dur-fast);
+  --animate-duration-base: var(--lw-dur-base);
+  --animate-duration-slow: var(--lw-dur-slow);
+
+  --ease-standard: var(--lw-ease-standard);
+  --ease-enter: var(--lw-ease-enter);
+  --ease-exit: var(--lw-ease-exit);
+  --ease-lw-linear: var(--lw-ease-linear);
+}
+
+/* transition-duration + animation-duration utilities keyed to motion tokens. */
+@utility duration-fast {
+  transition-duration: var(--lw-dur-fast);
+}
+@utility duration-base {
+  transition-duration: var(--lw-dur-base);
+}
+@utility duration-slow {
+  transition-duration: var(--lw-dur-slow);
+}
+
+@layer base {
+  html {
+    font-family: var(--lw-font-sans);
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--lw-bg);
+    color: var(--lw-text);
+    font-size: var(--lw-type-body-size);
+    line-height: var(--lw-type-body-line);
+    font-weight: var(--lw-weight-regular);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Numbers, KPIs and axis labels align by default via the numeric token. */
+  .lw-numeric {
+    font-family: var(--lw-font-num);
+    font-variant-numeric: var(--lw-numeric);
+  }
+
+  /* Visible, token-driven focus for every interactive element. */
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: var(--lw-outline-w) solid var(--lw-focus-ring);
+    outline-offset: 2px;
+  }
+}

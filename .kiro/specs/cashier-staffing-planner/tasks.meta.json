@@ -1,0 +1,462 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Frontend scaffold and design tokens": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037107
+      },
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764050757
+      },
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790765361930
+      }
+    ],
+    "1.2 Theme: colour palette and motion/animation": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037161
+      },
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790765371679
+      },
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790765584858
+      }
+    ],
+    "1.3 App brand mark (icon/logo)": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037193
+      },
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790765590396
+      },
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790765745519
+      }
+    ],
+    "1.4 Core components and states": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037221
+      }
+    ],
+    "1.5 Error and status pages (SCR-090)": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037251
+      }
+    ],
+    "1.6 Grid, layout system and responsive breakpoints": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037284
+      }
+    ],
+    "1.7 Accessibility and ARIA/labelling standard": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037342
+      }
+    ],
+    "1.8 Internationalisation and microcopy/voice": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037386
+      }
+    ],
+    "1.9 Keyboard shortcuts and help": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037419
+      }
+    ],
+    "1.10 Component gallery": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037454
+      }
+    ],
+    "2.1 Branching model and protection": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037487
+      }
+    ],
+    "2.2 Repository conventions and PR automation": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037521
+      }
+    ],
+    "3.1 CDK infrastructure skeleton": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037555
+      }
+    ],
+    "3.2 GitHub Actions OIDC and AWS role": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037603
+      }
+    ],
+    "3.3 PR pipeline": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037654
+      }
+    ],
+    "3.4 Deploy pipeline on merge to main": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037691
+      }
+    ],
+    "3.5 Walking-skeleton deploy": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037721
+      }
+    ],
+    "4. Application foundation (API + shared types)": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037754
+      }
+    ],
+    "5.1 Relational schema and migrations": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037787
+      }
+    ],
+    "5.2 Append-only audit log": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037820
+      }
+    ],
+    "6.1 Forecast, Erlang C and shrinkage": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037854
+      }
+    ],
+    "6.2 Shift builder, roster assignment and labor rules": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037889
+      }
+    ],
+    "6.3 Hiring plan and cost model": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037920
+      }
+    ],
+    "6.4 Parity test suite against DOM-001 tolerance": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037953
+      }
+    ],
+    "7.1 Cognito user pool with passkey sign-in": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764037994
+      }
+    ],
+    "7.2 Domain allowlist and self sign-up": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038040
+      }
+    ],
+    "7.3 Session timeout": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038071
+      }
+    ],
+    "8.1 RBAC and scope enforcement (server-side)": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038121
+      }
+    ],
+    "8.2 Demo role switcher": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038193
+      }
+    ],
+    "9.1 File upload and validation": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038237
+      }
+    ],
+    "9.2 Snapshots, staleness signalling and synthetic flag": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038262
+      }
+    ],
+    "9.3 Sample-data provenance": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038292
+      }
+    ],
+    "10.1 Versioned rule sets": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038320
+      }
+    ],
+    "10.2 Cost-rule approval flow": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038350
+      }
+    ],
+    "11.1 Scenario CRUD, lifecycle and single-published invariant": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038383
+      }
+    ],
+    "11.2 Staleness engine": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038409
+      }
+    ],
+    "11.3 Scenario compare": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038436
+      }
+    ],
+    "12. Approval workflow (headcount, budget, plan)": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038469
+      }
+    ],
+    "13.1 Day timeline": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038495
+      }
+    ],
+    "13.2 Week grid, Month coverage and zoom": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038535
+      }
+    ],
+    "13.3 Mobile roster views": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038563
+      }
+    ],
+    "13.4 Store-manager overrides": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038594
+      }
+    ],
+    "14.1 Network view and department day plan": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038625
+      }
+    ],
+    "14.2 Background jobs for hiring plan and long rosters": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038655
+      }
+    ],
+    "14.3 Leadership summary export": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038686
+      }
+    ],
+    "15. Location privacy and home-area consent": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038712
+      }
+    ],
+    "16.1 Map, layers and travel-time rings (Amazon Location Service)": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038750
+      }
+    ],
+    "16.2 Travel-time matrix": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038778
+      }
+    ],
+    "16.3 Candidate ranking and eligibility": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038817
+      }
+    ],
+    "16.4 Auto-match all gaps": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038844
+      }
+    ],
+    "17.1 Offers with single-acceptance": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038870
+      }
+    ],
+    "17.2 Store-to-store borrowing": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038904
+      }
+    ],
+    "18.1 My roster and offers": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038967
+      }
+    ],
+    "18.2 Time-off and swap requests": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764038992
+      }
+    ],
+    "19. Notifications": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764039021
+      }
+    ],
+    "20. Search, filter and saved views": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764039050
+      }
+    ],
+    "21. Cost visibility": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764039079
+      }
+    ],
+    "22. SM brand theming": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764039109
+      }
+    ],
+    "23. Demo data seed and isolation": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764039137
+      }
+    ],
+    "24. Full AWS wiring for feature services": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764039167
+      }
+    ],
+    "25. End-to-end verification against journeys and properties": [
+      {
+        "executionId": "19a4562a-4b60-4be3-a407-cc5f6c0f82e8",
+        "chatSessionId": "sess_de11a484-dee4-4480-b5f3-4b7cd17a8f5f",
+        "timestamp": 1790764039194
+      }
+    ]
+  }
+}
