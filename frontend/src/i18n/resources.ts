@@ -32,6 +32,7 @@
 import { appEn, appFil } from './app-messages'
 import { authEn, authFil } from './auth-messages'
 import { rosterEn, rosterFil } from './roster-messages'
+import { searchEn, searchFil } from './search-messages'
 import type { Bundle, Locale } from './types'
 
 const en: Bundle = {
@@ -306,6 +307,6 @@ const fil: Bundle = {
 
 /** All bundles, keyed by locale. English is the canonical key set. */
 export const BUNDLES: Record<Locale, Bundle> = {
-  en: { ...en, ...authEn, ...appEn, ...rosterEn },
-  fil: { ...fil, ...authFil, ...appFil, ...rosterFil },
+  en: { ...en, ...authEn, ...appEn, ...rosterEn, ...searchEn },
+  fil: { ...fil, ...authFil, ...appFil, ...rosterFil, ...searchFil },
 }

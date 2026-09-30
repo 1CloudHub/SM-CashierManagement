@@ -13,6 +13,7 @@ import {
   type RoleCode,
 } from '@lanewise/shared'
 import { ACTIVE_ROLE_HEADER, type ApiAdapter, type ApiRequest, type ApiResponse } from './client'
+import { createSavedViewStore, mockContextOptions, mockSearch, type MockResult } from './mock-directory'
 import type { HomeKpis, HomeScenarioRow, HomeSummary } from './types'
 
 /**
@@ -30,7 +31,16 @@ import type { HomeKpis, HomeScenarioRow, HomeSummary } from './types'
  * Add a route per endpoint as feature tasks need them.
  */
 
-type Handler = (ctx: { role: RoleCode; request: ApiRequest }) => ApiResponse
+interface HandlerContext {
+  readonly role: RoleCode
+  readonly request: ApiRequest
+  readonly query: URLSearchParams
+  /** The `:id` segment of a `/collection/:id` route. */
+  readonly id: string | null
+  readonly savedViews: ReturnType<typeof createSavedViewStore>
+}
+
+type Handler = (ctx: HandlerContext) => ApiResponse
 
 const NETWORK: CostTarget = { level: 'network' }
 
@@ -167,10 +177,31 @@ const ROUTES: Record<string, Handler> = {
   'GET /health': () =>
     ok({ status: 'ok', service: API_SERVICE_NAME, env: 'mock', time: new Date().toISOString() } satisfies HealthResponse),
   'GET /home': ({ role }) => ok(mockHomeDraft(role)),
+  'GET /search': ({ role, query }) => result(mockSearch(role, query.get('q'), query.get('limit'))),
+  'GET /context-options': ({ role }) => ok(mockContextOptions(role)),
+  'GET /saved-views': ({ query, savedViews }) => result(savedViews.list(query.get('screen'))),
+  'POST /saved-views': ({ request, savedViews }) => result(savedViews.create(request.body), 201),
+  'PATCH /saved-views/:id': ({ request, id, savedViews }) => result(savedViews.update(id ?? '', request.body)),
+  'DELETE /saved-views/:id': ({ id, savedViews }) => result(savedViews.remove(id ?? '')),
 }
 
-function ok(body: unknown): ApiResponse {
-  return { status: 200, body }
+function ok(body: unknown, status = 200): ApiResponse {
+  return { status, body }
+}
+
+const MOCK_ERROR_CODE = { 404: 'not_found', 409: 'conflict', 422: 'validation_failed' } as const
+
+function result<T>(r: MockResult<T>, status = 200): ApiResponse {
+  return r.ok ? ok(r.body, status) : fail(MOCK_ERROR_CODE[r.status], r.message)
+}
+
+/** The route key and `:id` for a path: `/saved-views/view-1` → `/saved-views/:id`. */
+function routeOf(method: string, pathname: string): { key: string; id: string | null } {
+  const exact = `${method} ${pathname}`
+  if (ROUTES[exact]) return { key: exact, id: null }
+  const m = /^(\/[a-z-]+)\/([^/]+)$/.exec(pathname)
+  if (!m) return { key: exact, id: null }
+  return { key: `${method} ${m[1]}/:id`, id: decodeURIComponent(m[2] ?? '') }
 }
 
 let requestSeq = 0
@@ -193,6 +224,7 @@ export interface MockAdapterOptions {
 }
 
 export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {}): ApiAdapter {
+  const savedViews = createSavedViewStore()
   return async (request) => {
     log?.push(request)
     if (latencyMs > 0) await new Promise((resolve) => setTimeout(resolve, latencyMs))
@@ -201,9 +233,11 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
     const role = header(request.headers, ACTIVE_ROLE_HEADER)
     if (!isRoleCode(role)) return fail('bad_request', 'The active role is missing or not recognised.')
 
-    const handler = ROUTES[`${request.method} ${request.path.split('?')[0]}`]
+    const [pathname = '', search = ''] = request.path.split('?', 2)
+    const { key, id } = routeOf(request.method, pathname)
+    const handler = ROUTES[key]
     if (!handler) return fail('not_found', 'We couldn’t find that.')
-    const res = handler({ role, request })
+    const res = handler({ role, request, query: new URLSearchParams(search), id, savedViews })
     // Like the API: strip any ₱ figure the role may not see, on every route.
     return { ...res, body: shapeCost<unknown>(res.body, mockViewer(role)) }
   }

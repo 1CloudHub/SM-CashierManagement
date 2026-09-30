@@ -1,10 +1,10 @@
-import { createContext, useContext, useId, type MouseEvent, type ReactNode } from 'react'
+import { createContext, useContext, type MouseEvent, type ReactNode } from 'react'
 import { AppShell } from '@/components/layout'
 import type { NavSection } from '@/components/shell'
 import { Alert } from '@/components/ui/alert'
 import type { Crumb } from '@/components/ui/breadcrumbs'
-import { Input } from '@/components/ui/input'
 import { useDocumentTitle } from '@/features/auth/use-document-title'
+import { GlobalSearch } from '@/features/search/global-search'
 import { LanguageSwitcher, useI18n } from '@/i18n'
 import { canAccess, navForRole, screenForPath } from './access'
 import { useActiveRole } from './active-role'
@@ -37,12 +37,15 @@ export function useShellSlots(): ShellSlots {
 export function AppLayout({
   title,
   crumbs,
+  contextBar,
   children,
 }: {
   /** Document title (already localised). */
   title: string
   /** Breadcrumb trail after Home; the last item is the current page. */
   crumbs: Crumb[]
+  /** Planning screens: the context bar (scenario + scope filters, saved views). */
+  contextBar?: ReactNode
   children: ReactNode
 }) {
   const { t } = useI18n()
@@ -88,7 +91,8 @@ export function AppLayout({
         mainLabel={t('a11y.mainContent')}
         skipLinkLabel={t('a11y.skipToMain')}
         breadcrumbs={breadcrumbs}
-        search={canAccess(role, 'SCR-041') ? <GlobalSearch /> : undefined}
+        search={canAccess(role, 'SCR-041') ? <GlobalSearch inputId={GLOBAL_SEARCH_ID} /> : undefined}
+        contextBar={contextBar}
         trailing={
           <>
             <LanguageSwitcher />
@@ -107,28 +111,5 @@ export function AppLayout({
         {children}
       </AppShell>
     </div>
-  )
-}
-
-function GlobalSearch() {
-  const { t } = useI18n()
-  const { navigate } = useRouter()
-  const labelId = useId()
-  return (
-    <form
-      role="search"
-      aria-labelledby={labelId}
-      className="w-full max-w-xl"
-      onSubmit={(e) => {
-        e.preventDefault()
-        const q = new FormData(e.currentTarget).get('q')
-        navigate(`/search?q=${encodeURIComponent(typeof q === 'string' ? q.trim() : '')}`)
-      }}
-    >
-      <label id={labelId} htmlFor={GLOBAL_SEARCH_ID} className="sr-only">
-        {t('shell.search.label')}
-      </label>
-      <Input id={GLOBAL_SEARCH_ID} name="q" type="search" placeholder={t('shell.search.placeholder')} />
-    </form>
   )
 }

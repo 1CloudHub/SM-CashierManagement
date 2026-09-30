@@ -94,8 +94,11 @@ export interface SearchResponse {
   };
 }
 
-/** Screens that have a context bar, and so can save views (design.md › Search and filter). */
-export const SAVED_VIEW_SCREENS = ['SCR-020', 'SCR-021', 'SCR-022', 'SCR-023', 'SCR-024', 'SCR-026'] as const;
+/**
+ * Planning screens with a context bar, and so saved views (design.md ›
+ * Search and filter; the wireframes' `ctx()` screens).
+ */
+export const SAVED_VIEW_SCREENS = ['SCR-020', 'SCR-021', 'SCR-022', 'SCR-023'] as const;
 export type SavedViewScreen = (typeof SAVED_VIEW_SCREENS)[number];
 
 export const SAVED_VIEW_NAME_MAX = 80;
