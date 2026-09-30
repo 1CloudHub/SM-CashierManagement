@@ -3,16 +3,18 @@ version: 0.2
 # LaneWise deploy — Build stage (spec task 3.4, DEP-002).
 #
 # Runs in the CodePipeline "Build" stage on merge to `main`. It installs
-# dependencies and builds the SPA (frontend) and the API/CDK app, then hands the
-# whole workspace forward as the build artifact so the Deploy stage can run
+# dependencies and builds the shared types, the API Lambda bundle
+# (api/dist/lambda), the SPA (frontend) and the CDK app, then hands the whole
+# workspace forward as the build artifact so the Deploy stage can run
 # `cdk deploy` against the already-built outputs.
 #
-# Repo layout assumed: /frontend, /infra at the repo root. CodePipeline places
-# the source at $CODEBUILD_SRC_DIR.
+# Repo layout assumed: /packages/shared, /api, /frontend, /infra at the repo
+# root. CodePipeline places the source at $CODEBUILD_SRC_DIR.
 #
 # Artifacts: the entire tree is exported so the Deploy stage has the built SPA
-# (frontend/dist), the infra CDK app, and node_modules available without a
-# second install. The Deploy stage re-runs `cdk synth`/`deploy` from infra.
+# (frontend/dist), the API bundle (api/dist/lambda, deployed as the Lambda code
+# by the ApiStack) and the infra CDK app. The Deploy stage re-runs
+# `cdk synth`/`deploy` from infra, so it needs no API rebuild.
 
 env:
   variables:
@@ -24,13 +26,17 @@ phases:
     runtime-versions:
       nodejs: 20
     commands:
-      - echo "install — restoring dependencies (frontend + infra)"
+      - echo "install — restoring dependencies (shared + API + frontend + infra)"
+      - cd "$CODEBUILD_SRC_DIR/packages/shared" && npm ci
+      - cd "$CODEBUILD_SRC_DIR/api" && npm ci
       - cd "$CODEBUILD_SRC_DIR/frontend" && npm ci
       - cd "$CODEBUILD_SRC_DIR/infra" && npm ci
 
   build:
     commands:
-      - echo "build — SPA (frontend) + CDK app (infra)"
+      - echo "build — shared types + API bundle + SPA (frontend) + CDK app (infra)"
+      - cd "$CODEBUILD_SRC_DIR/packages/shared" && npm run build
+      - cd "$CODEBUILD_SRC_DIR/api" && npm run build
       - cd "$CODEBUILD_SRC_DIR/frontend" && npm run build
       - cd "$CODEBUILD_SRC_DIR/infra" && npm run build
       - echo "cdk synth — validate the cloud assembly before deploy"

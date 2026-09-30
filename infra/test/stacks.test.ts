@@ -1,8 +1,11 @@
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { App } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { describe, expect, it } from 'vitest';
 import { resolveEnvironment } from '../config/environments';
-import { ApiStack } from '../lib/api-stack';
+import { ApiStack, DEFAULT_API_BUNDLE_DIR } from '../lib/api-stack';
 import { DeployPipelineStack } from '../lib/deploy-pipeline-stack';
 import { PipelineIamStack } from '../lib/pipeline-iam-stack';
 import { PipelinePrChecksStack } from '../lib/pipeline-pr-checks-stack';
@@ -68,17 +71,65 @@ describe('SPA hosting stack', () => {
 describe('API stack', () => {
   const { api } = synth();
 
-  it('creates exactly one Lambda function (health check, node 20)', () => {
+  it('runs the bundled API service as a single Node 20 Lambda', () => {
     api.resourceCountIs('AWS::Lambda::Function', 1);
     api.hasResourceProperties('AWS::Lambda::Function', {
+      FunctionName: 'lanewise-prod-api',
       Runtime: 'nodejs20.x',
-      Handler: 'health.handler',
+      Handler: 'index.handler',
+      Environment: {
+        Variables: Match.objectLike({ LANEWISE_ENV: 'prod', NODE_OPTIONS: '--enable-source-maps' }),
+      },
     });
   });
 
-  it('exposes a REST API with a /health resource', () => {
+  it('writes function logs to a retained log group with a retention period', () => {
+    api.resourceCountIs('AWS::Logs::LogGroup', 1);
+    api.hasResourceProperties('AWS::Logs::LogGroup', { RetentionInDays: 90 });
+    api.hasResource('AWS::Logs::LogGroup', { DeletionPolicy: 'Retain' });
+  });
+
+  it('exposes a REST API with GET /health proxied to the API function', () => {
     api.resourceCountIs('AWS::ApiGateway::RestApi', 1);
     api.hasResourceProperties('AWS::ApiGateway::Resource', { PathPart: 'health' });
+    api.hasResourceProperties('AWS::ApiGateway::Method', {
+      HttpMethod: 'GET',
+      AuthorizationType: 'NONE',
+      Integration: Match.objectLike({ Type: 'AWS_PROXY' }),
+    });
+  });
+
+  it('fails synth with a clear message when the API bundle has not been built', () => {
+    const app = new App();
+    expect(
+      () =>
+        new ApiStack(app, 'Test-Api-NoBundle', {
+          config: resolveEnvironment('prod'),
+          apiBundleDir: path.join(os.tmpdir(), 'lanewise-missing-bundle'),
+        }),
+    ).toThrowError(/API bundle not found/);
+  });
+});
+
+describe('API service bundle (built /api output)', () => {
+  it('serves the /health contract from the bundle deployed by the stack', async () => {
+    const bundle = path.join(DEFAULT_API_BUNDLE_DIR, 'index.mjs');
+    const mod = (await import(pathToFileURL(bundle).href)) as {
+      handler: (
+        event: unknown,
+        context: unknown,
+      ) => Promise<{ statusCode: number; headers: Record<string, string>; body: string }>;
+    };
+    const res = await mod.handler(
+      { httpMethod: 'GET', path: '/health', headers: {}, body: null, requestContext: { requestId: 't' } },
+      { awsRequestId: 't' },
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['Content-Type']).toMatch(/^application\/json/);
+    const body = JSON.parse(res.body) as Record<string, unknown>;
+    expect(Object.keys(body).sort()).toEqual(['env', 'service', 'status', 'time']);
+    expect(body).toMatchObject({ status: 'ok', service: 'lanewise-api' });
+    expect(Number.isNaN(Date.parse(body.time as string))).toBe(false);
   });
 });
 
