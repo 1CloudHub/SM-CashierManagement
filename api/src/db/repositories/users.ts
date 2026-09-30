@@ -78,6 +78,38 @@ export async function createUser(tx: AuditedTx, input: CreateUserInput): Promise
   return user;
 }
 
+export interface ProvisionUserInput {
+  /** Pre-generated id: it is also the audit actor of its own creation. */
+  readonly id: string;
+  readonly email: string;
+  readonly name: string;
+  readonly cognitoSub: string;
+  readonly activeRole: RoleCode;
+}
+
+/**
+ * Creates the app user for a self-signed-up identity on their first role
+ * choice (demo mode, requirement 1.7/3.1) — one `user.created` event that
+ * also records the starting role.
+ */
+export async function provisionUser(tx: AuditedTx, input: ProvisionUserInput): Promise<User> {
+  const row = await queryOne<UserRow>(
+    tx,
+    `INSERT INTO app_user (id, email, name, cognito_sub, active_role) VALUES ($1, $2, $3, $4, $5)
+     RETURNING ${USER_COLUMNS}`,
+    [input.id, input.email.toLowerCase(), input.name, input.cognitoSub, input.activeRole],
+  );
+  const user = toUser(row);
+  await audit.record(tx, {
+    action: 'create',
+    event: 'user.created',
+    objectType: 'user',
+    objectId: user.id,
+    after: { email: user.email, name: user.name, language: user.language, activeRole: user.activeRole },
+  });
+  return user;
+}
+
 export interface UpdateProfileInput {
   readonly name?: string;
   readonly language?: Language;

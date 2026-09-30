@@ -1,8 +1,10 @@
 /**
  * API wire contracts shared by the API service and the SPA: the JSON error
- * model and the health-check response.
+ * model, the health-check response and the identity/RBAC contracts.
  */
-import type { IsoDateTime } from './entities.js';
+import type { IsoDateTime, StoreFormat } from './entities.js';
+import type { NavKey, PermissionAction, RbacResource } from './rbac.js';
+import type { RoleCode, Scope } from './roles.js';
 
 export const API_ERROR_CODES = [
   'bad_request',
@@ -66,4 +68,57 @@ export interface HealthResponse {
   readonly service: typeof API_SERVICE_NAME;
   readonly env: string;
   readonly time: IsoDateTime;
+}
+
+/**
+ * Message for a deep link to an object that doesn't exist **or** is outside
+ * the caller's scope. Both cases return the identical 404 body, so a response
+ * never reveals whether an out-of-scope object exists (requirement 2.4, P1).
+ */
+export const NOT_FOUND_OR_NO_ACCESS_MESSAGE = "This item doesn't exist or you don't have access to it.";
+
+/** Request header carrying the demo role switcher's choice (requirement 3.2). */
+export const ACTIVE_ROLE_HEADER = 'X-Active-Role';
+
+/** `GET /me` — who the caller is and what the active role lets them do (task 8.1). */
+export interface MeResponse {
+  readonly user: {
+    /** `null` until the user is provisioned (first role choice in demo mode). */
+    readonly id: string | null;
+    readonly email: string;
+    readonly name: string;
+  };
+  readonly provisioned: boolean;
+  readonly demoMode: boolean;
+  readonly assignments: readonly { readonly role: RoleCode; readonly scope: Scope }[];
+  /** Roles the switcher may offer: all 8 in demo mode, else the assigned ones. */
+  readonly selectableRoles: readonly RoleCode[];
+  readonly activeRole: RoleCode | null;
+  /** The active role's data scope; `null` without an active role. */
+  readonly scope: Scope | null;
+  readonly permissions: Partial<Record<RbacResource, PermissionAction[]>>;
+  readonly nav: readonly NavKey[];
+  /** Staff (self scope) only: the caller's own staff record, never anyone else's (P11). */
+  readonly staff: { readonly id: string; readonly name: string } | null;
+}
+
+/** `PUT /me/active-role` request body. */
+export interface SetActiveRoleRequest {
+  readonly role: RoleCode;
+}
+
+/** A store as listed on SCR-052 and in scope pickers. */
+export interface StoreSummary {
+  readonly id: string;
+  readonly code: string;
+  readonly name: string;
+  readonly format: StoreFormat;
+  readonly regionId: string;
+  readonly active: boolean;
+  readonly synthetic: boolean;
+}
+
+/** `GET /stores` — only stores in the active role's scope (P1). */
+export interface StoreListResponse {
+  readonly stores: readonly StoreSummary[];
 }

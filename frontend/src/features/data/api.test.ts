@@ -30,7 +30,20 @@ describe('createDataApi request shapes', () => {
     expect(url).toBe('https://api.example.com/datasets')
     expect(init.method).toBe('GET')
     expect(headers.Authorization).toBe('id-token')
+    expect(headers['X-Active-Role']).toBeUndefined()
     expect(init.body).toBeUndefined()
+  })
+
+  it('sends the active role as X-Active-Role when one is set', async () => {
+    const fetch = vi.fn<FetchLike>().mockImplementation(async () => json(200, { datasets: [], provenance: { sampleData: false, syntheticDatasetTypes: [] } }))
+    const api = createDataApi({
+      baseUrl: 'https://api.example.com',
+      getToken: async () => 'id-token',
+      getActiveRole: () => 'RST',
+      fetch,
+    })
+    await api.listDatasets()
+    expect(call(fetch).headers['X-Active-Role']).toBe('RST')
   })
 
   it('builds query strings for history and snapshots', async () => {

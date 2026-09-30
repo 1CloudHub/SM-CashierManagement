@@ -1,6 +1,43 @@
+import { BrandMark } from '@/components/brand'
 import { Section } from '@/components/layout/section'
 import { Stack } from '@/components/layout/stack'
 import { Subsection, Swatch, SpecRow } from './gallery-parts'
+
+/**
+ * The raw brand ramps (PRIMITIVES). Shown for reference only — components use
+ * the semantic roles. Rendered through the --lw-* variables so the gallery
+ * tracks tokens.css with no colour value duplicated here.
+ */
+const RAMPS: readonly { name: string; stops: readonly number[] }[] = [
+  { name: 'blue', stops: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { name: 'red', stops: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900] },
+  { name: 'slate', stops: [0, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] },
+]
+
+function Ramp({ name, stops }: { name: string; stops: readonly number[] }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <code className="text-caption text-text-muted">--lw-{name}-*</code>
+      <div className="flex border-2 border-outline">
+        {stops.map((stop) => (
+          <div
+            key={stop}
+            className="h-10 flex-1"
+            style={{ backgroundColor: `var(--lw-${name}-${stop})` }}
+            title={`--lw-${name}-${stop}`}
+          />
+        ))}
+      </div>
+      <div className="flex">
+        {stops.map((stop) => (
+          <code key={stop} className="flex-1 text-center text-caption text-text-muted">
+            {stop}
+          </code>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 /**
  * Foundations — the design-token reference (task 1.10; tokens from 1.1/1.2,
@@ -17,8 +54,50 @@ export function FoundationsSection() {
   return (
     <Stack gap={8}>
       <Subsection
+        title="Brand — LaneWise by SM Retail"
+        hint="The three-lane mark, wordmark and 'by SM Retail' endorsement (concept v0.5, task 22). Coloured only by the brand roles, so it follows dark mode and an SM re-brand. SM brand + legal sign-off is pending (Q8/Q28)."
+      >
+        <div className="flex flex-wrap items-center gap-6">
+          <div className="border-2 border-outline-subtle bg-surface p-4">
+            <BrandMark />
+          </div>
+          <div className="border-2 border-outline-subtle bg-bg p-4">
+            <BrandMark />
+          </div>
+          <div className="flex items-center gap-3 border-2 border-outline-subtle bg-surface p-4">
+            <BrandMark lockup="mark" className="h-4" />
+            <BrandMark lockup="mark" className="h-6" />
+            <BrandMark lockup="mark" className="h-9" />
+          </div>
+        </div>
+        <div className="flex items-center gap-4 bg-appbar pr-4 text-on-appbar">
+          <BrandMark variant="reversed" className="m-2" />
+          <span className="ml-auto border-2 border-on-appbar px-3 py-1 text-body-sm">
+            Reversed on the primary app bar
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-3 tablet:grid-cols-4">
+          <Swatch token="bg-brand" onToken="text-on-brand" />
+          <Swatch token="bg-appbar" onToken="text-on-appbar" />
+          <Swatch token="bg-brand-endorsement" onToken="text-surface" />
+          <Swatch token="bg-focus-ring" onToken="text-surface" sample="" />
+        </div>
+      </Subsection>
+
+      <Subsection
+        title="Colour — brand ramps (primitives)"
+        hint="The raw LaneWise ramps that feed every semantic role. Reference only: components never read these. To re-brand, replace these values in tokens.css (SG-004 'Swapping the brand'); the contrast suite re-checks every pair in both themes."
+      >
+        <Stack gap={3}>
+          {RAMPS.map((r) => (
+            <Ramp key={r.name} name={r.name} stops={r.stops} />
+          ))}
+        </Stack>
+      </Subsection>
+
+      <Subsection
         title="Colour — semantic roles"
-        hint="Components read these roles, never the raw ramps. Every fill has a matching on-colour verified for AA contrast (SG-004). Dark mode swaps the values only."
+        hint="Components read these roles, never the raw ramps. Every fill has a matching on-colour; tokens.contrast.test.ts fails the build if any pair drops below 4.5:1 (text) or 3:1 (outlines, focus, chart series) in either theme. Dark mode swaps the values only."
       >
         <div className="grid grid-cols-2 gap-3 tablet:grid-cols-4 laptop:grid-cols-6">
           <Swatch token="bg-bg" />
@@ -37,6 +116,8 @@ export function FoundationsSection() {
           <Swatch token="bg-info-soft" onToken="text-on-info-soft" />
           <Swatch token="bg-text" onToken="text-bg" />
           <Swatch token="bg-text-muted" onToken="text-bg" />
+          <Swatch token="bg-outline" onToken="text-surface" sample="" />
+          <Swatch token="bg-outline-subtle" onToken="text-text" sample="" />
         </div>
         <p className="text-body-sm text-text-muted">
           Accent red is emphasis only — never a status. Status is always text +
@@ -60,7 +141,7 @@ export function FoundationsSection() {
 
       <Subsection
         title="Type scale"
-        hint="Size / line-height / weight / tracking are separate tokens, applied via the text-* utilities. Components never hardcode px font sizes (SG-002)."
+        hint="Size / line-height / weight / tracking are separate tokens, applied via the text-* utilities. Components never hardcode px font sizes (SG-002). System UI stack with Noto Sans as the fallback for Ñ/ñ and the peso sign (U+20B1)."
       >
         <Stack gap={2}>
           <p className="text-display text-text">Display — 32/40</p>
@@ -78,6 +159,9 @@ export function FoundationsSection() {
           </p>
           <p className="text-caption text-text-muted">
             Caption — 11. The smallest supporting text.
+          </p>
+          <p className="text-body text-text">
+            Filipino coverage — Ñ ñ · Mag-iskedyul ng kahera sa Parañaque · ₱
           </p>
           <p className="lw-numeric text-kpi text-text">₱13,600,000</p>
           <p className="text-body-sm text-text-muted">

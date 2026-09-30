@@ -2,7 +2,8 @@
  * Object storage for ingestion (task 9.1): raw uploads under `uploads/`
  * (written by the browser through a presigned PUT URL, kept 1 year — Q13) and
  * normalised, immutable snapshot data under `snapshots/` (pinned by
- * scenarios). The bucket is `INGESTION_BUCKET` (infra/lib/ingestion-storage.ts).
+ * scenarios). The bucket is the task-24 uploads bucket, `UPLOADS_BUCKET`
+ * (infra/lib/data-stack.ts; layout in infra/lib/ingestion-storage.ts).
  */
 import { createHash } from 'node:crypto';
 import { GetObjectCommand, PutObjectCommand, S3Client, type S3ClientConfig } from '@aws-sdk/client-s3';

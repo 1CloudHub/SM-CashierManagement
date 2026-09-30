@@ -12,8 +12,14 @@
  *      no component or Tailwind-utility change is required. The light block
  *      lives in :root; the dark block re-declares the same semantic names.
  *
- * When SM brand guidelines land (SG-004, Q8), swap the ramp + semantic
- * values here; nothing downstream changes.
+ * Brand theming (task 22, SG-004 "Swapping the brand"): the LaneWise v0.5
+ * concept (primary #1d4ed8, accent #dc2626, slate neutrals, square corners,
+ * 2px outlines, no shadows). SM brand + legal sign-off is pending (Q8/Q28),
+ * so the brand is isolated here: to re-brand, replace the ramps and the
+ * --lw-brand* / --lw-appbar* roles below (and the BrandMark component's
+ * geometry if the logo changes), then run `npm test` — the contrast suite
+ * (tokens.contrast.test.ts) fails if any fill/on-colour pair drops below
+ * WCAG AA in either theme. Nothing downstream changes.
  */
 
 :root {
@@ -62,30 +68,50 @@
   /* status ramps */
   --lw-green-50: #f0fdf4;
   --lw-green-100: #dcfce7;
+  --lw-green-300: #86efac;
+  --lw-green-400: #4ade80;
   --lw-green-600: #15803d;
   --lw-green-700: #166534;
   --lw-green-800: #14532d;
-  --lw-green-400: #4ade80;
+  --lw-green-950: #052e16;
 
   --lw-amber-50: #fffbeb;
   --lw-amber-100: #fef3c7;
+  --lw-amber-300: #fcd34d;
   --lw-amber-400: #fbbf24;
   --lw-amber-600: #b45309;
   --lw-amber-700: #92400e;
   --lw-amber-800: #78350f;
+  --lw-amber-950: #451a03;
 
   --lw-rose-50: #fef2f2;
   --lw-rose-100: #fee2e2;
   --lw-rose-600: #b91c1c;
   --lw-rose-700: #991b1b;
   --lw-rose-800: #7f1d1d;
+  --lw-rose-950: #450a0a;
 
   --lw-cyan-50: #ecfeff;
   --lw-cyan-100: #cffafe;
+  --lw-cyan-300: #67e8f9;
   --lw-cyan-400: #22d3ee;
   --lw-cyan-600: #0e7490;
   --lw-cyan-700: #155e75;
   --lw-cyan-800: #164e63;
+  --lw-cyan-950: #083344;
+
+  /* categorical (Okabe–Ito, contrast-adjusted; SG-010) — "strong" stops sit on
+   * light surfaces, "bright" stops on dark surfaces. */
+  --lw-cat-blue-strong: #0060a8;
+  --lw-cat-vermillion-strong: #c24f00;
+  --lw-cat-green-strong: #00795b;
+  --lw-cat-pink-strong: #b2548c;
+  --lw-cat-sky-strong: #2b8cc4;
+  --lw-cat-blue-bright: #56b4e9;
+  --lw-cat-vermillion-bright: #ff8a4c;
+  --lw-cat-green-bright: #2ec4a0;
+  --lw-cat-pink-bright: #e79cc7;
+  --lw-cat-sky-bright: #5fd3e0;
 
   /* ---------------------------------------------------------------------
    * Colour — semantic tokens (light, default). AA-verified (SG-004).
@@ -99,30 +125,30 @@
   --lw-text-muted: var(--lw-slate-600);
 
   --lw-primary: var(--lw-blue-600);
-  --lw-on-primary: #ffffff;
+  --lw-on-primary: var(--lw-slate-0);
   --lw-primary-soft: var(--lw-blue-100);
   --lw-on-primary-soft: var(--lw-blue-700);
 
   --lw-accent: var(--lw-red-600);
-  --lw-on-accent: #ffffff;
+  --lw-on-accent: var(--lw-slate-0);
 
   --lw-success: var(--lw-green-600);
-  --lw-on-success: #ffffff;
+  --lw-on-success: var(--lw-slate-0);
   --lw-success-soft: var(--lw-green-100);
   --lw-on-success-soft: var(--lw-green-700);
 
   --lw-warning: var(--lw-amber-600);
-  --lw-on-warning: #ffffff;
+  --lw-on-warning: var(--lw-slate-0);
   --lw-warning-soft: var(--lw-amber-100);
   --lw-on-warning-soft: var(--lw-amber-700);
 
   --lw-danger: var(--lw-rose-600);
-  --lw-on-danger: #ffffff;
+  --lw-on-danger: var(--lw-slate-0);
   --lw-danger-soft: var(--lw-rose-100);
   --lw-on-danger-soft: var(--lw-rose-700);
 
   --lw-info: var(--lw-cyan-600);
-  --lw-on-info: #ffffff;
+  --lw-on-info: var(--lw-slate-0);
   --lw-info-soft: var(--lw-cyan-100);
   --lw-on-info-soft: var(--lw-cyan-700);
 
@@ -131,14 +157,28 @@
 
   --lw-focus-ring: var(--lw-blue-600);
 
+  /* Modal scrim (dialogs, drawers). */
+  --lw-scrim: rgb(2 6 23 / 0.55);
+
+  /* Brand roles (task 22). The brand mark, the reversed primary app bar and
+   * the "by SM Retail" endorsement read these, never the primary role
+   * directly, so an SM re-brand (e.g. SM navy for the bar) can diverge from
+   * the action colour without touching components. Defined by reference so
+   * the dark value swap flows through automatically. */
+  --lw-brand: var(--lw-primary);
+  --lw-on-brand: var(--lw-on-primary);
+  --lw-brand-endorsement: var(--lw-text-muted); /* endorsement on surfaces */
+  --lw-appbar: var(--lw-brand); /* reversed primary app bar */
+  --lw-on-appbar: var(--lw-on-brand);
+
   /* Data-visualisation palette (SG-010) — Okabe–Ito, colour-blind safe.
    * Kept separate from status colours; always paired with a label + marker. */
-  --lw-viz-1: #0060a8;
-  --lw-viz-2: #c24f00;
-  --lw-viz-3: #00795b;
-  --lw-viz-4: #b2548c;
-  --lw-viz-5: #1e293b;
-  --lw-viz-6: #2b8cc4;
+  --lw-viz-1: var(--lw-cat-blue-strong);
+  --lw-viz-2: var(--lw-cat-vermillion-strong);
+  --lw-viz-3: var(--lw-cat-green-strong);
+  --lw-viz-4: var(--lw-cat-pink-strong);
+  --lw-viz-5: var(--lw-slate-800);
+  --lw-viz-6: var(--lw-cat-sky-strong);
 
   /* ---------------------------------------------------------------------
    * Typography (SG-002)
@@ -263,7 +303,10 @@
 /* -----------------------------------------------------------------------
  * Dark mode (SG-009) — VALUE SWAP of semantic tokens only.
  * Follows the device setting by default; data-theme on the root overrides.
- * All pairings re-verified ≥ 4.5:1 (AA normal text) per SG-004.
+ * The two blocks below MUST stay identical (the contrast suite asserts it).
+ * Brand/app-bar roles are defined by reference in :root, so they follow the
+ * swapped primary automatically. Every pair is checked by
+ * tokens.contrast.test.ts (≥ 4.5:1 text, ≥ 3:1 non-text) per SG-004.
  * --------------------------------------------------------------------- */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -284,23 +327,35 @@
 
     --lw-success: var(--lw-green-400);
     --lw-on-success: var(--lw-slate-950);
+    --lw-success-soft: var(--lw-green-950);
+    --lw-on-success-soft: var(--lw-green-300);
+
     --lw-warning: var(--lw-amber-400);
     --lw-on-warning: var(--lw-slate-950);
+    --lw-warning-soft: var(--lw-amber-950);
+    --lw-on-warning-soft: var(--lw-amber-300);
+
     --lw-danger: var(--lw-red-300);
     --lw-on-danger: var(--lw-slate-950);
+    --lw-danger-soft: var(--lw-rose-950);
+    --lw-on-danger-soft: var(--lw-red-300);
+
     --lw-info: var(--lw-cyan-400);
     --lw-on-info: var(--lw-slate-950);
+    --lw-info-soft: var(--lw-cyan-950);
+    --lw-on-info-soft: var(--lw-cyan-300);
 
     --lw-outline: var(--lw-slate-400);
+    --lw-outline-subtle: var(--lw-slate-700);
 
     --lw-focus-ring: var(--lw-blue-400);
 
-    --lw-viz-1: #56b4e9;
-    --lw-viz-2: #ff8a4c;
-    --lw-viz-3: #2ec4a0;
-    --lw-viz-4: #e79cc7;
-    --lw-viz-5: #e2e8f0;
-    --lw-viz-6: #5fd3e0;
+    --lw-viz-1: var(--lw-cat-blue-bright);
+    --lw-viz-2: var(--lw-cat-vermillion-bright);
+    --lw-viz-3: var(--lw-cat-green-bright);
+    --lw-viz-4: var(--lw-cat-pink-bright);
+    --lw-viz-5: var(--lw-slate-200);
+    --lw-viz-6: var(--lw-cat-sky-bright);
 
     color-scheme: dark;
   }
@@ -325,22 +380,35 @@
 
   --lw-success: var(--lw-green-400);
   --lw-on-success: var(--lw-slate-950);
+  --lw-success-soft: var(--lw-green-950);
+  --lw-on-success-soft: var(--lw-green-300);
+
   --lw-warning: var(--lw-amber-400);
   --lw-on-warning: var(--lw-slate-950);
+  --lw-warning-soft: var(--lw-amber-950);
+  --lw-on-warning-soft: var(--lw-amber-300);
+
   --lw-danger: var(--lw-red-300);
   --lw-on-danger: var(--lw-slate-950);
+  --lw-danger-soft: var(--lw-rose-950);
+  --lw-on-danger-soft: var(--lw-red-300);
+
   --lw-info: var(--lw-cyan-400);
   --lw-on-info: var(--lw-slate-950);
+  --lw-info-soft: var(--lw-cyan-950);
+  --lw-on-info-soft: var(--lw-cyan-300);
 
   --lw-outline: var(--lw-slate-400);
+  --lw-outline-subtle: var(--lw-slate-700);
+
   --lw-focus-ring: var(--lw-blue-400);
 
-  --lw-viz-1: #56b4e9;
-  --lw-viz-2: #ff8a4c;
-  --lw-viz-3: #2ec4a0;
-  --lw-viz-4: #e79cc7;
-  --lw-viz-5: #e2e8f0;
-  --lw-viz-6: #5fd3e0;
+  --lw-viz-1: var(--lw-cat-blue-bright);
+  --lw-viz-2: var(--lw-cat-vermillion-bright);
+  --lw-viz-3: var(--lw-cat-green-bright);
+  --lw-viz-4: var(--lw-cat-pink-bright);
+  --lw-viz-5: var(--lw-slate-200);
+  --lw-viz-6: var(--lw-cat-sky-bright);
 
   color-scheme: dark;
 }

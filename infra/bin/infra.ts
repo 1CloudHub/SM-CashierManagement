@@ -3,7 +3,11 @@ import { App, Tags } from 'aws-cdk-lib';
 import { resolveEnvironment } from '../config/environments';
 import { ApiStack } from '../lib/api-stack';
 import { AuthStack } from '../lib/auth-stack';
+import { DataStack } from '../lib/data-stack';
 import { DeployPipelineStack } from '../lib/deploy-pipeline-stack';
+import { JobsStack } from '../lib/jobs-stack';
+import { LocationStack } from '../lib/location-stack';
+import { grantSesSend, sesEnvironment } from '../lib/notifications';
 import { PipelineIamStack } from '../lib/pipeline-iam-stack';
 import { PipelinePrChecksStack } from '../lib/pipeline-pr-checks-stack';
 import { SpaHostingStack } from '../lib/spa-hosting-stack';
@@ -30,16 +34,75 @@ const spa = new SpaHostingStack(app, `${prefix}-SpaHosting`, {
 const auth = new AuthStack(app, `${prefix}-Auth`, {
   env,
   config,
-  relyingPartyId: config.auth.relyingPartyId ?? spa.distribution.distributionDomainName,
+  relyingPartyId: config.auth.relyingPartyId ?? config.domainName ?? spa.distribution.distributionDomainName,
   description: `LaneWise authentication (Cognito passkeys + domain allowlist) — ${config.envName}.`,
+});
+
+// Feature data services (task 24): VPC + Aurora PostgreSQL + migrations +
+// uploads bucket, the background-job queue/worker, and Amazon Location.
+const data = new DataStack(app, `${prefix}-Data`, {
+  env,
+  config,
+  uploadCorsOrigins: [
+    `https://${spa.distribution.distributionDomainName}`,
+    ...(config.domainName ? [`https://${config.domainName}`] : []),
+  ],
+  description: `LaneWise data tier (VPC, Aurora PostgreSQL, migrations, uploads bucket) — ${config.envName}.`,
+});
+
+const jobs = new JobsStack(app, `${prefix}-Jobs`, {
+  env,
+  config,
+  vpc: data.vpc,
+  appSubnets: data.appSubnets,
+  appSecurityGroup: data.appSecurityGroup,
+  dbSecret: data.dbSecret,
+  dbEnvironment: data.dbEnvironment,
+  description: `LaneWise background jobs (SQS + worker Lambda) — ${config.envName}.`,
+});
+
+const location = new LocationStack(app, `${prefix}-Location`, {
+  env,
+  config,
+  description: `LaneWise Amazon Location Service (map + route calculator) — ${config.envName}.`,
 });
 
 const api = new ApiStack(app, `${prefix}-Api`, {
   env,
   config,
   userPool: auth.userPool,
+  // CORS: only the SPA's origins (custom domain + CloudFront domain).
+  allowedOrigins: spa.spaOrigins,
+  network: { vpc: data.vpc, subnets: data.appSubnets, securityGroups: [data.appSecurityGroup] },
+  serviceEnvironment: {
+    ...data.dbEnvironment,
+    UPLOADS_BUCKET: data.uploadsBucket.bucketName,
+    JOBS_QUEUE_URL: jobs.queue.queueUrl,
+    LOCATION_MAP_NAME: location.mapName,
+    LOCATION_ROUTE_CALCULATOR: location.routeCalculatorName,
+    ...sesEnvironment(data, config.notifications),
+  },
   description: `LaneWise API (Lambda + API Gateway) — ${config.envName}.`,
 });
+
+// Least-privilege grants for the feature services, each scoped to the one
+// resource it uses (policies land on the function roles in Api/Jobs stacks).
+data.dbSecret.grantRead(api.apiFunction);
+data.uploadsBucket.grantPut(api.apiFunction);
+data.uploadsBucket.grantRead(api.apiFunction);
+jobs.queue.grantSendMessages(api.apiFunction);
+location.grantMap(api.apiFunction);
+location.grantRoutes(api.apiFunction);
+grantSesSend(api, api.apiFunction, config.notifications);
+
+jobs.worker.addEnvironment('UPLOADS_BUCKET', data.uploadsBucket.bucketName);
+jobs.worker.addEnvironment('LOCATION_ROUTE_CALCULATOR', location.routeCalculatorName);
+for (const [key, value] of Object.entries(sesEnvironment(jobs, config.notifications))) {
+  jobs.worker.addEnvironment(key, value);
+}
+data.uploadsBucket.grantRead(jobs.worker);
+location.grantRoutes(jobs.worker);
+grantSesSend(jobs, jobs.worker, config.notifications);
 
 // Source connection + scoped IAM service roles for the CI/CD pipeline (task 3.2).
 // The pipeline and build projects themselves are added in tasks 3.3/3.4.
@@ -81,6 +144,9 @@ for (const [key, value] of Object.entries(config.tags)) {
 
 void spa;
 void auth;
+void data;
+void jobs;
+void location;
 void api;
 void pipelineIam;
 void pipelinePrChecks;

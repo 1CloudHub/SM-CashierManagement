@@ -17,9 +17,10 @@
  *   PATCH /snapshots/:snapshotId          set/clear the synthetic flag
  *
  * RBAC matrix row "Data ingestion and upload (SCR-050/051)": ADM V, PLN V,
- * RST M. Each route declares its permission once (the `permission` option);
- * the Rules-Steward-only clearing of the synthetic flag (Req 17.6) is a
- * domain rule checked in the handler on top of that.
+ * RST M — each route's guard is `authorize('data_ingestion', view|manage)`
+ * (task 8.1). The Rules-Steward-only clearing of the synthetic flag
+ * (Req 17.6) is a domain rule checked in the handler on top of that. The
+ * banner route is `authenticated()`: every signed-in role sees the banner.
  */
 import { randomUUID } from 'node:crypto';
 import {
@@ -41,21 +42,27 @@ import {
   type WithProvenance,
 } from '@lanewise/shared';
 import { z } from 'zod';
-import { requirePrincipal, type RequestContext } from '../context.js';
+import type pg from 'pg';
+import { authenticated, authorize } from '../auth/guards.js';
+import { requireIdentity, requirePrincipal, type RequestContext } from '../context.js';
 import { actorFromPrincipal, withAuditedTransaction, type Actor } from '../db/audit.js';
 import { recordExport } from '../db/repositories/exports.js';
 import * as repo from '../db/repositories/ingestion-workflow.js';
-import type { AppDeps } from '../deps.js';
 import { errors } from '../http/errors.js';
-import type { RoutePermission } from '../http/permissions.js';
 import type { Router } from '../http/router.js';
 import type { RouteHandler } from '../http/types.js';
 import { parseInput } from '../http/validation.js';
-import { isUploadKeyFor, snapshotDataKey, uploadKey } from '../ingestion/storage.js';
+import { isUploadKeyFor, snapshotDataKey, uploadKey, type IngestionStorage } from '../ingestion/storage.js';
 import { validateDataset } from '../ingestion/validate.js';
 
-const VIEW: RoutePermission = { resource: 'data_ingestion', action: 'view' };
-const MANAGE: RoutePermission = { resource: 'data_ingestion', action: 'manage' };
+const VIEW = authorize('data_ingestion', 'view');
+const MANAGE = authorize('data_ingestion', 'manage');
+
+export interface IngestionDeps {
+  readonly db: () => pg.Pool;
+  /** Omitted or throwing => 503 on the routes that need storage. */
+  readonly storage?: () => IngestionStorage;
+}
 
 /** Presigned upload URLs are valid for 15 minutes. */
 export const UPLOAD_URL_TTL_SECONDS = 15 * 60;
@@ -133,7 +140,12 @@ function baseName(fileName: string): string {
 // Routes
 // ---------------------------------------------------------------------------
 
-export function registerIngestionRoutes(router: Router, deps: AppDeps): Router {
+export function registerIngestionRoutes(router: Router, deps: IngestionDeps): Router {
+  const storageOf = (): IngestionStorage => {
+    if (!deps.storage) throw errors.serviceUnavailable();
+    return deps.storage();
+  };
+
   const listDatasets: RouteHandler = async () => {
     const db = deps.db();
     const datasets = await repo.datasetSummaries(db);
@@ -145,7 +157,7 @@ export function registerIngestionRoutes(router: Router, deps: AppDeps): Router {
   // route needs no capability beyond being signed in; it reveals only which
   // dataset types are synthetic.
   const provenance: RouteHandler = async (_request, context) => {
-    requirePrincipal(context);
+    requireIdentity(context);
     const body: ProvenanceInfo = await repo.inUseProvenance(deps.db());
     return { statusCode: 200, body };
   };
@@ -154,7 +166,7 @@ export function registerIngestionRoutes(router: Router, deps: AppDeps): Router {
     actorOf(context);
     const input = parseInput(uploadBody, request.body, 'body');
     const key = uploadKey(input.datasetType, randomUUID(), input.fileName);
-    const signed = await deps.storage().presignPut(key, input.contentType, UPLOAD_URL_TTL_SECONDS);
+    const signed = await storageOf().presignPut(key, input.contentType, UPLOAD_URL_TTL_SECONDS);
     const body: UploadUrlResponse = {
       fileKey: key,
       uploadUrl: signed.url,
@@ -173,7 +185,7 @@ export function registerIngestionRoutes(router: Router, deps: AppDeps): Router {
       ]);
     }
     const db = deps.db();
-    const storage = deps.storage();
+    const storage = storageOf();
     const file = await storage.getText(input.fileKey, MAX_UPLOAD_BYTES);
     if (!file) {
       throw errors.validationFailed('The file has not been uploaded yet.', [
@@ -386,17 +398,17 @@ export function registerIngestionRoutes(router: Router, deps: AppDeps): Router {
   };
 
   return router
-    .get('/datasets', listDatasets, { permission: VIEW })
-    .get('/datasets/provenance', provenance)
-    .post('/ingestions/uploads', createUploadUrl, { permission: MANAGE })
-    .post('/ingestions', createIngestion, { permission: MANAGE })
-    .get('/ingestions', listIngestions, { permission: VIEW })
-    .get('/ingestions/export', exportIngestions, { permission: VIEW })
-    .get('/ingestions/:ingestionId', getIngestion, { permission: VIEW })
-    .get('/ingestions/:ingestionId/report', ingestionReport, { permission: VIEW })
-    .post('/ingestions/:ingestionId/load', loadIngestion, { permission: MANAGE })
-    .post('/ingestions/:ingestionId/cancel', cancelIngestion, { permission: MANAGE })
-    .get('/snapshots', listSnapshots, { permission: VIEW })
-    .get('/snapshots/:snapshotId', getSnapshot, { permission: VIEW })
-    .patch('/snapshots/:snapshotId', updateSnapshot, { permission: MANAGE });
+    .get('/datasets', VIEW, listDatasets)
+    .get('/datasets/provenance', authenticated(), provenance)
+    .post('/ingestions/uploads', MANAGE, createUploadUrl)
+    .post('/ingestions', MANAGE, createIngestion)
+    .get('/ingestions', VIEW, listIngestions)
+    .get('/ingestions/export', VIEW, exportIngestions)
+    .get('/ingestions/:ingestionId', VIEW, getIngestion)
+    .get('/ingestions/:ingestionId/report', VIEW, ingestionReport)
+    .post('/ingestions/:ingestionId/load', MANAGE, loadIngestion)
+    .post('/ingestions/:ingestionId/cancel', MANAGE, cancelIngestion)
+    .get('/snapshots', VIEW, listSnapshots)
+    .get('/snapshots/:snapshotId', VIEW, getSnapshot)
+    .patch('/snapshots/:snapshotId', MANAGE, updateSnapshot);
 }

@@ -1,5 +1,6 @@
 import {
   HTTP_STATUS_BY_ERROR_CODE,
+  NOT_FOUND_OR_NO_ACCESS_MESSAGE,
   type ApiErrorBody,
   type ApiErrorCode,
   type ApiErrorDetail,
@@ -40,6 +41,11 @@ export const errors = {
   /** Deliberately generic: never reveal anything about an out-of-scope object (P1). */
   forbidden: () => new ApiError('forbidden', 'You do not have access to this resource.'),
   notFound: () => new ApiError('not_found', 'Resource not found.'),
+  /**
+   * A deep link to an object that is missing **or** out of scope: identical
+   * either way, so the response never reveals that the object exists (Req 2.4).
+   */
+  notFoundOrNoAccess: () => new ApiError('not_found', NOT_FOUND_OR_NO_ACCESS_MESSAGE),
   methodNotAllowed: (allow: readonly string[]) =>
     new ApiError('method_not_allowed', 'Method not allowed for this resource.', {
       headers: { Allow: allow.join(', ') },

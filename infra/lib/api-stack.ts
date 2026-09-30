@@ -1,13 +1,13 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CfnOutput, Duration, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
+import { CfnOutput, Duration, Fn, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import type * as cognito from 'aws-cdk-lib/aws-cognito';
+import type * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 import type { EnvironmentConfig } from '../config/environments';
-import { IngestionStorage } from './ingestion-storage';
 
 export interface ApiStackProps extends StackProps {
   readonly config: EnvironmentConfig;
@@ -21,7 +21,58 @@ export interface ApiStackProps extends StackProps {
    * Every route except `GET /health` requires a valid token.
    */
   readonly userPool: cognito.IUserPool;
+  /**
+   * Browser origins allowed to call the API (CORS), e.g. the SPA's custom
+   * domain and CloudFront domain as `https://…` URLs. Applied to the API
+   * Gateway preflight and to the function's responses (`CORS_ALLOWED_ORIGINS`).
+   * Undefined or empty => any origin (`*`).
+   */
+  readonly allowedOrigins?: readonly string[];
+  /**
+   * Runs the API function inside the data VPC (task 24) so it can reach
+   * Aurora through the app security group. Omitted => no VPC.
+   */
+  readonly network?: ApiNetwork;
+  /** Extra function environment (data/jobs/location/SES settings, task 24). */
+  readonly serviceEnvironment?: Record<string, string>;
 }
+
+export interface ApiNetwork {
+  readonly vpc: ec2.IVpc;
+  readonly subnets: ec2.SubnetSelection;
+  readonly securityGroups: ec2.ISecurityGroup[];
+}
+
+/**
+ * Feature routes served by the API (api/src/app.ts), declared explicitly so
+ * each carries the Cognito authorizer (task 8.1). API Gateway path syntax.
+ * The `{proxy+}` catch-all is protected the same way, so a route missing here
+ * is still never public; the API authorises every request against the active
+ * role and scope on top (P12).
+ */
+export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path: string }[] = [
+  { method: 'GET', path: '/me' },
+  { method: 'PUT', path: '/me/active-role' },
+  { method: 'GET', path: '/stores' },
+  { method: 'GET', path: '/stores/{storeId}' },
+  // Data ingestion and provenance (task 9).
+  { method: 'GET', path: '/datasets' },
+  { method: 'GET', path: '/datasets/provenance' },
+  { method: 'POST', path: '/ingestions/uploads' },
+  { method: 'POST', path: '/ingestions' },
+  { method: 'GET', path: '/ingestions' },
+  { method: 'GET', path: '/ingestions/export' },
+  { method: 'GET', path: '/ingestions/{ingestionId}' },
+  { method: 'GET', path: '/ingestions/{ingestionId}/report' },
+  { method: 'POST', path: '/ingestions/{ingestionId}/load' },
+  { method: 'POST', path: '/ingestions/{ingestionId}/cancel' },
+  { method: 'GET', path: '/snapshots' },
+  { method: 'GET', path: '/snapshots/{snapshotId}' },
+  { method: 'PATCH', path: '/snapshots/{snapshotId}' },
+];
+
+/** Request headers the SPA sends: the defaults plus the demo role switcher's `X-Active-Role`. */
+export const CORS_ALLOW_HEADERS: readonly string[] = [...apigateway.Cors.DEFAULT_HEADERS, 'X-Active-Role'];
 
 /** Default location of the API bundle produced by `api/scripts/bundle.mjs`. */
 export const DEFAULT_API_BUNDLE_DIR = path.join(__dirname, '..', '..', 'api', 'dist', 'lambda');
@@ -44,8 +95,9 @@ function assertApiBundle(dir: string): void {
  * (task 7.1) — secure by default: feature routes added to the in-process
  * router are protected without further infra changes, and the API re-checks
  * the verified claims (identity + domain allowlist, api/src/context.ts). The
- * data services (Aurora, S3, SQS, SES, Location Service) are added in later
- * phases (task 24) by extending this stack.
+ * data services (Aurora, S3, SQS, SES, Location Service) live in their own
+ * stacks (task 24); `network` + `serviceEnvironment` place the function in the
+ * data VPC and pass their settings, and bin/infra.ts adds the scoped grants.
  */
 export class ApiStack extends Stack {
   /** The invoke URL of the deployed REST API (e.g. https://xxxx.execute-api.../prod/). */
@@ -54,14 +106,15 @@ export class ApiStack extends Stack {
   public readonly authorizer: apigateway.CognitoUserPoolsAuthorizer;
   /** Method options that protect a route with the Cognito authorizer. */
   public readonly protectedMethodOptions: apigateway.MethodOptions;
-  /** Data-ingestion upload/snapshot storage (task 9.1). */
-  public readonly ingestionStorage: IngestionStorage;
+  /** The API function (grants for data services are added in bin/infra.ts). */
+  public readonly apiFunction: lambda.Function;
 
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
 
     const { config } = props;
     const removalPolicy = config.retainData ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY;
+    const allowedOrigins = props.allowedOrigins && props.allowedOrigins.length > 0 ? [...props.allowedOrigins] : undefined;
 
     // The LaneWise API service (/api, @lanewise/api): a single Node 20 Lambda
     // behind API Gateway, routing requests in-process. The bundle is built by
@@ -89,16 +142,19 @@ export class ApiStack extends Stack {
         LANEWISE_ENV: config.envName,
         LOG_LEVEL: 'info',
         NODE_OPTIONS: '--enable-source-maps',
+        // Demo role switcher (requirement 3); the API authorises every request
+        // against the active role either way (P12).
+        DEMO_ROLE_SWITCHER: config.demoRoleSwitcher ? 'true' : 'false',
+        CORS_ALLOWED_ORIGINS: allowedOrigins ? Fn.join(',', allowedOrigins) : '*',
+        ...props.serviceEnvironment,
       },
+      ...(props.network && {
+        vpc: props.network.vpc,
+        vpcSubnets: props.network.subnets,
+        securityGroups: props.network.securityGroups,
+      }),
     });
-
-    // Data-ingestion storage (task 9.1): S3 bucket for uploaded files and
-    // normalised snapshots; grants the API Put/Get and sets INGESTION_BUCKET.
-    this.ingestionStorage = new IngestionStorage(this, 'IngestionStorage', {
-      envName: config.envName,
-      retainData: config.retainData,
-      apiFunction: apiFn,
-    });
+    this.apiFunction = apiFn;
 
     const api = new apigateway.RestApi(this, 'RestApi', {
       restApiName: `lanewise-${config.envName}-api`,
@@ -108,11 +164,12 @@ export class ApiStack extends Stack {
         throttlingRateLimit: 100,
         throttlingBurstLimit: 200,
       },
-      // Permissive CORS for the skeleton; tightened to the CloudFront origin in
-      // later phases once the SPA domain is fixed.
+      // CORS limited to the SPA's origins (custom domain + CloudFront domain);
+      // the function echoes the same allowlist on its responses.
       defaultCorsPreflightOptions: {
-        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        allowOrigins: allowedOrigins ?? apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS,
+        allowHeaders: [...CORS_ALLOW_HEADERS],
       },
     });
 
@@ -142,17 +199,15 @@ export class ApiStack extends Stack {
       anyMethod: true,
       defaultMethodOptions: this.protectedMethodOptions,
     });
+    for (const route of PROTECTED_ROUTES) {
+      api.root.resourceForPath(route.path).addMethod(route.method, integration, this.protectedMethodOptions);
+    }
 
     this.apiUrl = api.url;
 
     new CfnOutput(this, 'ApiUrl', {
       value: api.url,
       description: 'Invoke URL of the LaneWise REST API.',
-    });
-
-    new CfnOutput(this, 'IngestionBucketName', {
-      value: this.ingestionStorage.bucket.bucketName,
-      description: 'S3 bucket for data-ingestion uploads and snapshots.',
     });
 
   }

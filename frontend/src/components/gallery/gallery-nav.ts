@@ -14,6 +14,7 @@
  *   - states       the UX-010 state set — 1.4
  *   - layout       the grid + layout primitives — 1.6
  *   - patterns     accessibility (1.7), i18n (1.8), keyboard + help (1.9)
+ *   - roster       the roster visual-planning components — 13.1–13.3
  *   - errors       the SCR-090 error/status pages — 1.5
  *
  * These are reference/scaffolding labels for the style guide itself, so they
@@ -34,7 +35,7 @@ export const GALLERY_SECTIONS: readonly GallerySection[] = [
     id: 'foundations',
     label: 'Foundations',
     description:
-      'The design tokens every component reads: colour, type scale, spacing, shape and motion. No component hardcodes these values.',
+      'The LaneWise brand (mark, ramps) and the design tokens every component reads: colour, type scale, spacing, shape and motion. No component hardcodes these values.',
   },
   {
     id: 'primitives',
@@ -59,6 +60,12 @@ export const GALLERY_SECTIONS: readonly GallerySection[] = [
     label: 'Patterns',
     description:
       'The cross-cutting layers: accessibility and labelling (task 1.7), internationalisation and ₱/number formatting (task 1.8), and keyboard shortcuts and help (task 1.9).',
+  },
+  {
+    id: 'roster',
+    label: 'Roster',
+    description:
+      'Visual roster planning (task 13): the Day timeline, Week / Fortnight / Four-weeks grid, Month coverage and zoom, the shift editor and the phone views — with the SCR-022 sample data.',
   },
   {
     id: 'errors',

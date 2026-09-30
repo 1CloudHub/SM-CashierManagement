@@ -10,13 +10,18 @@ import { randomUUID } from 'node:crypto';
 import { DATASET_COLUMNS, SAMPLE_DATA_MARKER, type DatasetType, type RoleCode } from '@lanewise/shared';
 import fc from 'fast-check';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { createApp } from '../../src/app.js';
-import { envDeps } from '../../src/deps.js';
+import type pg from 'pg';
 import type { Router } from '../../src/http/router.js';
+import { registerIngestionRoutes } from '../../src/routes/ingestion.js';
 import { createTestDatabase, type TestDatabase } from '../support/db.js';
-import { dispatch, principal } from '../support/dispatch.js';
+import { dispatch, principal, testRouter } from '../support/dispatch.js';
 import { insertRegion, insertScenario, insertUser } from '../support/fixtures.js';
 import { MemoryStorage } from '../support/memory-storage.js';
+import { insertAppUser, makeClient, setAssignments } from '../support/rbac.js';
+
+/** The task-9 routes behind the test enforcer (real RBAC matrix, principal from the test). */
+const ingestionApp = (pool: pg.Pool, mem?: MemoryStorage): Router =>
+  registerIngestionRoutes(testRouter(), { db: () => pool, ...(mem ? { storage: () => mem } : {}) });
 
 let db: TestDatabase;
 let storage: MemoryStorage;
@@ -25,9 +30,7 @@ let steward: string;
 let planner: string;
 let admin: string;
 
-// RBAC (task 8.1) is out of scope here: authorise every permissioned route.
-const allow = (): void => undefined;
-const as = (userId: string, role: RoleCode) => ({ principal: principal(userId, role), authorize: allow });
+const as = (userId: string, role: RoleCode) => ({ principal: principal(userId, role) });
 
 const POS_HEADER = DATASET_COLUMNS.pos.map((c) => c.field).join(',');
 const MASTER_HEADER = DATASET_COLUMNS.master.map((c) => c.field).join(',');
@@ -76,7 +79,9 @@ async function loadCsv(type: DatasetType, csv: string, synthetic = false) {
   return loaded.body;
 }
 
-async function seedReference(pool: TestDatabase['pool']): Promise<void> {
+let referenceStoreId: string;
+
+async function seedReference(pool: TestDatabase['pool']): Promise<string> {
   const regionId = await insertRegion(pool);
   const store = await pool.query<{ id: string }>(
     `INSERT INTO store (code, name, format, region_id) VALUES ('SMQC', 'SM QC', 'sm_supermarket', $1) RETURNING id`,
@@ -87,6 +92,7 @@ async function seedReference(pool: TestDatabase['pool']): Promise<void> {
      VALUES ($1, 'Main lanes', 12, 2.5, '10:00', '22:00')`,
     [store.rows[0]?.id],
   );
+  return store.rows[0]?.id as string;
 }
 
 beforeAll(async () => {
@@ -99,7 +105,7 @@ beforeAll(async () => {
     [steward, planner],
   );
   // Real reference master data: store SMQC, department "Main lanes" (12 installed lanes).
-  await seedReference(db.pool);
+  referenceStoreId = await seedReference(db.pool);
 });
 
 afterAll(async () => {
@@ -108,7 +114,7 @@ afterAll(async () => {
 
 beforeEach(() => {
   storage = new MemoryStorage();
-  app = createApp({ db: () => db.pool, storage: () => storage });
+  app = ingestionApp(db.pool, storage);
 });
 
 describe('upload URL (task 9.1)', () => {
@@ -306,7 +312,7 @@ describe('synthetic flag (Req 17.6) and provenance (Req 18, P9)', () => {
     try {
       const user = await insertUser(fresh.pool);
       const mem = new MemoryStorage();
-      const local = createApp({ db: () => fresh.pool, storage: () => mem });
+      const local = ingestionApp(fresh.pool, mem);
       const v = await upload('master', masterCsv(), { synthetic: true, router: local, mem, userId: user });
       const l = await dispatch(local, 'POST', `/ingestions/${v.body.run.id}/load`, { ...as(user, 'RST'), body: { confirmWarnings: true } });
       const snapshotId = l.body.snapshot.id as string;
@@ -360,7 +366,7 @@ describe('P9 / P18 over random load sequences', () => {
     try {
       const user = await insertUser(fresh.pool);
       const mem = new MemoryStorage();
-      const local = createApp({ db: () => fresh.pool, storage: () => mem });
+      const local = ingestionApp(fresh.pool, mem);
       const csvFor: Record<DatasetType, string> = {
         pos: `${POS_HEADER}\nSMQC,Main lanes,2025-12-01,10,100,,\n`,
         master: masterCsv(),
@@ -413,44 +419,67 @@ describe('P9 / P18 over random load sequences', () => {
   });
 });
 
-describe('authorisation hooks', () => {
-  it('permissioned routes fail closed without an active role (until task 8.1 wires RBAC)', async () => {
+describe('authorisation (task 8.1 guards)', () => {
+  it('applies the RBAC matrix: RST manages, ADM/PLN view, others have no access', async () => {
+    for (const role of ['EXE', 'STM', 'HR', 'FIN', 'STF'] as const) {
+      expect((await dispatch(app, 'GET', '/datasets', as(admin, role))).status).toBe(403);
+    }
+    for (const role of ['ADM', 'PLN', 'RST'] as const) {
+      expect((await dispatch(app, 'GET', '/datasets', as(admin, role))).status).toBe(200);
+    }
+    for (const role of ['ADM', 'PLN'] as const) {
+      const res = await dispatch(app, 'POST', '/ingestions/uploads', {
+        ...as(admin, role),
+        body: { datasetType: 'pos', fileName: 'a.csv', contentType: 'text/csv', sizeBytes: 10 },
+      });
+      expect(res.status).toBe(403);
+    }
     expect((await dispatch(app, 'GET', '/datasets', { principal: principal(admin, null) })).status).toBe(403);
     expect((await dispatch(app, 'GET', '/datasets')).status).toBe(401);
+    // The banner: any signed-in role, never anonymous.
+    expect((await dispatch(app, 'GET', '/datasets/provenance', as(admin, 'STF'))).status).toBe(200);
     expect((await dispatch(app, 'GET', '/datasets/provenance')).status).toBe(401);
   });
 
-  it('every task-9 route declares a data_ingestion permission except the banner', () => {
-    const routes: [string, string, 'view' | 'manage'][] = [
-      ['GET', '/datasets', 'view'],
-      ['POST', '/ingestions/uploads', 'manage'],
-      ['POST', '/ingestions', 'manage'],
-      ['GET', '/ingestions', 'view'],
-      ['GET', '/ingestions/export', 'view'],
-      ['GET', `/ingestions/${randomUUID()}`, 'view'],
-      ['GET', `/ingestions/${randomUUID()}/report`, 'view'],
-      ['POST', `/ingestions/${randomUUID()}/load`, 'manage'],
-      ['POST', `/ingestions/${randomUUID()}/cancel`, 'manage'],
-      ['GET', '/snapshots', 'view'],
-      ['GET', `/snapshots/${randomUUID()}`, 'view'],
-      ['PATCH', `/snapshots/${randomUUID()}`, 'manage'],
-    ];
-    for (const [method, path, action] of routes) {
-      const match = app.resolve(method, path);
-      expect(match.kind).toBe('matched');
-      if (match.kind === 'matched') expect(match.permission).toEqual({ resource: 'data_ingestion', action });
+  it('every task-9 route declares a data_ingestion guard, except the authenticated banner', () => {
+    const guards = Object.fromEntries(app.routes().map((r) => [`${r.method} ${r.pattern}`, r.guard]));
+    const expected: Record<string, 'view' | 'manage'> = {
+      'GET /datasets': 'view',
+      'POST /ingestions/uploads': 'manage',
+      'POST /ingestions': 'manage',
+      'GET /ingestions': 'view',
+      'GET /ingestions/export': 'view',
+      'GET /ingestions/:ingestionId': 'view',
+      'GET /ingestions/:ingestionId/report': 'view',
+      'POST /ingestions/:ingestionId/load': 'manage',
+      'POST /ingestions/:ingestionId/cancel': 'manage',
+      'GET /snapshots': 'view',
+      'GET /snapshots/:snapshotId': 'view',
+      'PATCH /snapshots/:snapshotId': 'manage',
+    };
+    for (const [route, action] of Object.entries(expected)) {
+      expect(guards[route], route).toEqual({ kind: 'authorize', resource: 'data_ingestion', action });
     }
-    const banner = app.resolve('GET', '/datasets/provenance');
-    expect(banner.kind === 'matched' && banner.permission).toBe(null);
+    expect(guards['GET /datasets/provenance']).toEqual({ kind: 'authenticated' });
+    expect(Object.keys(guards)).toHaveLength(Object.keys(expected).length + 1);
   });
 
-  it('answers 503 when the database or bucket is not configured', async () => {
-    const unconfigured = createApp(envDeps({}));
-    expect((await dispatch(unconfigured, 'GET', '/datasets', as(admin, 'ADM'))).status).toBe(503);
-    const up = await dispatch(unconfigured, 'POST', '/ingestions/uploads', {
-      ...as(steward, 'RST'),
-      body: { datasetType: 'pos', fileName: 'a.csv', contentType: 'text/csv', sizeBytes: 10 },
-    });
-    expect(up.status).toBe(503);
+  it('through the real enforcer: assignments decide access; storage unconfigured => 503', async () => {
+    const rst = `rst.${randomUUID().slice(0, 8)}@smretail.com`;
+    const pln = `pln.${randomUUID().slice(0, 8)}@smretail.com`;
+    const stm = `stm.${randomUUID().slice(0, 8)}@smretail.com`;
+    for (const [email, role] of [[rst, 'RST'], [pln, 'PLN'], [stm, 'STM']] as const) {
+      const id = await insertAppUser(db.pool, email, { activeRole: role });
+      await setAssignments(db.pool, id, [{ role, scope: role === 'STM' ? { type: 'store', storeIds: [referenceStoreId] } : { type: 'global' } }]);
+    }
+    const { call } = makeClient(db.pool, false);
+    expect((await call({ path: '/datasets', email: rst })).status).toBe(200);
+    expect((await call({ path: '/datasets', email: pln })).status).toBe(200);
+    expect((await call({ path: '/datasets', email: stm })).status).toBe(403);
+    expect((await call({ path: '/datasets/provenance', email: stm })).status).toBe(200);
+    const body = { datasetType: 'pos', fileName: 'a.csv', contentType: 'text/csv', sizeBytes: 10 };
+    expect((await call({ method: 'POST', path: '/ingestions/uploads', email: pln, body })).status).toBe(403);
+    // makeClient's deps have no storage: authorised, then 503.
+    expect((await call({ method: 'POST', path: '/ingestions/uploads', email: rst, body })).status).toBe(503);
   });
 });

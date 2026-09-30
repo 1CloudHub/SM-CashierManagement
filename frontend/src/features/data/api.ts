@@ -11,6 +11,8 @@
  * error `code`, the HTTP `status` and the `requestId` (the reference ID shown
  * to users) — raw bodies and stack traces never reach the UI.
  */
+import type { RoleCode } from '@lanewise/shared'
+import { ACTIVE_ROLE_HEADER } from '@/api/client'
 import {
   HTTP_STATUS_BY_ERROR_CODE,
   isApiErrorCode,
@@ -65,6 +67,12 @@ export interface DataApiOptions {
   readonly baseUrl: string
   /** Resolves the current Cognito ID token, or `null` when signed out. */
   readonly getToken: () => Promise<string | null>
+  /**
+   * The role the user is acting as (the demo "Viewing as" switcher). Sent as
+   * `X-Active-Role`, like the app's API client; the server authorises each
+   * request against it (task 8.1, P12).
+   */
+  readonly getActiveRole?: () => RoleCode | null
   readonly fetch?: FetchLike
 }
 
@@ -147,6 +155,8 @@ export function createDataApi(options: DataApiOptions): DataApi {
     const token = await options.getToken()
     if (!token) throw new ApiRequestError('unauthenticated', 401, 'unauthenticated')
     const headers: Record<string, string> = { Authorization: token, Accept: 'application/json' }
+    const role = options.getActiveRole?.()
+    if (role) headers[ACTIVE_ROLE_HEADER] = role
     if (body !== undefined) headers['Content-Type'] = 'application/json'
     const res = await send(`${base}${path}`, {
       method,

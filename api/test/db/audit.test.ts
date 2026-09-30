@@ -125,10 +125,16 @@ describe('withAuditedTransaction', () => {
 describe('actorFromPrincipal (P12)', () => {
   it('requires an active role', () => {
     expect(() =>
-      actorFromPrincipal({ userId: 'u', email: 'a@smretail.com', activeRole: null, assignments: [] }, 'r'),
+      actorFromPrincipal(
+        { userId: 'u', email: 'a@smretail.com', name: 'A', activeRole: null, assignments: [], scope: null, demoMode: true },
+        'r',
+      ),
     ).toThrowError(ApiError);
     expect(
-      actorFromPrincipal({ userId: 'u', email: 'a@smretail.com', activeRole: 'PLN', assignments: [] }, 'r'),
+      actorFromPrincipal(
+        { userId: 'u', email: 'a@smretail.com', name: 'A', activeRole: 'PLN', assignments: [], scope: null, demoMode: true },
+        'r',
+      ),
     ).toEqual({ userId: 'u', activeRole: 'PLN', requestId: 'r' });
   });
 });

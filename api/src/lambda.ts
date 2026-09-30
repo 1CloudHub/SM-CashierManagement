@@ -7,9 +7,8 @@
 import { randomUUID } from 'node:crypto';
 import type { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { createApp } from './app.js';
-import { principalFromClaims, type RequestContext } from './context.js';
+import { identityFromClaims, type RequestContext } from './context.js';
 import { ApiError, errors, internalErrorBody, toErrorBody } from './http/errors.js';
-import { requireActiveRole, type AuthorizeRoute } from './http/permissions.js';
 import type { Router } from './http/router.js';
 import type { ApiRequest, ApiResponse } from './http/types.js';
 import { createLogger, isLogLevel, type LogLevel } from './logger.js';
@@ -24,10 +23,11 @@ export interface LambdaHandlerOptions {
   readonly logLevel?: LogLevel;
   readonly logSink?: (line: string) => void;
   /**
-   * Authorises routes that declare a `permission`. Task 8.1 supplies the RBAC
-   * implementation; the default fails closed (`requireActiveRole`).
+   * Browser origins allowed to call the API (CORS). Defaults to the
+   * comma-separated `CORS_ALLOWED_ORIGINS` env var set by infra/lib/api-stack.ts;
+   * empty or `*` => any origin.
    */
-  readonly authorize?: AuthorizeRoute;
+  readonly allowedOrigins?: readonly string[];
 }
 
 export type LambdaHandler = (event: APIGatewayProxyEvent, context: Context) => Promise<APIGatewayProxyResult>;
@@ -36,10 +36,29 @@ const BASE_HEADERS: Readonly<Record<string, string>> = {
   'Content-Type': 'application/json; charset=utf-8',
   'Cache-Control': 'no-store',
   'X-Content-Type-Options': 'nosniff',
-  // Matches the permissive CORS preflight in infra/lib/api-stack.ts; both are
-  // tightened to the CloudFront origin once the SPA domain is fixed.
-  'Access-Control-Allow-Origin': '*',
 };
+
+/** Parses a comma-separated origin allowlist; `[]` means any origin. */
+export function parseAllowedOrigins(value: string | undefined): string[] {
+  const origins = (value ?? '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter((o) => o.length > 0);
+  return origins.includes('*') ? [] : origins;
+}
+
+/**
+ * CORS response headers. Mirrors the API Gateway preflight in
+ * infra/lib/api-stack.ts: the request's Origin is echoed only when it is on
+ * the allowlist (the SPA's custom domain and CloudFront domain).
+ */
+function corsHeaders(allowedOrigins: readonly string[], origin: string | undefined): Record<string, string> {
+  if (allowedOrigins.length === 0) return { 'Access-Control-Allow-Origin': '*' };
+  if (origin !== undefined && allowedOrigins.includes(origin)) {
+    return { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' };
+  }
+  return { Vary: 'Origin' };
+}
 
 function lowerCaseHeaders(headers: APIGatewayProxyEvent['headers'] | null): Record<string, string> {
   const out: Record<string, string> = {};
@@ -73,10 +92,10 @@ function parseBody(event: APIGatewayProxyEvent, headers: Record<string, string>)
   }
 }
 
-function toResult(response: ApiResponse, requestId: string): APIGatewayProxyResult {
+function toResult(response: ApiResponse, requestId: string, cors: Record<string, string>): APIGatewayProxyResult {
   return {
     statusCode: response.statusCode,
-    headers: { ...BASE_HEADERS, ...response.headers, 'X-Request-Id': requestId },
+    headers: { ...BASE_HEADERS, ...cors, ...response.headers, 'X-Request-Id': requestId },
     body: JSON.stringify(response.body ?? null),
   };
 }
@@ -84,8 +103,8 @@ function toResult(response: ApiResponse, requestId: string): APIGatewayProxyResu
 export function createLambdaHandler(options: LambdaHandlerOptions = {}): LambdaHandler {
   const router = options.router ?? createApp();
   const env = options.env ?? process.env.LANEWISE_ENV ?? 'unknown';
+  const allowedOrigins = options.allowedOrigins ?? parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS);
   const now = options.now ?? (() => new Date());
-  const authorize = options.authorize ?? requireActiveRole;
   const envLevel = process.env.LOG_LEVEL;
   const rootLogger = createLogger({
     level: options.logLevel ?? (isLogLevel(envLevel) ? envLevel : 'info'),
@@ -123,10 +142,10 @@ export function createLambdaHandler(options: LambdaHandlerOptions = {}): LambdaH
         env,
         now,
         logger: logger.child({ route }),
-        principal: principalFromClaims(claims),
+        identity: identityFromClaims(claims),
+        principal: null,
       };
 
-      if (match.permission) await authorize(match.permission, context);
       response = await match.handler({ ...request, params: match.params, route }, context);
     } catch (err) {
       if (err instanceof ApiError) {
@@ -145,7 +164,8 @@ export function createLambdaHandler(options: LambdaHandlerOptions = {}): LambdaH
       status: response.statusCode,
       durationMs: Date.now() - started,
     });
-    return toResult(response, requestId);
+    const origin = lowerCaseHeaders(event.headers).origin;
+    return toResult(response, requestId, corsHeaders(allowedOrigins, origin));
   };
 }
 
