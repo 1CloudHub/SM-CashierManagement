@@ -1,0 +1,87 @@
+/*
+ * Roster visual planning styles (task 13 — design.md "Visual planning
+ * components", wireframe.css .tl-* / .bar-shift / .dchip / .chip / .month).
+ *
+ * Only the category and pattern fills live here: they need color-mix() and
+ * repeating gradients over the data-viz tokens, which don't read well as
+ * utilities. Layout comes from the layout primitives + utilities; every value
+ * is a --lw-* token. Categories are always paired with a letter or label in
+ * the markup (requirement 6.4) — colour here is never the only channel.
+ */
+
+/* A category (department / contract / home store) sets --cat to a viz token. */
+.lw-cat-fill {
+  background-color: color-mix(in srgb, var(--cat) 22%, var(--lw-surface));
+  border-inline-start: calc(var(--lw-outline-w) * 2) solid var(--cat);
+  color: var(--lw-text);
+}
+.lw-cat-fill:where(button):hover {
+  background-color: color-mix(in srgb, var(--cat) 36%, var(--lw-surface));
+}
+.lw-cat-band {
+  background-color: var(--cat);
+  color: var(--lw-surface);
+}
+.lw-cat-swatch {
+  background-color: color-mix(in srgb, var(--cat) 22%, var(--lw-surface));
+  border: var(--lw-outline-w) solid var(--lw-outline);
+  border-inline-start: calc(var(--lw-outline-w) * 2) solid var(--cat);
+}
+
+/* Float cashiers: diagonal hatch over the category fill. */
+.lw-hatch-float {
+  background-image: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--lw-surface) 60%, transparent) 0 var(--lw-space-1),
+    transparent var(--lw-space-1) var(--lw-space-2)
+  );
+}
+
+/* Unavailable: a neutral hatch, distinct from a plain day off. */
+.lw-hatch-unavailable {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--lw-surface-2) 0 var(--lw-space-2),
+    var(--lw-bg) var(--lw-space-2) var(--lw-space-4)
+  );
+}
+
+/* Manager change (✎): dashed outline in addition to the ✎ glyph + text. */
+.lw-edited {
+  outline: var(--lw-outline-w) dashed var(--lw-text);
+  outline-offset: 1px;
+}
+
+/* Activity segments inside a shift bar (letters M/T/H carry the meaning). */
+.lw-act-meal {
+  background-color: var(--lw-surface);
+  outline: var(--lw-outline-w) dashed var(--lw-outline);
+  outline-offset: calc(var(--lw-outline-w) * -1);
+  color: var(--lw-text);
+}
+.lw-act-training {
+  background-color: var(--lw-viz-4);
+  color: var(--lw-surface);
+}
+.lw-act-huddle {
+  background-color: var(--lw-viz-2);
+  color: var(--lw-surface);
+}
+
+/* Hour gridlines behind a timeline track; --cols = visible hours. */
+.lw-track-grid {
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--lw-outline-subtle) 0 var(--lw-outline-w),
+    transparent var(--lw-outline-w) calc(100% / var(--cols))
+  );
+}
+
+/* Drag handles on bar edges (pointer only; keyboard uses Shift+arrows). */
+.lw-resize-handle {
+  cursor: ew-resize;
+  touch-action: none;
+}
+.lw-drag {
+  touch-action: none;
+}
