@@ -248,8 +248,9 @@ describe('rule versions (Req 16, P6)', () => {
     );
     await expectPgError(
       db.pool.query(
-        `INSERT INTO rule_version (rule_set_id, is_cost_rule, version, effective_from, payload, created_by)
-         VALUES ($1, false, 2, '2026-11-01', '{}', $2)`,
+        // Other provenance, so the one-open-version index (0110) doesn't fire first.
+        `INSERT INTO rule_version (rule_set_id, is_cost_rule, version, effective_from, payload, created_by, synthetic)
+         VALUES ($1, false, 2, '2026-11-01', '{}', $2, true)`,
         [set?.id, author],
       ),
       FK,
