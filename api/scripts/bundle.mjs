@@ -5,19 +5,18 @@
 // Bundling here (rather than in CDK via NodejsFunction) keeps `cdk synth` /
 // `cdk deploy` free of a bundling step: the deploy stage consumes the bundle
 // produced by the build stage (infra/buildspec-deploy.yml).
-import { rm } from 'node:fs/promises';
+//
+// A second bundle, `dist/migrate/index.mjs` (+ the SQL in
+// `dist/migrate/migrations/`), is the `npm run db:migrate` CLI (task 5.1).
+import { cp, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const outdir = join(root, 'dist', 'lambda');
 
-await rm(outdir, { recursive: true, force: true });
-
-await build({
-  entryPoints: { index: join(root, 'src', 'lambda.ts') },
-  outdir,
+/** @type {import('esbuild').BuildOptions} */
+const common = {
   outExtension: { '.js': '.mjs' },
   bundle: true,
   platform: 'node',
@@ -27,6 +26,21 @@ await build({
   minify: false,
   legalComments: 'none',
   // The AWS SDK v3 ships with the Lambda runtime; don't bundle it if used later.
-  external: ['@aws-sdk/*'],
+  // pg-native is an optional pg dependency we don't use.
+  external: ['@aws-sdk/*', 'pg-native'],
+  // CommonJS dependencies (e.g. pg) call require() for Node built-ins; give the
+  // ESM bundle a real require.
+  banner: {
+    js: "import { createRequire as __lwCreateRequire } from 'node:module'; const require = __lwCreateRequire(import.meta.url);",
+  },
   logLevel: 'info',
-});
+};
+
+const lambdaOut = join(root, 'dist', 'lambda');
+await rm(lambdaOut, { recursive: true, force: true });
+await build({ ...common, entryPoints: { index: join(root, 'src', 'lambda.ts') }, outdir: lambdaOut });
+
+const migrateOut = join(root, 'dist', 'migrate');
+await rm(migrateOut, { recursive: true, force: true });
+await build({ ...common, entryPoints: { index: join(root, 'src', 'db', 'migrate-cli.ts') }, outdir: migrateOut });
+await cp(join(root, 'migrations'), join(migrateOut, 'migrations'), { recursive: true });

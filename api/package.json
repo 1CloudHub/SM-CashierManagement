@@ -13,16 +13,20 @@
     "build": "npm run typecheck && npm run bundle",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:migrate": "node dist/migrate/index.mjs"
   },
   "dependencies": {
     "@lanewise/shared": "file:../packages/shared",
+    "pg": "8.23.1",
     "zod": "4.6.5"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@types/aws-lambda": "8.10.164",
     "@types/node": "20.19.43",
+    "@types/pg": "8.23.1",
+    "embedded-postgres": "17.10.0-beta.17",
     "esbuild": "0.28.2",
     "eslint": "10.11.0",
     "fast-check": "4.10.2",
