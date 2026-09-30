@@ -30,7 +30,7 @@ const spa = new SpaHostingStack(app, `${prefix}-SpaHosting`, {
 const auth = new AuthStack(app, `${prefix}-Auth`, {
   env,
   config,
-  relyingPartyId: config.auth.relyingPartyId ?? spa.distribution.distributionDomainName,
+  relyingPartyId: config.auth.relyingPartyId ?? config.domainName ?? spa.distribution.distributionDomainName,
   description: `LaneWise authentication (Cognito passkeys + domain allowlist) — ${config.envName}.`,
 });
 
@@ -38,6 +38,8 @@ const api = new ApiStack(app, `${prefix}-Api`, {
   env,
   config,
   userPool: auth.userPool,
+  // CORS: only the SPA's origins (custom domain + CloudFront domain).
+  allowedOrigins: spa.spaOrigins,
   description: `LaneWise API (Lambda + API Gateway) — ${config.envName}.`,
 });
 

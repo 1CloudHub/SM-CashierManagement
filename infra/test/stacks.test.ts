@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { App } from 'aws-cdk-lib';
 import { Annotations, Match, Template } from 'aws-cdk-lib/assertions';
 import { describe, expect, it } from 'vitest';
-import { resolveEnvironment } from '../config/environments';
+import { type EnvironmentConfig, resolveEnvironment, validateDomain } from '../config/environments';
 import { ApiStack, DEFAULT_API_BUNDLE_DIR, PROTECTED_ROUTES } from '../lib/api-stack';
 import { AuthStack, DEFAULT_PRE_SIGN_UP_BUNDLE_DIR, TOKEN_POLICY } from '../lib/auth-stack';
 import { DeployPipelineStack } from '../lib/deploy-pipeline-stack';
@@ -16,11 +16,12 @@ function synth() {
   const app = new App();
   const config = resolveEnvironment('prod');
   const spa = new SpaHostingStack(app, 'Test-SpaHosting', { config });
+  // Mirrors bin/infra.ts.
   const auth = new AuthStack(app, 'Test-Auth', {
     config,
-    relyingPartyId: spa.distribution.distributionDomainName,
+    relyingPartyId: config.auth.relyingPartyId ?? config.domainName ?? spa.distribution.distributionDomainName,
   });
-  const api = new ApiStack(app, 'Test-Api', { config, userPool: auth.userPool });
+  const api = new ApiStack(app, 'Test-Api', { config, userPool: auth.userPool, allowedOrigins: spa.spaOrigins });
   const pipelineIam = new PipelineIamStack(app, 'Test-PipelineIam', { config });
   const pipelinePrChecks = new PipelinePrChecksStack(app, 'Test-PipelinePrChecks', {
     config,
@@ -35,6 +36,7 @@ function synth() {
   });
   return {
     spa: Template.fromStack(spa),
+    spaStack: spa,
     api: Template.fromStack(api),
     auth: Template.fromStack(auth),
     authStack: auth,
@@ -43,6 +45,20 @@ function synth() {
     prChecksStack: pipelinePrChecks,
     deployPipeline: Template.fromStack(deployPipeline),
     deployPipelineStack: deployPipeline,
+  };
+}
+
+const DOMAIN = 'lanewise.prototypes.1cloudhub.com';
+const ZONE_ID = 'Z10306162UR77DOLJD1L3';
+
+/** Prod config with the custom domain, relying party and SES sender removed. */
+function withoutDomainOrEmail(): EnvironmentConfig {
+  const base = resolveEnvironment('prod');
+  return {
+    ...base,
+    domainName: undefined,
+    hostedZone: undefined,
+    auth: { ...base.auth, relyingPartyId: undefined, email: undefined },
   };
 }
 
@@ -72,6 +88,94 @@ describe('SPA hosting stack', () => {
         ],
       },
     });
+  });
+});
+
+describe('SPA custom domain (prod: lanewise.prototypes.1cloudhub.com)', () => {
+  const { spa, spaStack } = synth();
+
+  it('issues a DNS-validated ACM certificate in the prototypes.1cloudhub.com zone', () => {
+    spa.resourceCountIs('AWS::CertificateManager::Certificate', 1);
+    spa.hasResourceProperties('AWS::CertificateManager::Certificate', {
+      DomainName: DOMAIN,
+      ValidationMethod: 'DNS',
+      DomainValidationOptions: [{ DomainName: DOMAIN, HostedZoneId: ZONE_ID }],
+    });
+  });
+
+  it('asserts at deploy time that the certificate stack is in us-east-1 (CloudFront)', () => {
+    const rules = spa.toJSON().Rules as Record<string, { Assertions: Array<{ Assert: unknown }> }>;
+    expect(rules.CertificateRegionRule?.Assertions[0]?.Assert).toEqual({
+      'Fn::Equals': [{ Ref: 'AWS::Region' }, 'us-east-1'],
+    });
+  });
+
+  it('attaches the certificate and the alias to CloudFront (SNI, TLS 1.2+)', () => {
+    spa.hasResourceProperties('AWS::CloudFront::Distribution', {
+      DistributionConfig: Match.objectLike({
+        Aliases: [DOMAIN],
+        ViewerCertificate: {
+          AcmCertificateArn: { Ref: Match.stringLikeRegexp('SpaCertificate') },
+          SslSupportMethod: 'sni-only',
+          MinimumProtocolVersion: 'TLSv1.2_2021',
+        },
+      }),
+    });
+  });
+
+  it('creates Route 53 A and AAAA alias records for the name, and nothing else in the zone', () => {
+    spa.resourceCountIs('AWS::Route53::RecordSet', 2);
+    for (const type of ['A', 'AAAA']) {
+      spa.hasResourceProperties('AWS::Route53::RecordSet', {
+        Name: `${DOMAIN}.`,
+        Type: type,
+        HostedZoneId: ZONE_ID,
+        AliasTarget: {
+          DNSName: { 'Fn::GetAtt': [Match.stringLikeRegexp('SpaDistribution'), 'DomainName'] },
+          HostedZoneId: Match.anyValue(),
+        },
+      });
+    }
+    spa.resourceCountIs('AWS::Route53::HostedZone', 0);
+  });
+
+  it('serves on the custom domain and keeps the CloudFront domain', () => {
+    expect(spaStack.spaOrigins).toHaveLength(2);
+    expect(spaStack.spaOrigins[0]).toBe(`https://${DOMAIN}`);
+    spa.hasOutput('SpaUrl', { Value: `https://${DOMAIN}` });
+    spa.hasOutput('DistributionDomainName', Match.anyValue());
+  });
+
+  it('adds no certificate, alias or DNS records when no domain is configured', () => {
+    const t = Template.fromStack(new SpaHostingStack(new App(), 'Test-Spa-NoDomain', { config: withoutDomainOrEmail() }));
+    t.resourceCountIs('AWS::CertificateManager::Certificate', 0);
+    t.resourceCountIs('AWS::Route53::RecordSet', 0);
+    const dist = Object.values(t.findResources('AWS::CloudFront::Distribution'))[0] as {
+      Properties: { DistributionConfig: Record<string, unknown> };
+    };
+    expect(dist.Properties.DistributionConfig.Aliases).toBeUndefined();
+    expect(dist.Properties.DistributionConfig.ViewerCertificate).toBeUndefined();
+    expect(Object.keys(t.toJSON().Rules ?? {})).not.toContain('CertificateRegionRule');
+  });
+
+  it('refuses a custom domain in a stack pinned outside us-east-1', () => {
+    expect(
+      () =>
+        new SpaHostingStack(new App(), 'Test-Spa-WrongRegion', {
+          config: resolveEnvironment('prod'),
+          env: { region: 'ap-southeast-1' },
+        }),
+    ).toThrowError(/us-east-1/);
+  });
+
+  it('validates that a custom domain has a hosted zone and sits inside it', () => {
+    const base = resolveEnvironment('prod');
+    expect(() => validateDomain(base)).not.toThrow();
+    expect(() => validateDomain({ ...base, hostedZone: undefined })).toThrowError(/hostedZone/);
+    expect(() => validateDomain({ ...base, domainName: 'lanewise.1cloudhub.com' })).toThrowError(/not in hosted zone/);
+    expect(() => validateDomain({ ...base, domainName: 'evilprototypes.1cloudhub.com' })).toThrowError(
+      /not in hosted zone/,
+    );
   });
 });
 
@@ -183,6 +287,42 @@ describe('API stack', () => {
     }
   });
 
+  it('restricts the CORS preflight to the SPA origins (custom domain + CloudFront domain)', () => {
+    const options = Object.values(api.findResources('AWS::ApiGateway::Method')).filter(
+      (m) => (m as { Properties: { HttpMethod: string } }).Properties.HttpMethod === 'OPTIONS',
+    );
+    expect(options.length).toBeGreaterThan(0);
+    for (const m of options) {
+      const json = JSON.stringify(m);
+      expect(json).not.toContain("'*'");
+      expect(json).toContain(`'https://${DOMAIN}'`);
+      expect(json).toMatch(/SpaDistribution.*DomainName/);
+    }
+  });
+
+  it('passes the same origin allowlist to the function (CORS_ALLOWED_ORIGINS)', () => {
+    api.hasResourceProperties('AWS::Lambda::Function', {
+      Environment: {
+        Variables: Match.objectLike({
+          CORS_ALLOWED_ORIGINS: {
+            'Fn::Join': [',', [`https://${DOMAIN}`, Match.objectLike({ 'Fn::Join': Match.anyValue() })]],
+          },
+        }),
+      },
+    });
+  });
+
+  it('allows any origin when no allowlist is given', () => {
+    const app = new App();
+    const config = withoutDomainOrEmail();
+    const auth = new AuthStack(app, 'Test-Auth-Cors', { config, relyingPartyId: 'x.example.com' });
+    const t = Template.fromStack(new ApiStack(app, 'Test-Api-Cors', { config, userPool: auth.userPool }));
+    t.hasResourceProperties('AWS::Lambda::Function', {
+      Environment: { Variables: Match.objectLike({ CORS_ALLOWED_ORIGINS: '*' }) },
+    });
+    expect(JSON.stringify(t.findResources('AWS::ApiGateway::Method'))).toContain("'*'");
+  });
+
   it('fails synth with a clear message when the API bundle has not been built', () => {
     const app = new App();
     expect(
@@ -215,16 +355,54 @@ describe('auth stack (task 7)', () => {
     });
   });
 
-  it('binds passkeys to the SPA domain by default (relying party = CloudFront domain)', () => {
+  it('binds passkeys to the custom domain in prod (relying party id)', () => {
+    auth.hasResourceProperties('AWS::Cognito::UserPool', { WebAuthnRelyingPartyID: DOMAIN });
+    auth.hasOutput('RelyingPartyId', { Value: DOMAIN });
+  });
+
+  it('sends one-time codes through SES from noreply@1cloudhub.com and enables EMAIL_OTP in prod', () => {
+    expect(authStack.allowedFirstAuthFactors).toEqual(['PASSWORD', 'WEB_AUTHN', 'EMAIL_OTP']);
+    auth.hasResourceProperties('AWS::Cognito::UserPool', {
+      EmailConfiguration: {
+        EmailSendingAccount: 'DEVELOPER',
+        From: 'LaneWise <noreply@1cloudhub.com>',
+        SourceArn: Match.anyValue(),
+      },
+      Policies: Match.objectLike({
+        SignInPolicy: { AllowedFirstAuthFactors: ['PASSWORD', 'WEB_AUTHN', 'EMAIL_OTP'] },
+      }),
+    });
     const pool = Object.values(auth.findResources('AWS::Cognito::UserPool'))[0] as {
+      Properties: { EmailConfiguration: { SourceArn: unknown } };
+    };
+    // arn:<partition>:ses:us-east-1:<account>:identity/1cloudhub.com
+    expect(JSON.stringify(pool.Properties.EmailConfiguration.SourceArn)).toMatch(/:ses:us-east-1:.*:identity\/1cloudhub\.com/);
+    auth.hasOutput('EmailOtpEnabled', { Value: 'true' });
+    const warnings = Annotations.fromStack(authStack).findWarning('*', Match.stringLikeRegexp('Email one-time codes'));
+    expect(warnings).toHaveLength(0);
+  });
+
+  it('binds passkeys to the CloudFront domain when no custom domain is configured', () => {
+    const app = new App();
+    const config = withoutDomainOrEmail();
+    const spa = new SpaHostingStack(app, 'Test-Spa-Rp', { config });
+    const stack = new AuthStack(app, 'Test-Auth-Rp', {
+      config,
+      relyingPartyId: config.auth.relyingPartyId ?? config.domainName ?? spa.distribution.distributionDomainName,
+    });
+    const pool = Object.values(Template.fromStack(stack).findResources('AWS::Cognito::UserPool'))[0] as {
       Properties: { WebAuthnRelyingPartyID: unknown };
     };
     expect(JSON.stringify(pool.Properties.WebAuthnRelyingPartyID)).toMatch(/SpaDistribution/);
   });
 
-  it('keeps email OTP off (with a synth warning) until an SES identity is configured', () => {
-    expect(authStack.allowedFirstAuthFactors).toEqual(['PASSWORD', 'WEB_AUTHN']);
-    const warnings = Annotations.fromStack(authStack).findWarning('*', Match.stringLikeRegexp('Email one-time codes are OFF'));
+  it('keeps email OTP off (with a synth warning) when no SES identity is configured', () => {
+    const stack = new AuthStack(new App(), 'Test-Auth-NoSes', {
+      config: withoutDomainOrEmail(),
+      relyingPartyId: 'x.example.com',
+    });
+    expect(stack.allowedFirstAuthFactors).toEqual(['PASSWORD', 'WEB_AUTHN']);
+    const warnings = Annotations.fromStack(stack).findWarning('*', Match.stringLikeRegexp('Email one-time codes are OFF'));
     expect(warnings).toHaveLength(1);
   });
 

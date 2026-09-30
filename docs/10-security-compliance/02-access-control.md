@@ -1,7 +1,7 @@
 ---
 id: SEC-002
 title: Access control
-version: 0.3.0
+version: 0.4.0
 status: Draft
 owner: TBD
 last_updated: 2026-10-01
@@ -59,8 +59,12 @@ Implemented in task 7 (`infra/lib/auth-stack.ts`, `api/src/triggers/pre-sign-up.
   maximum. Residual risk: a signed-in user could set a password on their own account
   through the Cognito API; revisit when Cognito allows a pool without `PASSWORD`.
 - **Email one-time code:** only bootstraps or recovers a passkey. After a code sign-in
-  the SPA stays locked on passkey registration. Requires a verified Amazon SES
-  identity; until one is configured, email OTP is off.
+  the SPA stays locked on passkey registration. Sent through Amazon SES (us-east-1)
+  as `LaneWise <noreply@1cloudhub.com>` from the verified `1cloudhub.com` domain
+  identity; without an SES sender configured, email OTP is off.
+- **Relying party / origin:** passkeys are bound to `lanewise.prototypes.1cloudhub.com`
+  (the SPA's custom domain), so passkey sign-in works only there. API CORS allows only
+  the SPA's origins (custom domain and CloudFront domain).
 - **Domain allowlist (P13):** `smretail.com` and `1cloudhub.com`, exact and
   case-insensitive (no subdomains, suffix tricks or look-alike characters). Enforced by
   the pre-sign-up trigger on every creation path (self sign-up, admin create,
@@ -79,3 +83,4 @@ Implemented in task 7 (`infra/lib/auth-stack.ts`, `api/src/triggers/pre-sign-up.
 | 0.1.0 | 2026-09-30 | TBD | Initial scaffold |
 | 0.2.0 | 2026-10-01 | Claude | Authentication section (task 7: Cognito passkeys, domain allowlist, sessions) |
 | 0.3.0 | 2026-10-01 | Claude | Permission matrix section (task 8.1: RBAC as data, route guards, active role, scope, no-leak 404) |
+| 0.4.0 | 2026-10-01 | Claude | SES sender for email one-time codes, custom-domain relying party, CORS allowlist |
