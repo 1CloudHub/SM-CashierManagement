@@ -8,8 +8,11 @@ version: 0.2
 #
 #   1. `cdk deploy` all LaneWise-prod stacks (SPA hosting, API/Lambda + API
 #      Gateway, and supporting stacks). CloudFormation reconciles infra changes.
-#   2. Upload the freshly built SPA (frontend/dist) to the SPA S3 bucket.
-#   3. Invalidate the CloudFront distribution so the new SPA is served
+#   2. Write the SPA runtime config (frontend/dist/runtime-config.json: Cognito
+#      user pool + app client ids, region, API URL) from the Auth/Api stack
+#      outputs, so the same SPA build works in any environment.
+#   3. Upload the freshly built SPA (frontend/dist) to the SPA S3 bucket.
+#   4. Invalidate the CloudFront distribution so the new SPA is served
 #      immediately.
 #
 # The S3 bucket name and CloudFront distribution id are read at deploy time from
@@ -26,6 +29,8 @@ env:
     CI: "true"
     LANEWISE_ENV: prod
     SPA_STACK_NAME: LaneWise-prod-SpaHosting
+    AUTH_STACK_NAME: LaneWise-prod-Auth
+    API_STACK_NAME: LaneWise-prod-Api
 
 phases:
   install:
@@ -66,6 +71,19 @@ phases:
           --query "Stacks[0].Outputs[?OutputKey=='DistributionId'].OutputValue" \
           --output text)
       - echo "SPA bucket=$SPA_BUCKET distribution=$DISTRIBUTION_ID"
+      # SPA runtime config (task 7): the Cognito ids + API URL the SPA needs at
+      # start-up. Public identifiers only — no secrets (the app client has none).
+      - |
+        stack_output() {
+          aws cloudformation describe-stacks --stack-name "$1" \
+            --query "Stacks[0].Outputs[?OutputKey=='$2'].OutputValue" --output text
+        }
+        export USER_POOL_ID=$(stack_output "$AUTH_STACK_NAME" UserPoolId)
+        export USER_POOL_CLIENT_ID=$(stack_output "$AUTH_STACK_NAME" UserPoolClientId)
+        export SELF_SIGN_UP_ENABLED=$(stack_output "$AUTH_STACK_NAME" SelfSignUpEnabled)
+        export API_URL=$(stack_output "$API_STACK_NAME" ApiUrl)
+        node -e 'const e=process.env; const region=e.USER_POOL_ID.split("_")[0]; require("fs").writeFileSync(process.argv[1], JSON.stringify({region, userPoolId:e.USER_POOL_ID, userPoolClientId:e.USER_POOL_CLIENT_ID, selfSignUp:e.SELF_SIGN_UP_ENABLED==="true", apiUrl:e.API_URL}, null, 2));' "$CODEBUILD_SRC_DIR/frontend/dist/runtime-config.json"
+        cat "$CODEBUILD_SRC_DIR/frontend/dist/runtime-config.json"
       # Upload the built SPA. --delete removes stale assets no longer in dist.
       - aws s3 sync "$CODEBUILD_SRC_DIR/frontend/dist" "s3://$SPA_BUCKET" --delete
       # Invalidate the CloudFront cache so the new SPA is served immediately.

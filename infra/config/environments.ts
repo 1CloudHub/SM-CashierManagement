@@ -30,6 +30,8 @@ export interface EnvironmentConfig {
   readonly retainData: boolean;
   /** GitHub source wiring for the CI/CD pipeline (CodeStar Connection). */
   readonly github: GitHubSourceConfig;
+  /** Cognito user pool / sign-in settings (task 7, requirement 1). */
+  readonly auth: AuthConfig;
   /** Tags applied to every stack/resource in this environment. */
   readonly tags: Record<string, string>;
 }
@@ -56,6 +58,45 @@ export interface GitHubSourceConfig {
   readonly connectionName: string;
 }
 
+/**
+ * Authentication configuration (task 7, requirement 1, ADR-0002).
+ *
+ * Sign-in is passkey-only; the email one-time code is used only to bootstrap
+ * or recover a passkey. Email OTP in Cognito requires Amazon SES as the
+ * sender, so it is switched on only once a verified SES identity is set here.
+ */
+export interface AuthConfig {
+  /**
+   * Demo mode: anyone with an allowlisted email may create their own account
+   * (requirement 1.7, Q15). When false, only administrators create users.
+   */
+  readonly selfSignUp: boolean;
+  /**
+   * WebAuthn relying party ID (the domain passkeys are bound to). Undefined =>
+   * the SPA's CloudFront domain. Set this to the custom domain once one exists
+   * — changing it later invalidates every registered passkey.
+   */
+  readonly relyingPartyId?: string;
+  /**
+   * Amazon SES sender for the one-time codes. Undefined => email OTP stays OFF
+   * (Cognito refuses EMAIL_OTP without SES) and first sign-in cannot complete;
+   * `cdk synth` emits a warning. Requires a verified SES identity (manual step,
+   * see infra/README.md).
+   */
+  readonly email?: AuthEmailConfig;
+}
+
+export interface AuthEmailConfig {
+  /** Verified SES "From" address, e.g. `no-reply@lanewise.smretail.com`. */
+  readonly fromEmail: string;
+  /** Display name for the From header. */
+  readonly fromName?: string;
+  /** Verified SES domain identity, when the From address is covered by a domain identity. */
+  readonly sesVerifiedDomain?: string;
+  /** SES region (must host the verified identity). */
+  readonly sesRegion: string;
+}
+
 const BASE_TAGS: Record<string, string> = {
   Project: 'LaneWise',
   Application: 'cashier-staffing-planner',
@@ -74,6 +115,13 @@ export const environments: Record<EnvName, EnvironmentConfig> = {
       repo: 'SM-CashierManagement',
       branch: 'main',
       connectionName: 'lanewise-prod-github',
+    },
+    auth: {
+      // Demo deployment: self sign-up on for the allowlisted domains (Q15).
+      selfSignUp: true,
+      relyingPartyId: undefined,
+      // Set once an SES identity is verified (manual step) — see infra/README.md.
+      email: undefined,
     },
     tags: { ...BASE_TAGS, Environment: 'prod' },
   },
@@ -94,6 +142,7 @@ export const environments: Record<EnvName, EnvironmentConfig> = {
   //     branch: 'main',
   //     connectionName: 'lanewise-staging-github',
   //   },
+  //   auth: { selfSignUp: true, relyingPartyId: undefined, email: undefined },
   //   tags: { ...BASE_TAGS, Environment: 'staging' },
   // },
   //

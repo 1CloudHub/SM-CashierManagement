@@ -2,10 +2,11 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { App } from 'aws-cdk-lib';
-import { Match, Template } from 'aws-cdk-lib/assertions';
+import { Annotations, Match, Template } from 'aws-cdk-lib/assertions';
 import { describe, expect, it } from 'vitest';
 import { resolveEnvironment } from '../config/environments';
 import { ApiStack, DEFAULT_API_BUNDLE_DIR } from '../lib/api-stack';
+import { AuthStack, DEFAULT_PRE_SIGN_UP_BUNDLE_DIR, TOKEN_POLICY } from '../lib/auth-stack';
 import { DeployPipelineStack } from '../lib/deploy-pipeline-stack';
 import { PipelineIamStack } from '../lib/pipeline-iam-stack';
 import { PipelinePrChecksStack } from '../lib/pipeline-pr-checks-stack';
@@ -15,7 +16,11 @@ function synth() {
   const app = new App();
   const config = resolveEnvironment('prod');
   const spa = new SpaHostingStack(app, 'Test-SpaHosting', { config });
-  const api = new ApiStack(app, 'Test-Api', { config });
+  const auth = new AuthStack(app, 'Test-Auth', {
+    config,
+    relyingPartyId: spa.distribution.distributionDomainName,
+  });
+  const api = new ApiStack(app, 'Test-Api', { config, userPool: auth.userPool });
   const pipelineIam = new PipelineIamStack(app, 'Test-PipelineIam', { config });
   const pipelinePrChecks = new PipelinePrChecksStack(app, 'Test-PipelinePrChecks', {
     config,
@@ -31,6 +36,8 @@ function synth() {
   return {
     spa: Template.fromStack(spa),
     api: Template.fromStack(api),
+    auth: Template.fromStack(auth),
+    authStack: auth,
     pipelineIam: Template.fromStack(pipelineIam),
     pipelinePrChecks: Template.fromStack(pipelinePrChecks),
     prChecksStack: pipelinePrChecks,
@@ -99,15 +106,201 @@ describe('API stack', () => {
     });
   });
 
+  it('protects every other route with the Cognito user-pool authorizer (feature routes secure by default)', () => {
+    api.resourceCountIs('AWS::ApiGateway::Authorizer', 1);
+    api.hasResourceProperties('AWS::ApiGateway::Authorizer', {
+      Type: 'COGNITO_USER_POOLS',
+      IdentitySource: 'method.request.header.Authorization',
+      ProviderARNs: [Match.anyValue()],
+    });
+    api.hasResourceProperties('AWS::ApiGateway::Resource', { PathPart: '{proxy+}' });
+    api.hasResourceProperties('AWS::ApiGateway::Method', {
+      HttpMethod: 'ANY',
+      AuthorizationType: 'COGNITO_USER_POOLS',
+      AuthorizerId: Match.anyValue(),
+      Integration: Match.objectLike({ Type: 'AWS_PROXY' }),
+    });
+  });
+
+  it('leaves only /health and CORS preflight unauthenticated', () => {
+    const methods = api.findResources('AWS::ApiGateway::Method');
+    for (const [, m] of Object.entries(methods)) {
+      const props = (m as { Properties: { HttpMethod: string; AuthorizationType: string } }).Properties;
+      if (props.AuthorizationType === 'NONE') {
+        expect(['GET', 'OPTIONS']).toContain(props.HttpMethod);
+      }
+    }
+    const unauthenticatedGets = Object.values(methods).filter((m) => {
+      const p = (m as { Properties: { HttpMethod: string; AuthorizationType: string } }).Properties;
+      return p.HttpMethod === 'GET' && p.AuthorizationType === 'NONE';
+    });
+    expect(unauthenticatedGets).toHaveLength(1);
+    // Both `/` and `/{proxy+}` ANY methods carry the authorizer.
+    const anyMethods = Object.values(methods).filter(
+      (m) => (m as { Properties: { HttpMethod: string } }).Properties.HttpMethod === 'ANY',
+    );
+    expect(anyMethods).toHaveLength(2);
+    for (const m of anyMethods) {
+      expect((m as { Properties: { AuthorizationType: string } }).Properties.AuthorizationType).toBe('COGNITO_USER_POOLS');
+    }
+  });
+
   it('fails synth with a clear message when the API bundle has not been built', () => {
     const app = new App();
     expect(
       () =>
         new ApiStack(app, 'Test-Api-NoBundle', {
           config: resolveEnvironment('prod'),
+          userPool: new AuthStack(app, 'Test-Auth-ForNoBundle', {
+            config: resolveEnvironment('prod'),
+            relyingPartyId: 'lanewise.example.com',
+          }).userPool,
           apiBundleDir: path.join(os.tmpdir(), 'lanewise-missing-bundle'),
         }),
     ).toThrowError(/API bundle not found/);
+  });
+});
+
+describe('auth stack (task 7)', () => {
+  const { auth, authStack } = synth();
+
+  it('creates one Cognito user pool on the Essentials tier with passkey (WebAuthn) sign-in', () => {
+    auth.resourceCountIs('AWS::Cognito::UserPool', 1);
+    auth.hasResourceProperties('AWS::Cognito::UserPool', {
+      UserPoolName: 'lanewise-prod-users',
+      UserPoolTier: 'ESSENTIALS',
+      WebAuthnRelyingPartyID: Match.anyValue(),
+      WebAuthnUserVerification: 'required',
+      Policies: Match.objectLike({
+        SignInPolicy: { AllowedFirstAuthFactors: Match.arrayWith(['WEB_AUTHN']) },
+      }),
+    });
+  });
+
+  it('binds passkeys to the SPA domain by default (relying party = CloudFront domain)', () => {
+    const pool = Object.values(auth.findResources('AWS::Cognito::UserPool'))[0] as {
+      Properties: { WebAuthnRelyingPartyID: unknown };
+    };
+    expect(JSON.stringify(pool.Properties.WebAuthnRelyingPartyID)).toMatch(/SpaDistribution/);
+  });
+
+  it('keeps email OTP off (with a synth warning) until an SES identity is configured', () => {
+    expect(authStack.allowedFirstAuthFactors).toEqual(['PASSWORD', 'WEB_AUTHN']);
+    const warnings = Annotations.fromStack(authStack).findWarning('*', Match.stringLikeRegexp('Email one-time codes are OFF'));
+    expect(warnings).toHaveLength(1);
+  });
+
+  it('enables email OTP (sent through SES) when an SES identity is configured', () => {
+    const app = new App();
+    const base = resolveEnvironment('prod');
+    const config = {
+      ...base,
+      auth: {
+        ...base.auth,
+        email: { fromEmail: 'no-reply@lanewise.smretail.com', sesRegion: 'ap-southeast-1' },
+      },
+    };
+    const stack = new AuthStack(app, 'Test-Auth-Ses', { config, relyingPartyId: 'lanewise.smretail.com' });
+    const t = Template.fromStack(stack);
+    t.hasResourceProperties('AWS::Cognito::UserPool', {
+      WebAuthnRelyingPartyID: 'lanewise.smretail.com',
+      Policies: Match.objectLike({
+        SignInPolicy: { AllowedFirstAuthFactors: ['PASSWORD', 'WEB_AUTHN', 'EMAIL_OTP'] },
+      }),
+      EmailConfiguration: Match.objectLike({ EmailSendingAccount: 'DEVELOPER' }),
+    });
+  });
+
+  it('closes the password paths: no forgot-password recovery, max-strength policy, no MFA', () => {
+    auth.hasResourceProperties('AWS::Cognito::UserPool', {
+      AccountRecoverySetting: { RecoveryMechanisms: [{ Name: 'admin_only', Priority: 1 }] },
+      Policies: Match.objectLike({ PasswordPolicy: Match.objectLike({ MinimumLength: 99 }) }),
+      MfaConfiguration: 'OFF',
+    });
+  });
+
+  it('uses email as a case-insensitive, immutable, auto-verified username (P13)', () => {
+    auth.hasResourceProperties('AWS::Cognito::UserPool', {
+      UsernameAttributes: ['email'],
+      UsernameConfiguration: { CaseSensitive: false },
+      AutoVerifiedAttributes: ['email'],
+      Schema: Match.arrayWith([Match.objectLike({ Name: 'email', Mutable: false, Required: true })]),
+    });
+  });
+
+  it('allows self sign-up in demo mode', () => {
+    auth.hasResourceProperties('AWS::Cognito::UserPool', {
+      AdminCreateUserConfig: { AllowAdminCreateUserOnly: false },
+    });
+  });
+
+  it('wires the pre-sign-up allowlist trigger to the bundled Lambda', () => {
+    auth.hasResourceProperties('AWS::Cognito::UserPool', {
+      LambdaConfig: { PreSignUp: { 'Fn::GetAtt': [Match.stringLikeRegexp('PreSignUpFunction'), 'Arn'] } },
+    });
+    auth.hasResourceProperties('AWS::Lambda::Function', {
+      FunctionName: 'lanewise-prod-pre-sign-up',
+      Runtime: 'nodejs20.x',
+      Handler: 'index.handler',
+      Environment: { Variables: Match.objectLike({ SELF_SIGN_UP_ENABLED: 'true' }) },
+    });
+    auth.hasResourceProperties('AWS::Lambda::Permission', {
+      Action: 'lambda:InvokeFunction',
+      Principal: 'cognito-idp.amazonaws.com',
+    });
+  });
+
+  it('retains the prod user pool with deletion protection', () => {
+    auth.hasResource('AWS::Cognito::UserPool', { DeletionPolicy: 'Retain' });
+    auth.hasResourceProperties('AWS::Cognito::UserPool', { DeletionProtection: 'ACTIVE' });
+  });
+
+  it('gives the SPA a public client limited to choice-based sign-in and refresh', () => {
+    auth.resourceCountIs('AWS::Cognito::UserPoolClient', 1);
+    auth.hasResourceProperties('AWS::Cognito::UserPoolClient', {
+      GenerateSecret: false,
+      ExplicitAuthFlows: ['ALLOW_USER_AUTH', 'ALLOW_REFRESH_TOKEN_AUTH'],
+      PreventUserExistenceErrors: 'ENABLED',
+      EnableTokenRevocation: true,
+      WriteAttributes: ['email'],
+    });
+  });
+
+  it('matches token lifetimes to the 60-minute idle timeout (requirement 1.8)', () => {
+    expect(TOKEN_POLICY.accessTokenMinutes).toBe(60);
+    auth.hasResourceProperties('AWS::Cognito::UserPoolClient', {
+      AccessTokenValidity: 60,
+      IdTokenValidity: 60,
+      RefreshTokenValidity: TOKEN_POLICY.refreshTokenHours * 60,
+      TokenValidityUnits: { AccessToken: 'minutes', IdToken: 'minutes', RefreshToken: 'minutes' },
+      AuthSessionValidity: TOKEN_POLICY.authSessionMinutes,
+    });
+  });
+
+  it('fails synth with a clear message when the pre-sign-up bundle has not been built', () => {
+    expect(
+      () =>
+        new AuthStack(new App(), 'Test-Auth-NoBundle', {
+          config: resolveEnvironment('prod'),
+          relyingPartyId: 'x.example.com',
+          preSignUpBundleDir: path.join(os.tmpdir(), 'lanewise-missing-bundle'),
+        }),
+    ).toThrowError(/Pre-sign-up bundle not found/);
+  });
+});
+
+describe('pre-sign-up bundle (built /api output)', () => {
+  it('rejects outside domains and accepts allowlisted ones from the bundle deployed by the stack', async () => {
+    const mod = (await import(pathToFileURL(path.join(DEFAULT_PRE_SIGN_UP_BUNDLE_DIR, 'index.mjs')).href)) as {
+      handler: (event: unknown) => Promise<unknown>;
+    };
+    const ev = (email: string) => ({
+      triggerSource: 'PreSignUp_AdminCreateUser',
+      request: { userAttributes: { email } },
+      response: {},
+    });
+    await expect(mod.handler(ev('juan@smretail.com.evil.io'))).rejects.toThrow("This work email domain isn't allowed.");
+    await expect(mod.handler(ev('juan@smretail.com'))).resolves.toBeDefined();
   });
 });
 

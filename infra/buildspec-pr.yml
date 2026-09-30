@@ -10,10 +10,11 @@ version: 0.2
 # Phase mapping to DEP-002 (install → build → lint → test → cdk synth/diff):
 #   install  -> restore deps (shared types, API, frontend, infra, domain);
 #               dependency-free repo scripts need no install.
-#   build    -> build @lanewise/shared (consumed by the API), type-check and
-#               bundle the API Lambda, build the SPA, type-check/emit the CDK
-#               app, build the staffing domain package. The API bundle must
-#               exist before cdk synth / infra tests.
+#   build    -> build @lanewise/shared (consumed by the API and the SPA),
+#               type-check and bundle the API Lambda + the Cognito pre-sign-up
+#               trigger (api/dist/{lambda,pre-sign-up}), build the SPA,
+#               type-check/emit the CDK app, build the staffing domain package.
+#               Both bundles must exist before cdk synth / infra tests.
 #   lint     -> ESLint (shared + API + frontend + infra + domain) +
 #               docs-conventions.
 #   test     -> unit + property-based tests (shared + API + frontend + infra +

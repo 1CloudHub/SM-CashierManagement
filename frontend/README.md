@@ -14,6 +14,25 @@ npm run lint     # eslint, incl. token-usage enforcement
 
 Path alias `@/*` maps to `src/*` (see `tsconfig.app.json` and `vite.config.ts`).
 
+The SPA imports `@lanewise/shared` (email allowlist, session policy); build it
+first: `(cd ../packages/shared && npm ci && npm run build)`.
+
+## Sign-in (Cognito passkeys, task 7)
+
+The app sits behind passkey sign-in (`src/features/auth`, `src/app/root.tsx`).
+At start-up it loads `/runtime-config.json` (written by the deploy stage from
+the CDK outputs) or, locally, these Vite env vars:
+
+```bash
+VITE_COGNITO_USER_POOL_ID=ap-southeast-1_XXXXXXXXX
+VITE_COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
+VITE_SELF_SIGN_UP=true
+```
+
+Passkeys are bound to the pool's relying-party domain, so real sign-in only
+works on that domain. Without any config, `npm run dev` shows the component
+gallery and a production build fails closed (503 page).
+
 ## Design tokens (single source of truth)
 
 All colour, typography, spacing, radius, elevation and motion values are design

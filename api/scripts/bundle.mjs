@@ -8,6 +8,10 @@
 //
 // A second bundle, `dist/migrate/index.mjs` (+ the SQL in
 // `dist/migrate/migrations/`), is the `npm run db:migrate` CLI (task 5.1).
+//
+// A third bundle, `dist/pre-sign-up/index.mjs`, is the Cognito pre-sign-up
+// trigger (email-domain allowlist, task 7.2), deployed by the CDK AuthStack
+// (infra/lib/auth-stack.ts) with handler `index.handler`.
 import { cp, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -44,3 +48,11 @@ const migrateOut = join(root, 'dist', 'migrate');
 await rm(migrateOut, { recursive: true, force: true });
 await build({ ...common, entryPoints: { index: join(root, 'src', 'db', 'migrate-cli.ts') }, outdir: migrateOut });
 await cp(join(root, 'migrations'), join(migrateOut, 'migrations'), { recursive: true });
+
+const preSignUpOut = join(root, 'dist', 'pre-sign-up');
+await rm(preSignUpOut, { recursive: true, force: true });
+await build({
+  ...common,
+  entryPoints: { index: join(root, 'src', 'triggers', 'pre-sign-up.ts') },
+  outdir: preSignUpOut,
+});

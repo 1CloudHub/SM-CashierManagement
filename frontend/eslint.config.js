@@ -84,6 +84,8 @@ export default defineConfig([
             'useAnnounce',
             'useI18n',
             'useT',
+            'useAuth',
+            'useRouter',
           ],
         },
       ],

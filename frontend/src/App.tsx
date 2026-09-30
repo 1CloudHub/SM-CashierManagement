@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { ComponentGallery } from '@/components/gallery'
 
 /**
@@ -12,6 +13,6 @@ import { ComponentGallery } from '@/components/gallery'
  * axe check (App.test.tsx). The gallery owns its own providers (I18n,
  * Announcer, Toast, Help/keyboard) via `ComponentGallery`.
  */
-export function App() {
-  return <ComponentGallery />
+export function App({ accountSlot }: { accountSlot?: ReactNode } = {}) {
+  return <ComponentGallery accountSlot={accountSlot} />
 }

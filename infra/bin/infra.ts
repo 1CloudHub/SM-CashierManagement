@@ -2,6 +2,7 @@
 import { App, Tags } from 'aws-cdk-lib';
 import { resolveEnvironment } from '../config/environments';
 import { ApiStack } from '../lib/api-stack';
+import { AuthStack } from '../lib/auth-stack';
 import { DeployPipelineStack } from '../lib/deploy-pipeline-stack';
 import { PipelineIamStack } from '../lib/pipeline-iam-stack';
 import { PipelinePrChecksStack } from '../lib/pipeline-pr-checks-stack';
@@ -24,9 +25,19 @@ const spa = new SpaHostingStack(app, `${prefix}-SpaHosting`, {
   description: `LaneWise SPA hosting (S3 + CloudFront) — ${config.envName}.`,
 });
 
+// Cognito user pool (passkeys + domain allowlist, task 7). Passkeys are bound
+// to the SPA's domain (the relying party), so this follows SPA hosting.
+const auth = new AuthStack(app, `${prefix}-Auth`, {
+  env,
+  config,
+  relyingPartyId: config.auth.relyingPartyId ?? spa.distribution.distributionDomainName,
+  description: `LaneWise authentication (Cognito passkeys + domain allowlist) — ${config.envName}.`,
+});
+
 const api = new ApiStack(app, `${prefix}-Api`, {
   env,
   config,
+  userPool: auth.userPool,
   description: `LaneWise API (Lambda + API Gateway) — ${config.envName}.`,
 });
 
@@ -69,6 +80,7 @@ for (const [key, value] of Object.entries(config.tags)) {
 }
 
 void spa;
+void auth;
 void api;
 void pipelineIam;
 void pipelinePrChecks;

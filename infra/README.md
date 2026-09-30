@@ -8,8 +8,13 @@ the deployment topology from **ADR-0004** and docs **DEP-003 / DEP-004 / DEP-005
   `index.html`. (`lib/spa-hosting-stack.ts`)
 - **API** — AWS Lambda behind Amazon API Gateway (REST). Runs the bundled
   `@lanewise/api` service (`/api`, built to `api/dist/lambda`) and exposes the
-  `/health` endpoint for the walking-skeleton deploy (task 3.5); feature routes
-  and data services are added in later phases. (`lib/api-stack.ts`)
+  public `/health` endpoint; every other route goes through the Cognito
+  user-pool authorizer (task 7). Data services are added in later phases.
+  (`lib/api-stack.ts`)
+- **Auth** — Amazon Cognito user pool with passkey (WebAuthn) sign-in, email
+  one-time codes for passkey bootstrap/recovery, the pre-sign-up domain
+  allowlist trigger (`api/dist/pre-sign-up`) and the SPA app client
+  (task 7). (`lib/auth-stack.ts`)
 - **Pipeline IAM** — the CodeStar (GitHub) Connection plus scoped IAM service
   roles for CodePipeline and CodeBuild. No stored AWS keys / GitHub credentials.
   The pipeline and build projects themselves are added in tasks 3.3/3.4.
@@ -25,7 +30,8 @@ infra/
   bin/infra.ts                 # app entry — resolves env config, instantiates stacks
   config/environments.ts       # per-environment config map (prod now; staging template)
   lib/spa-hosting-stack.ts     # S3 + CloudFront (OAC) SPA hosting
-  lib/api-stack.ts             # Lambda + API Gateway
+  lib/api-stack.ts             # Lambda + API Gateway (+ Cognito authorizer)
+  lib/auth-stack.ts            # Cognito user pool (passkeys), pre-sign-up allowlist, SPA client
   lib/pipeline-iam-stack.ts    # CodeStar (GitHub) connection + pipeline/CodeBuild IAM roles
   test/stacks.test.ts          # CDK assertion smoke tests
 ```
@@ -76,6 +82,40 @@ console before any pipeline can pull the repo:
 No GitHub token or AWS access key is stored anywhere — the connection is the
 credential broker (NFR-SEC-004). Update `config/environments.ts` (`github` block)
 if the org/repo/connection name differs.
+
+## Authentication (Cognito passkeys, task 7)
+
+- **Passkey-only sign-in.** The SPA app client allows only `ALLOW_USER_AUTH`
+  (choice-based sign-in) and refresh. Cognito insists on `PASSWORD` staying in
+  the pool's allowed first factors, so the password policy is at its maximum
+  (99 characters), forgot-password recovery is off (`admin_only`) and users
+  sign up without a password; the SPA never offers one.
+- **Domain allowlist (P13).** `lanewise-<env>-pre-sign-up` rejects every
+  creation path (self sign-up, admin create, federated) for emails outside
+  smretail.com / 1cloudhub.com; `email` is immutable. The API re-checks the
+  domain on every request.
+- **Tokens.** ID/access tokens 60 minutes (= the idle timeout), refresh token
+  12 hours (absolute cap; the SPA revokes it on idle sign-out), auth session
+  10 minutes.
+- **Relying party.** Passkeys are bound to the SPA's CloudFront domain unless
+  `auth.relyingPartyId` is set. Set the custom domain *before* users register
+  passkeys — changing it later invalidates every passkey.
+- **SPA config.** The deploy stage writes `runtime-config.json` (pool id,
+  client id, region, API URL) into the SPA bucket from the stack outputs.
+
+### ⚠️ Manual step: verify an SES identity for the one-time codes
+
+Cognito sends email one-time codes only through Amazon SES. Until
+`auth.email` is set in `config/environments.ts`, email OTP stays **off** and
+`cdk synth` warns (`lanewise:auth:email-otp-disabled`) — nobody can finish
+first sign-in. To enable it:
+
+1. In SES (in the region you'll name as `sesRegion`), verify the sender domain
+   or address (e.g. `no-reply@lanewise.smretail.com`) and request production
+   access (out of the sandbox) so codes reach any smretail.com / 1cloudhub.com
+   inbox.
+2. Set `auth.email = { fromEmail, fromName?, sesVerifiedDomain?, sesRegion }`
+   for the environment and merge; the pipeline deploys it.
 
 ## Adding `staging` later
 

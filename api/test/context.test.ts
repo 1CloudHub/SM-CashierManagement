@@ -29,6 +29,13 @@ describe('request context', () => {
     });
   });
 
+  it('builds no principal for an email outside the domain allowlist (P13 defence in depth)', () => {
+    for (const email of ['a@gmail.com', 'a@smretail.com.evil.io', 'a@it.smretail.com', 'a@evilsmretail.com']) {
+      expect(principalFromClaims({ sub: 'u-1', email })).toBeNull();
+    }
+    expect(principalFromClaims({ sub: 'u-2', email: 'b@1cloudhub.com' })?.email).toBe('b@1cloudhub.com');
+  });
+
   it('requirePrincipal throws unauthenticated when anonymous', () => {
     expect(() => requirePrincipal(ctx(null))).toThrowError(ApiError);
     try {
