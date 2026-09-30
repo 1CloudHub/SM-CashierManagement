@@ -3,6 +3,7 @@ import { App } from '@/App'
 import { useRouteFocus } from '@/components/a11y'
 import { HelpProvider } from '@/components/help'
 import { ProfileScreen } from '@/features/auth/profile-screen'
+import { DataSourcesPage, UploadPage } from '@/features/data/pages'
 import { HomeScreen } from '@/features/home/home-screen'
 import { SearchResultsScreen } from '@/features/search/search-results-screen'
 import { SCREEN_BY_ID, SCREENS, type ScreenDef, type ScreenId } from './screens'
@@ -21,6 +22,8 @@ const BUILT: Partial<Record<ScreenId, () => React.ReactNode>> = {
   'SCR-010': () => <HomeScreen />,
   'SCR-041': () => <SearchResultsScreen />,
   // SCR-080 keeps its own shell from task 7 until it moves into AppLayout.
+  'SCR-050': () => <DataSourcesPage />,
+  'SCR-051': () => <UploadPage />,
   'SCR-080': () => <ProfileScreen />,
   'SCR-090': () => <StatusScreen />,
   'SCR-091': () => <HelpScreen />,
