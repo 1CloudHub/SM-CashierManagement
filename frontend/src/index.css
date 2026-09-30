@@ -51,6 +51,14 @@
   --color-outline: var(--lw-outline);
   --color-outline-subtle: var(--lw-outline-subtle);
   --color-focus-ring: var(--lw-focus-ring);
+  --color-scrim: var(--lw-scrim);
+
+  /* Brand roles (task 22) — brand mark, reversed app bar, endorsement. */
+  --color-brand: var(--lw-brand);
+  --color-on-brand: var(--lw-on-brand);
+  --color-brand-endorsement: var(--lw-brand-endorsement);
+  --color-appbar: var(--lw-appbar);
+  --color-on-appbar: var(--lw-on-appbar);
 
   --color-viz-1: var(--lw-viz-1);
   --color-viz-2: var(--lw-viz-2);
