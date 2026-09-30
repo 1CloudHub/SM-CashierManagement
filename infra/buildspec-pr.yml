@@ -8,18 +8,22 @@ version: 0.2
 # check is added to `main`'s required status checks (DEP-001) — blocks merge.
 #
 # Phase mapping to DEP-002 (install → build → lint → test → cdk synth/diff):
-#   install  -> restore deps (shared types, API, frontend, infra); dependency-
-#               free repo scripts need no install.
+#   install  -> restore deps (shared types, API, frontend, infra, domain);
+#               dependency-free repo scripts need no install.
 #   build    -> build @lanewise/shared (consumed by the API), type-check and
 #               bundle the API Lambda, build the SPA, type-check/emit the CDK
-#               app. The API bundle must exist before cdk synth / infra tests.
-#   lint     -> ESLint (shared + API + frontend + infra) + docs-conventions.
-#   test     -> unit + property-based tests (shared + API + frontend + infra)
-#               + spec-format validation.
+#               app, build the staffing domain package. The API bundle must
+#               exist before cdk synth / infra tests.
+#   lint     -> ESLint (shared + API + frontend + infra + domain) +
+#               docs-conventions.
+#   test     -> unit + property-based tests (shared + API + frontend + infra +
+#               domain, incl. the prototype-v3 parity suite) + spec-format
+#               validation.
 #   cdk synth / cdk diff -> synthesize the CDK app and surface the infra delta.
 #
-# Repo layout assumed: /packages/shared, /api, /frontend, /infra, /scripts at
-# the repo root. CodeBuild checks out the PR source branch at the repo root.
+# Repo layout assumed: /packages/shared, /packages/domain, /api, /frontend,
+# /infra, /scripts at the repo root. CodeBuild checks out the PR source branch
+# at the repo root.
 #
 # Note: CodeBuild runs pre_build (lint) before build, so lint must not depend
 # on build outputs (the shared package's lint type-checks its sources directly).
@@ -43,6 +47,7 @@ phases:
       - cd "$CODEBUILD_SRC_DIR/api" && npm ci
       - cd "$CODEBUILD_SRC_DIR/frontend" && npm ci
       - cd "$CODEBUILD_SRC_DIR/infra" && npm ci
+      - cd "$CODEBUILD_SRC_DIR/packages/domain" && npm ci
 
   build:
     commands:
@@ -51,6 +56,7 @@ phases:
       - cd "$CODEBUILD_SRC_DIR/api" && npm run build
       - cd "$CODEBUILD_SRC_DIR/frontend" && npm run build
       - cd "$CODEBUILD_SRC_DIR/infra" && npm run build
+      - cd "$CODEBUILD_SRC_DIR/packages/domain" && npm run build
 
   pre_build:
     commands:
@@ -59,6 +65,7 @@ phases:
       - cd "$CODEBUILD_SRC_DIR/api" && npm run lint
       - cd "$CODEBUILD_SRC_DIR/frontend" && npm run lint
       - cd "$CODEBUILD_SRC_DIR/infra" && npm run lint
+      - cd "$CODEBUILD_SRC_DIR/packages/domain" && npm run lint
       # docs-conventions check (lint step). --changed scopes it to files changed
       # vs origin/main so PR builds stay fast (scripts/README.md, GOV-000).
       - cd "$CODEBUILD_SRC_DIR" && node scripts/check-docs-conventions.mjs --changed
@@ -76,6 +83,8 @@ phases:
       - cd "$CODEBUILD_SRC_DIR/api" && npm test
       - cd "$CODEBUILD_SRC_DIR/frontend" && npm test
       - cd "$CODEBUILD_SRC_DIR/infra" && npm test
+      # Staffing domain: unit + property tests and the v3 parity suite (task 6.4).
+      - cd "$CODEBUILD_SRC_DIR/packages/domain" && npm test
       # spec-format validation (test step) — scripts/README.md, GOV-000.
       - cd "$CODEBUILD_SRC_DIR" && node scripts/check-spec-format.mjs
       - echo "cdk synth — synthesize the CDK app (gate)"
