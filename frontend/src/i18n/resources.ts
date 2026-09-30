@@ -30,6 +30,7 @@
  */
 
 import { authEn, authFil } from './auth-messages'
+import { rulesEn, rulesFil } from './rules-messages'
 import type { Bundle, Locale } from './types'
 
 const en: Bundle = {
@@ -304,6 +305,6 @@ const fil: Bundle = {
 
 /** All bundles, keyed by locale. English is the canonical key set. */
 export const BUNDLES: Record<Locale, Bundle> = {
-  en: { ...en, ...authEn },
-  fil: { ...fil, ...authFil },
+  en: { ...en, ...authEn, ...rulesEn },
+  fil: { ...fil, ...authFil, ...rulesFil },
 }
