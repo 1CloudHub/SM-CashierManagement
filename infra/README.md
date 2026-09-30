@@ -6,8 +6,9 @@ the deployment topology from **ADR-0004** and docs **DEP-003 / DEP-004 / DEP-005
 - **SPA hosting** — private Amazon S3 bucket served through Amazon CloudFront via
   Origin Access Control (OAC), with SPA (client-side routing) fallback to
   `index.html`. (`lib/spa-hosting-stack.ts`)
-- **API** — AWS Lambda behind Amazon API Gateway (REST). Ships a `/health`
-  skeleton endpoint for the walking-skeleton deploy (task 3.5); feature routes
+- **API** — AWS Lambda behind Amazon API Gateway (REST). Runs the bundled
+  `@lanewise/api` service (`/api`, built to `api/dist/lambda`) and exposes the
+  `/health` endpoint for the walking-skeleton deploy (task 3.5); feature routes
   and data services are added in later phases. (`lib/api-stack.ts`)
 - **Pipeline IAM** — the CodeStar (GitHub) Connection plus scoped IAM service
   roles for CodePipeline and CodeBuild. No stored AWS keys / GitHub credentials.
@@ -26,11 +27,16 @@ infra/
   lib/spa-hosting-stack.ts     # S3 + CloudFront (OAC) SPA hosting
   lib/api-stack.ts             # Lambda + API Gateway
   lib/pipeline-iam-stack.ts    # CodeStar (GitHub) connection + pipeline/CodeBuild IAM roles
-  lambda/health/health.mjs     # health-check handler (skeleton)
   test/stacks.test.ts          # CDK assertion smoke tests
 ```
 
 ## Commands
+
+`cdk synth` and the tests need the API bundle. Build it first (from the repo root):
+
+```bash
+(cd packages/shared && npm ci && npm run build) && (cd api && npm ci && npm run build)
+```
 
 ```bash
 npm install         # install dependencies

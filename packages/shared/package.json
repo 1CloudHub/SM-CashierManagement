@@ -1,0 +1,39 @@
+{
+  "name": "@lanewise/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared domain types, DTOs and tiny pure helpers for LaneWise (Cashier Staffing Planner). Types only plus dependency-free helpers; consumed by the API and the SPA (ADR-0002).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint . && npm run typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "20.19.43",
+    "eslint": "10.11.0",
+    "fast-check": "4.10.2",
+    "globals": "17.12.0",
+    "typescript": "5.6.3",
+    "typescript-eslint": "8.71.0",
+    "vitest": "3.2.7"
+  }
+}
