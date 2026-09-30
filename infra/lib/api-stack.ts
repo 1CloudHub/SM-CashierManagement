@@ -7,6 +7,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 import type { EnvironmentConfig } from '../config/environments';
+import { IngestionStorage } from './ingestion-storage';
 
 export interface ApiStackProps extends StackProps {
   readonly config: EnvironmentConfig;
@@ -53,6 +54,8 @@ export class ApiStack extends Stack {
   public readonly authorizer: apigateway.CognitoUserPoolsAuthorizer;
   /** Method options that protect a route with the Cognito authorizer. */
   public readonly protectedMethodOptions: apigateway.MethodOptions;
+  /** Data-ingestion upload/snapshot storage (task 9.1). */
+  public readonly ingestionStorage: IngestionStorage;
 
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
@@ -87,6 +90,14 @@ export class ApiStack extends Stack {
         LOG_LEVEL: 'info',
         NODE_OPTIONS: '--enable-source-maps',
       },
+    });
+
+    // Data-ingestion storage (task 9.1): S3 bucket for uploaded files and
+    // normalised snapshots; grants the API Put/Get and sets INGESTION_BUCKET.
+    this.ingestionStorage = new IngestionStorage(this, 'IngestionStorage', {
+      envName: config.envName,
+      retainData: config.retainData,
+      apiFunction: apiFn,
     });
 
     const api = new apigateway.RestApi(this, 'RestApi', {
@@ -137,6 +148,11 @@ export class ApiStack extends Stack {
     new CfnOutput(this, 'ApiUrl', {
       value: api.url,
       description: 'Invoke URL of the LaneWise REST API.',
+    });
+
+    new CfnOutput(this, 'IngestionBucketName', {
+      value: this.ingestionStorage.bucket.bucketName,
+      description: 'S3 bucket for data-ingestion uploads and snapshots.',
     });
 
   }
