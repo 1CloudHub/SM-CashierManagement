@@ -74,6 +74,17 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'GET', path: '/snapshots' },
   { method: 'GET', path: '/snapshots/{snapshotId}' },
   { method: 'PATCH', path: '/snapshots/{snapshotId}' },
+  // Task 10: business rule sets and versions (SCR-060, SCR-061).
+  { method: 'GET', path: '/rule-sets' },
+  { method: 'GET', path: '/rule-sets/{ruleSetId}/versions' },
+  { method: 'POST', path: '/rule-sets/{ruleSetId}/versions' },
+  { method: 'GET', path: '/rule-versions/{versionId}' },
+  { method: 'PATCH', path: '/rule-versions/{versionId}' },
+  { method: 'POST', path: '/rule-versions/{versionId}/submit' },
+  { method: 'POST', path: '/rule-versions/{versionId}/approve' },
+  { method: 'POST', path: '/rule-versions/{versionId}/request-changes' },
+  { method: 'POST', path: '/rule-versions/{versionId}/publish' },
+  { method: 'GET', path: '/rule-versions/{versionId}/diff' },
 ];
 
 /** Request headers the SPA sends: the defaults plus the demo role switcher's `X-Active-Role`. */
