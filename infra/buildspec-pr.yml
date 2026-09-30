@@ -1,0 +1,68 @@
+version: 0.2
+
+# LaneWise pull-request checks (spec task 3.3, DEP-002).
+#
+# Runs on every pull request against `main` via the CodeStar (GitHub)
+# Connection webhook and reports status back to the PR. A non-zero exit in any
+# phase fails the build, which surfaces a failing check on the PR and — once the
+# check is added to `main`'s required status checks (DEP-001) — blocks merge.
+#
+# Phase mapping to DEP-002 (install → build → lint → test → cdk synth/diff):
+#   install  -> restore deps (frontend + infra); dependency-free repo scripts
+#               need no install.
+#   build    -> build the SPA (frontend) and type-check/emit the CDK app.
+#   lint     -> ESLint (frontend + infra) + the docs-conventions check.
+#   test     -> unit + property-based tests (frontend + infra) + spec-format
+#               validation.
+#   cdk synth / cdk diff -> synthesize the CDK app and surface the infra delta.
+#
+# Repo layout assumed: /frontend, /infra, /scripts at the repo root. CodeBuild
+# checks out the PR source branch at the repo root.
+
+env:
+  variables:
+    # Keep CI installs deterministic and non-interactive.
+    CI: "true"
+    # cdk diff against the deployed stacks is best-effort in PR checks (the
+    # bootstrap/deploy roles may not be assumable from the PR build); a diff
+    # failure must not fail the check — synth is the gate. See the diff phase.
+    LANEWISE_ENV: prod
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - echo "install — restoring dependencies"
+      - cd "$CODEBUILD_SRC_DIR/frontend" && npm ci
+      - cd "$CODEBUILD_SRC_DIR/infra" && npm ci
+
+  build:
+    commands:
+      - echo "build — SPA + CDK app"
+      - cd "$CODEBUILD_SRC_DIR/frontend" && npm run build
+      - cd "$CODEBUILD_SRC_DIR/infra" && npm run build
+
+  pre_build:
+    commands:
+      - echo "lint — ESLint + docs-conventions"
+      - cd "$CODEBUILD_SRC_DIR/frontend" && npm run lint
+      - cd "$CODEBUILD_SRC_DIR/infra" && npm run lint
+      # docs-conventions check (lint step). --changed scopes it to files changed
+      # vs origin/main so PR builds stay fast (scripts/README.md, GOV-000).
+      - cd "$CODEBUILD_SRC_DIR" && node scripts/check-docs-conventions.mjs --changed
+
+  post_build:
+    commands:
+      - echo "test — unit + property tests + spec-format"
+      - cd "$CODEBUILD_SRC_DIR/frontend" && npm test
+      - cd "$CODEBUILD_SRC_DIR/infra" && npm test
+      # spec-format validation (test step) — scripts/README.md, GOV-000.
+      - cd "$CODEBUILD_SRC_DIR" && node scripts/check-spec-format.mjs
+      - echo "cdk synth — synthesize the CDK app (gate)"
+      - cd "$CODEBUILD_SRC_DIR/infra" && npx cdk synth
+      # cdk diff surfaces the infra delta for reviewers. It is best-effort: the
+      # PR build may not be able to assume the deploy role to read live stacks,
+      # so a diff failure is logged but does not fail the check (synth is the gate).
+      - echo "cdk diff — surface the infra delta (best-effort)"
+      - cd "$CODEBUILD_SRC_DIR/infra" && (npx cdk diff || echo "cdk diff could not compare against deployed stacks (non-fatal)")

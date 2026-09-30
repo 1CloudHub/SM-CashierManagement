@@ -1,0 +1,44 @@
+version: 0.2
+
+# LaneWise deploy — Build stage (spec task 3.4, DEP-002).
+#
+# Runs in the CodePipeline "Build" stage on merge to `main`. It installs
+# dependencies and builds the SPA (frontend) and the API/CDK app, then hands the
+# whole workspace forward as the build artifact so the Deploy stage can run
+# `cdk deploy` against the already-built outputs.
+#
+# Repo layout assumed: /frontend, /infra at the repo root. CodePipeline places
+# the source at $CODEBUILD_SRC_DIR.
+#
+# Artifacts: the entire tree is exported so the Deploy stage has the built SPA
+# (frontend/dist), the infra CDK app, and node_modules available without a
+# second install. The Deploy stage re-runs `cdk synth`/`deploy` from infra.
+
+env:
+  variables:
+    CI: "true"
+    LANEWISE_ENV: prod
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - echo "install — restoring dependencies (frontend + infra)"
+      - cd "$CODEBUILD_SRC_DIR/frontend" && npm ci
+      - cd "$CODEBUILD_SRC_DIR/infra" && npm ci
+
+  build:
+    commands:
+      - echo "build — SPA (frontend) + CDK app (infra)"
+      - cd "$CODEBUILD_SRC_DIR/frontend" && npm run build
+      - cd "$CODEBUILD_SRC_DIR/infra" && npm run build
+      - echo "cdk synth — validate the cloud assembly before deploy"
+      - cd "$CODEBUILD_SRC_DIR/infra" && npx cdk synth
+
+artifacts:
+  # Carry the full workspace forward to the Deploy stage: built SPA
+  # (frontend/dist), the infra app, and installed dependencies.
+  files:
+    - '**/*'
+  base-directory: .

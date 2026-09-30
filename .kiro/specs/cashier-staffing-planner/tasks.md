@@ -1,6 +1,6 @@
 # Implementation Plan — Cashier Staffing Planner
 
-> Derived from `requirements.md` v0.2.0 and `design.md` v0.7.0. Stack per ADR-0002; design system per ADR-0003 (Tailwind + shadcn/ui, token-driven); deployment/CI-CD per ADR-0004 (S3+CloudFront SPA, Lambda+API Gateway, GitHub Flow to a single prod, GitHub Actions + OIDC).
+> Derived from `requirements.md` v0.2.0 and `design.md` v0.7.0. Stack per ADR-0002; design system per ADR-0003 (Tailwind + shadcn/ui, token-driven); deployment/CI-CD per ADR-0004 (S3+CloudFront SPA, Lambda+API Gateway, GitHub Flow to a single prod, AWS CodePipeline + CodeBuild via a CodeStar Connection).
 > Order reflects a walking-skeleton approach: design system → branching → deployment pipeline → app foundation → features. Each task lists the requirements it implements; property-based tests (P1–P19) follow the testing strategy (TS-002).
 
 ## Overview
@@ -9,7 +9,7 @@ Phase 1 establishes the **design system** (style guide tokens + UX-system compon
 
 ## Tasks
 
-- [ ] 1. Design system: style guide and UX system
+- [x] 1. Design system: style guide and UX system
 - [x] 1.1 Frontend scaffold and design tokens
   - Scaffold the React + TypeScript SPA (Vite) with Tailwind CSS and shadcn/ui per ADR-0003.
   - Define design tokens (colour palette with semantic ramps and accessible on-colours, typography, spacing, radius, elevation, motion durations/easings) as CSS variables and wire them into the Tailwind config; grayscale/neutral until SM brand tokens land (SG-004, Q8).
@@ -24,56 +24,56 @@ Phase 1 establishes the **design system** (style guide tokens + UX-system compon
   - Design a single simple SVG mark and export it for every context: favicon (16/32/48 + SVG), PWA/app icons (180 maskable, 192, 512), the sign-in hero lockup, the top-bar brand, OG/social preview, and a monochrome print variant.
   - Drive the mark from brand tokens so it is theme-aware and legible at 16 px; use a neutral placeholder until SM brand guidelines arrive (Q8).
   - _Requirements: 24 (SG-003, SG-008, SG-004)_
-- [~] 1.4 Core components and states
+- [x] 1.4 Core components and states
   - Build the atomic and composite components the wireframes use: buttons, inputs/selects, tabs, dialogs/drawers, tables (sortable, sticky header/first column), cards, pills/status, KPI cards, toasts, breadcrumbs, side nav and top bar.
   - Implement the standard states per UX-010: loading (skeletons for KPIs, tables and cards; labelled placeholders for charts/timeline/map; deferred spinner only for short waits), empty, error, no-access, stale, unsaved and success. Skeletons match the final layout to avoid shift and respect `prefers-reduced-motion`.
   - Components ship with correct roles, accessible names, loading/skeleton variants and motion by default, so screens don't re-implement them.
   - _Requirements: 21, 24 (SG-001, SG-006, UX-005, UX-010)_
-- [~] 1.5 Error and status pages (SCR-090)
+- [x] 1.5 Error and status pages (SCR-090)
   - Build 400/401/403/404/429/500/503 and offline pages, each with a plain-language message, a reference ID, localisation, and a clear way back to safety (Home / previous safe screen / sign-in). No dead ends; no stack traces or object details leaked; announced to assistive tech.
   - _Requirements: 2, 24 (UX-010)_
-- [~] 1.6 Grid, layout system and responsive breakpoints
+- [x] 1.6 Grid, layout system and responsive breakpoints
   - Implement the responsive grid (12 columns; 8 on tablet; 4 on mobile) with token-driven gutters, outer margins and container widths (laptop 1280 px, desktop 1600 px) per the design's grid table.
   - Build the layout primitives — Page, Grid/Col, Stack, Cluster, Split/Sidebar, Section — from the spacing scale so screens compose them instead of bespoke CSS; provide a compact density variant for tables and the roster timeline while keeping ≥44 px touch targets.
   - Implement the app shell (top bar, side nav, breadcrumb, sample-data banner slot) and the four breakpoints (mobile <600, tablet 600–1023, laptop 1024–1439, desktop ≥1440), including the mobile nav drawer and full-screen search.
   - _Requirements: 24 (UX-002, UX-005, UX-006, UX-007, SG-005)_
-- [~] 1.7 Accessibility and ARIA/labelling standard
+- [x] 1.7 Accessibility and ARIA/labelling standard
   - Establish landmarks, skip link, focus management and the ARIA/labelling standard (UX-004): accessible names on every control, aria-labels on icon-only buttons, documented patterns for tabs/dialogs/menus/grids/timeline, descriptive cell-action labels, and live regions for async results. Add automated accessibility checks to the component gallery.
   - _Requirements: 24 (UX-001, UX-004, NFR-A11Y-001)_
-- [~] 1.8 Internationalisation and microcopy/voice
+- [x] 1.8 Internationalisation and microcopy/voice
   - Set up the i18n framework with en/fil resource bundles, the language switcher, and locale-aware date/number/₱ formatting.
   - Add the numeric/currency type token (`--font-num`, tabular figures) and a shared Currency/Num component: render ₱ as the Unicode peso sign (U+20B1) with a font fallback that includes the glyph, right-aligned tabular columns; verify ₱ renders on Windows/macOS/iOS/Android/Linux (SG-002).
   - Establish the microcopy/voice conventions (UX-003) with a canonical string reference for common actions, states and errors; all UI text, labels and errors sourced from bundles (no hardcoding).
   - _Requirements: 23, 24 (UX-003, UX-011, NFR-L10N-001)_
-- [~] 1.9 Keyboard shortcuts and help
+- [x] 1.9 Keyboard shortcuts and help
   - Implement the global shortcut scheme (`/` or ⌘K search, `?` shortcut reference, `g`+key navigation, `n` notifications, Esc close) and roster-timeline shortcuts (arrow/Enter, keyboard equivalents for drag/resize/bulk); disabled while typing, never focus-trapping, all discoverable.
   - Build the Help and shortcuts screen (SCR-091) and in-context "How it works" help drawn from DOM-001/DOM-003; field-level hints with accessible info popovers (never tooltip-only for essential info).
   - _Requirements: 24 (UX-003, UX-004, SG-000)_
-- [~] 1.10 Component gallery
+- [x] 1.10 Component gallery
   - Publish a component gallery/storybook documenting components, tokens, motion and states as the living style-guide reference (SG-000/001, UX-010).
   - _Requirements: 24 (SG-000)_
 
-- [ ] 2. Git branching strategy and repository automation
-- [~] 2.1 Branching model and protection
+- [x] 2. Git branching strategy and repository automation
+- [x] 2.1 Branching model and protection
   - Adopt GitHub Flow (ADR-0004): short-lived branches, PRs into `main`, `main` always deployable. Document it in DEP-001.
   - Configure branch protection on `main`: require PR, require passing status checks, no direct pushes.
   - _Requirements: NFR summary (DEP-001)_
-- [~] 2.2 Repository conventions and PR automation
-  - Add PR template, CODEOWNERS, commit/PR title conventions, and the docs-conventions check; wire the spec-format validation into CI where applicable.
+- [x] 2.2 Repository conventions and PR automation
+  - Add PR template, CODEOWNERS, commit/PR title conventions, and the docs-conventions check; wire the spec-format validation into the CodeBuild PR checks where applicable.
   - _Requirements: NFR summary (DEP-001, GOV-000)_
 
 - [ ] 3. Deployment and CI/CD (merge to main → deploy to AWS)
-- [~] 3.1 CDK infrastructure skeleton
+- [x] 3.1 CDK infrastructure skeleton
   - Create the AWS CDK app (TypeScript) with stacks for SPA hosting (S3 + CloudFront) and the API (Lambda + API Gateway), parameterised for a single `prod` env but structured to add `staging` later (ADR-0004, DEP-003/004/005).
   - _Requirements: NFR summary (DEP-003, DEP-004, DEP-005)_
-- [~] 3.2 GitHub Actions OIDC and AWS role
-  - Configure GitHub Actions to assume an AWS IAM role via OIDC (no stored keys); scope the role to the deploy actions.
+- [x] 3.2 CodeStar connection and pipeline IAM roles
+  - Create a CodeStar (GitHub) Connection so AWS can source the private repo (authorise the GitHub App handshake once in the console), and define scoped IAM service roles for CodePipeline and CodeBuild (no stored keys).
   - _Requirements: NFR summary (DEP-002, NFR-SEC-004)_
-- [~] 3.3 PR pipeline
-  - On pull requests: install, build, lint, run tests, and run `cdk synth` + `cdk diff`; block merge on failure.
+- [x] 3.3 PR pipeline
+  - A CodeBuild project triggered on pull requests (via the CodeStar Connection) runs install, build, lint, tests, and `cdk synth` + `cdk diff`, reporting status back to the PR; a failing check blocks merge.
   - _Requirements: NFR summary (DEP-002)_
-- [~] 3.4 Deploy pipeline on merge to main
-  - On merge to `main`: build the SPA and API, then `cdk deploy` to AWS prod (upload SPA to S3, invalidate CloudFront, deploy Lambda/API Gateway). Keep a promotion gate/staging stage easy to add later.
+- [x] 3.4 Deploy pipeline on merge to main
+  - CodePipeline on merge to `main`: Source (CodeStar Connection) → Build (CodeBuild: build SPA + API) → Deploy (`cdk deploy` to AWS prod — upload SPA to S3, invalidate CloudFront, deploy Lambda/API Gateway). Keep a promotion gate/staging stage easy to add later.
   - _Requirements: NFR summary (DEP-002, DEP-003)_
 - [~] 3.5 Walking-skeleton deploy
   - Deploy a minimal SPA (the app shell from task 1.3) served by CloudFront calling a health-check API endpoint, to prove the full pipeline end to end before feature work.
@@ -255,7 +255,7 @@ Phase 1 establishes the **design system** (style guide tokens + UX-system compon
   - _Requirements: 19 (P18)_
 
 - [~] 24. Full AWS wiring for feature services
-  - Extend the CDK stacks (from phase 3) with PostgreSQL/Aurora, S3 buckets, SQS + workers, Cognito, SES and Amazon Location Service; wire environment config and secrets via the OIDC pipeline.
+  - Extend the CDK stacks (from phase 3) with PostgreSQL/Aurora, S3 buckets, SQS + workers, Cognito, SES and Amazon Location Service; wire environment config and secrets via the CodePipeline/CodeBuild deploy pipeline.
   - _Requirements: NFR summary (DEP-003, DEP-004)_
 
 - [~] 25. End-to-end verification against journeys and properties
