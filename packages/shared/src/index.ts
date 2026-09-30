@@ -10,4 +10,5 @@ export * from './entities.js';
 export * from './provenance.js';
 export * from './rbac.js';
 export * from './roles.js';
+export * from './rules.js';
 export * from './scenario.js';
