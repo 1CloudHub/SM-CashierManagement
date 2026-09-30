@@ -67,6 +67,12 @@ phases:
     commands:
       - echo "test — unit + property tests + spec-format"
       - cd "$CODEBUILD_SRC_DIR/packages/shared" && npm test
+      # API tests include the PostgreSQL-backed data-layer suites (schema
+      # invariants, audit log, P7). Vitest's global setup starts an embedded
+      # PostgreSQL 17 from the `embedded-postgres` npm binaries — no Docker or
+      # privileged mode needed; as root (CodeBuild) it runs the server under a
+      # `postgres` OS user it creates. Set TEST_DATABASE_URL to use an external
+      # server instead.
       - cd "$CODEBUILD_SRC_DIR/api" && npm test
       - cd "$CODEBUILD_SRC_DIR/frontend" && npm test
       - cd "$CODEBUILD_SRC_DIR/infra" && npm test
