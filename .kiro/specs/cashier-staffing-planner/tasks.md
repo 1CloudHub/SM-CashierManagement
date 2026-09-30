@@ -79,42 +79,42 @@ Phase 1 establishes the **design system** (style guide tokens + UX-system compon
   - Deploy a minimal SPA (the app shell from task 1.3) served by CloudFront calling a health-check API endpoint, to prove the full pipeline end to end before feature work.
   - _Requirements: NFR summary (DEP-002, DEP-003)_
 
-- [~] 4. Application foundation (API + shared types)
+- [x] 4. Application foundation (API + shared types)
   - Scaffold the Node + TypeScript API service and a shared types package; add the test runner with property-based testing support; connect the API skeleton to the CI/CD pipeline from phase 3.
   - _Requirements: NFR summary (ADR-0002)_
 
-- [ ] 5. Data model and persistence
-- [~] 5.1 Relational schema and migrations
+- [x] 5. Data model and persistence
+- [x] 5.1 Relational schema and migrations
   - Implement tables for User, Passkey, RoleAssignment, Store, Department, Dataset/Snapshot, IngestionRun, RuleSet/RuleVersion, Scenario, ScenarioRun, ApprovalStep, Staff/Availability, ShiftOverride, StaffRequest, StoreLocation, StaffHomeArea, TravelTime, ShiftOffer, TransferRequest, Notification, NotificationPreference, SavedView, AuditEvent, per DOM-002. Include the `synthetic` flag and User `language`.
   - _Requirements: 4, 8, 17, 19_
-- [~] 5.2 Append-only audit log
+- [x] 5.2 Append-only audit log
   - Implement the immutable AuditEvent store (time, user, active role, event, object, before/after).
   - Property test: every create/edit/submit/decision/publish/ingestion/export/role-change writes exactly one event (P7).
   - _Requirements: 22 (P7)_
 
-- [ ] 6. Core staffing domain (pure TypeScript, prototype parity)
-- [~] 6.1 Forecast, Erlang C and shrinkage
+- [x] 6. Core staffing domain (pure TypeScript, prototype parity)
+- [x] 6.1 Forecast, Erlang C and shrinkage
   - Implement hourly forecast, Erlang C lane sizing to the service target, and shrinkage uplift per DOM-001.
   - _Requirements: 4_
-- [~] 6.2 Shift builder, roster assignment and labor rules
+- [x] 6.2 Shift builder, roster assignment and labor rules
   - Implement shift construction, named roster assignment and PH labor-rule checks (consecutive days, weekly hours, rest ≥ 10 h, mandatory 24-hour rest after 6 days).
   - _Requirements: 4, 6.7, 7.4_
-- [~] 6.3 Hiring plan and cost model
+- [x] 6.3 Hiring plan and cost model
   - Implement seasonal team sizing, hiring waves by lead time, and the cost model from wage/premium rule versions.
   - _Requirements: 4, 10_
-- [~] 6.4 Parity test suite against DOM-001 tolerance
+- [x] 6.4 Parity test suite against DOM-001 tolerance
   - Golden-master/property test running the pipeline on the seeded demo snapshot, asserting parity with v3 per the DOM-001 tolerance table and fixtures A–C (integers exact; cost ±0.5%; roster on shift-set and hours). Fixture A: Erlang example (λ=240, h=2.5 → 13 cashiers @ 90%/60s). Fixture C: QC main lanes Dec 19 (19 peak) and network Dec 19 (254 peak, 555 rostered, 3,688 hours). Assert single-department vs all-stores consistency.
   - _Requirements: 4 (P2, P6)_
 
-- [ ] 7. Authentication (Cognito passkeys) and domain allowlist
-- [~] 7.1 Cognito user pool with passkey sign-in
+- [x] 7. Authentication (Cognito passkeys) and domain allowlist
+- [x] 7.1 Cognito user pool with passkey sign-in
   - Configure passkey (WebAuthn) sign-in with no password path; first sign-in / new-device email one-time code leading to passkey registration; passkey management (list/add/remove, block last-passkey removal).
   - _Requirements: 1.3, 1.4, 1.5, 1.6, 1.9_
-- [~] 7.2 Domain allowlist and self sign-up
+- [x] 7.2 Domain allowlist and self sign-up
   - Pre-sign-up Lambda enforcing smretail.com / 1cloudhub.com; self sign-up in demo mode; reject other domains with the specified message.
   - Property test: no account exists with a domain outside the allowlist (P13).
   - _Requirements: 1.1, 1.2, 1.7 (P13)_
-- [~] 7.3 Session timeout
+- [x] 7.3 Session timeout
   - 60-minute idle timeout with a 2-minute warning and return-to-URL after re-auth.
   - _Requirements: 1.8_
 
