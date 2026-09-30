@@ -49,6 +49,9 @@ afterAll(async () => {
   await db?.dispose();
 });
 
+/** `authenticated()` routes that act on the caller's own staff record (task 15). */
+const OWN_STAFF_RECORD = /^\/me\/(consents|home-area)(\/|$)/;
+
 const storeOf = (id: string) => org.stores.find((s) => s.id === id);
 
 /** A non-staff scope over the seeded org. */
@@ -199,6 +202,10 @@ describe('P12 active-role enforcement', () => {
           if (!active.ok) {
             allowed = false;
             denial = 403;
+          } else if (request.guard.kind === 'authenticated' && OWN_STAFF_RECORD.test(request.pattern)) {
+            // Task 15: only the active role's own staff record (Staff self scope).
+            allowed = active.role !== null && expectedScope(active.role, assigned).type === 'self';
+            if (!allowed) denial = 403;
           } else if (request.guard.kind === 'authenticated') {
             const bodyRole = (request.body as { role?: RoleCode } | undefined)?.role;
             allowed = request.method === 'GET' || selectableRoles(assignments, demoMode).includes(bodyRole as RoleCode);
@@ -221,7 +228,9 @@ describe('P12 active-role enforcement', () => {
             expect(after).toEqual(before);
             return;
           }
-          expect(res.status === 200 || res.status === 422, `${request.method} ${request.path}: ${res.raw}`).toBe(true);
+          // 409: e.g. removing a home area the Staff user never shared (task 15).
+          const ok = [200, 422, ...(OWN_STAFF_RECORD.test(request.pattern) ? [409] : [])];
+          expect(ok.includes(res.status), `${request.method} ${request.path}: ${res.raw}`).toBe(true);
           if (request.method === 'GET') {
             expect(after).toEqual(before);
           } else if (request.pattern === '/me/active-role') {

@@ -38,6 +38,8 @@ const TABLES = [
   'notification_preference',
   'saved_view',
   'audit_event',
+  'consent_text',
+  'staff_consent',
 ];
 
 describe('migration runner', () => {

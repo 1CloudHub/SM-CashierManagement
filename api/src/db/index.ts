@@ -8,6 +8,7 @@ export * from './pool.js';
 export * from './rows.js';
 export * as exportsRepo from './repositories/exports.js';
 export * as ingestionRepo from './repositories/ingestion.js';
+export * as locationPrivacyRepo from './repositories/location-privacy.js';
 export * as orgRepo from './repositories/org.js';
 export * as rulesRepo from './repositories/rules.js';
 export * as scenariosRepo from './repositories/scenarios.js';
