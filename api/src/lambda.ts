@@ -7,7 +7,7 @@
 import { randomUUID } from 'node:crypto';
 import type { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { createApp } from './app.js';
-import { principalFromClaims, type RequestContext } from './context.js';
+import { identityFromClaims, type RequestContext } from './context.js';
 import { ApiError, errors, internalErrorBody, toErrorBody } from './http/errors.js';
 import type { Router } from './http/router.js';
 import type { ApiRequest, ApiResponse } from './http/types.js';
@@ -116,7 +116,8 @@ export function createLambdaHandler(options: LambdaHandlerOptions = {}): LambdaH
         env,
         now,
         logger: logger.child({ route }),
-        principal: principalFromClaims(claims),
+        identity: identityFromClaims(claims),
+        principal: null,
       };
 
       response = await match.handler({ ...request, params: match.params, route }, context);
