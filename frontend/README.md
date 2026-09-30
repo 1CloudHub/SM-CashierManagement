@@ -14,8 +14,8 @@ npm run lint     # eslint, incl. token-usage enforcement
 
 Path alias `@/*` maps to `src/*` (see `tsconfig.app.json` and `vite.config.ts`).
 
-The SPA imports `@lanewise/shared` (email allowlist, session policy); build it
-first: `(cd ../packages/shared && npm ci && npm run build)`.
+The SPA imports `@lanewise/shared` (roles, email allowlist, session policy,
+API contracts); build it first: `(cd ../packages/shared && npm ci && npm run build)`.
 
 ## Sign-in (Cognito passkeys, task 7)
 
@@ -30,8 +30,28 @@ VITE_SELF_SIGN_UP=true
 ```
 
 Passkeys are bound to the pool's relying-party domain, so real sign-in only
-works on that domain. Without any config, `npm run dev` shows the component
-gallery and a production build fails closed (503 page).
+works on that domain. Without any config, `npm run dev` runs the app shell
+without sign-in (for UI work) and a production build fails closed (503 page).
+
+## App skeleton, roles and the API client (task 8.2)
+
+- **Routes** — `src/app/screens.ts` is the screen map: one react-router route
+  per screen (SCR-010 … SCR-091), its roles (the wireframe `data-page-roles`)
+  and the side-nav groups (the wireframe `NAV` table; `access.test.ts` parses
+  both, so drift fails CI). Unbuilt screens render a placeholder naming their
+  spec task. A role that may not open a screen gets the "No access" state, and
+  its nav item is hidden. The component gallery is at `/gallery`.
+- **"Viewing as"** — the demo role switcher (all 8 roles) persists per user in
+  localStorage; switching keeps the page if the new role may open it, else
+  goes Home.
+- **API client** — `src/api` (`useApi()`): typed methods over a transport
+  adapter. Every request sends `X-Active-Role`; the server enforces it (task
+  8.1). Add endpoints to `client.ts` and a mock route to `mock.ts`.
+
+| Env var | Default | Effect |
+| --- | --- | --- |
+| `VITE_DEMO_ROLE_SWITCHER` | on | `false` hides the switcher; the role comes from the user's assignments |
+| `VITE_API_MOCK` | on | `false` calls the real API (`apiUrl` from runtime config) instead of the in-memory mock; the sample-data banner shows while the mock is on |
 
 ## Design tokens (single source of truth)
 

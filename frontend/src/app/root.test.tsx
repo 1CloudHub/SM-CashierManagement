@@ -32,7 +32,8 @@ describe('auth gate', () => {
     setPath('/profile?tab=passkeys')
     const user = userEvent.setup()
     const client = fakeClient()
-    renderWithAuth(<AuthRoutes home={<Home />} />, client)
+    // The full signed-in app, so /profile resolves through the route table.
+    renderWithAuth(<AuthRoutes />, client)
 
     await screen.findByRole('heading', { name: 'Sign in to LaneWise' })
     expect(window.location.pathname).toBe('/sign-in')
