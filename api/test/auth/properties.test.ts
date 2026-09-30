@@ -223,8 +223,16 @@ describe('P12 active-role enforcement', () => {
             expect(after).toEqual(before);
             return;
           }
-          expect(res.status === 200 || res.status === 422, `${request.method} ${request.path}: ${res.raw}`).toBe(true);
-          if (request.method === 'GET') {
+          // Authorised: the handler ran. Task-9 routes addressed with random
+          // ids/bodies legitimately answer 201/404/409 too — never 401/403/5xx.
+          const featureOutcome =
+            request.guard.kind === 'authorize' && request.guard.resource === 'data_ingestion'
+              ? res.status < 500 && res.status !== 401 && res.status !== 403
+              : res.status === 200 || res.status === 422;
+          expect(featureOutcome, `${request.method} ${request.path}: ${res.raw}`).toBe(true);
+          // CSV downloads record one export audit event (P7), so only they may write on GET.
+          const isExport = /\/(export|report)$/.test(request.pattern);
+          if (request.method === 'GET' && !isExport) {
             expect(after).toEqual(before);
           } else if (request.pattern === '/me/active-role') {
             const role = (request.body as { role: RoleCode }).role;

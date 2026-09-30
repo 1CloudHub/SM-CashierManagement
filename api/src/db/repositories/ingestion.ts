@@ -1,21 +1,25 @@
 /**
  * Dataset ingestion and snapshots (DOM-002 Dataset/Snapshot, IngestionRun;
- * Req 17). File parsing/validation is task 9; this persists the outcome.
+ * Req 17). File parsing/validation lives in `src/ingestion/` (pure); this
+ * persists outcomes. The task-9 two-step workflow (validate, then load or
+ * cancel) is in ./ingestion-workflow.ts; `ingestDataset` below records a
+ * one-step load (seeding, tests).
  */
 import { randomUUID } from 'node:crypto';
-import type { DatasetSnapshot, DatasetType, IsoDate } from '@lanewise/shared';
+import type { DatasetSnapshot, DatasetType, IngestionStatus, IsoDate } from '@lanewise/shared';
 import type pg from 'pg';
 import { audit, type AuditedTx } from '../audit.js';
 import type { Queryable } from '../pool.js';
 import { isoOrNull, queryMaybe, queryOne } from '../rows.js';
 
+export type { IngestionStatus } from '@lanewise/shared';
+
+/** Minimal issue shape accepted by `ingestDataset` (the wire type adds `code`/`column`). */
 export interface IngestionIssue {
   readonly row: number;
   readonly severity: 'warning' | 'error';
   readonly message: string;
 }
-
-export type IngestionStatus = 'validating' | 'validated' | 'blocked' | 'loaded' | 'failed' | 'cancelled';
 
 export interface IngestionRun {
   readonly id: string;
@@ -32,7 +36,7 @@ export interface IngestionRun {
   readonly finishedAt: string | null;
 }
 
-interface SnapshotRow extends pg.QueryResultRow {
+export interface SnapshotRow extends pg.QueryResultRow {
   id: string;
   dataset_type: DatasetType;
   covers_from: string;
@@ -42,9 +46,9 @@ interface SnapshotRow extends pg.QueryResultRow {
   loaded_at: Date;
 }
 
-const SNAPSHOT_COLUMNS = 'id, dataset_type, covers_from, covers_to, row_count, synthetic, loaded_at';
+export const SNAPSHOT_COLUMNS = 'id, dataset_type, covers_from, covers_to, row_count, synthetic, loaded_at';
 
-function toSnapshot(row: SnapshotRow): DatasetSnapshot {
+export function toSnapshot(row: SnapshotRow): DatasetSnapshot {
   return {
     id: row.id,
     type: row.dataset_type,

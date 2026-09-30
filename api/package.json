@@ -18,6 +18,8 @@
     "db:seed:demo": "node dist/seed-demo/index.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1144.0",
+    "@aws-sdk/s3-request-presigner": "3.1144.0",
     "@lanewise/domain": "file:../packages/domain",
     "@lanewise/shared": "file:../packages/shared",
     "pg": "8.23.1",
