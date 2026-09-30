@@ -57,7 +57,7 @@ describe('routing', () => {
     renderApp({ path: '/', role: 'RST' })
     await user.click(within(mainNav()).getByRole('link', { name: 'Rule sets' }))
     expect(window.location.pathname).toBe('/rules')
-    expect(screen.getByRole('heading', { level: 1, name: 'Rule sets' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Business rule sets' })).toBeInTheDocument()
   })
 
   it('keeps the component gallery at /gallery', () => {
