@@ -62,7 +62,7 @@ Phase 1 establishes the **design system** (style guide tokens + UX-system compon
   - Add PR template, CODEOWNERS, commit/PR title conventions, and the docs-conventions check; wire the spec-format validation into the CodeBuild PR checks where applicable.
   - _Requirements: NFR summary (DEP-001, GOV-000)_
 
-- [ ] 3. Deployment and CI/CD (merge to main → deploy to AWS)
+- [x] 3. Deployment and CI/CD (merge to main → deploy to AWS)
 - [x] 3.1 CDK infrastructure skeleton
   - Create the AWS CDK app (TypeScript) with stacks for SPA hosting (S3 + CloudFront) and the API (Lambda + API Gateway), parameterised for a single `prod` env but structured to add `staging` later (ADR-0004, DEP-003/004/005).
   - _Requirements: NFR summary (DEP-003, DEP-004, DEP-005)_
@@ -75,7 +75,7 @@ Phase 1 establishes the **design system** (style guide tokens + UX-system compon
 - [x] 3.4 Deploy pipeline on merge to main
   - CodePipeline on merge to `main`: Source (CodeStar Connection) → Build (CodeBuild: build SPA + API) → Deploy (`cdk deploy` to AWS prod — upload SPA to S3, invalidate CloudFront, deploy Lambda/API Gateway). Keep a promotion gate/staging stage easy to add later.
   - _Requirements: NFR summary (DEP-002, DEP-003)_
-- [~] 3.5 Walking-skeleton deploy
+- [x] 3.5 Walking-skeleton deploy
   - Deploy a minimal SPA (the app shell from task 1.3) served by CloudFront calling a health-check API endpoint, to prove the full pipeline end to end before feature work.
   - _Requirements: NFR summary (DEP-002, DEP-003)_
 
