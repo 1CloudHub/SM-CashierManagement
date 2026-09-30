@@ -1,7 +1,7 @@
 ---
 id: SG-002
 title: Typography
-version: 0.4.0
+version: 0.5.0
 status: Draft
 owner: TBD
 last_updated: 2026-09-30
@@ -19,6 +19,8 @@ related: [SG-000, SG-004, UX-011, ADR-0003]
 - `--lw-numeric`: `tabular-nums` — applied via `font-variant-numeric` on every number column, KPI and axis.
 
 **Latin + Filipino coverage:** the stack covers the Filipino alphabet including Ñ/ñ and the peso sign ₱ (U+20B1); Noto Sans is the fallback when a device font lacks a glyph. Test ₱ and ñ on the store PCs and tablets before launch (GOV-003 risk).
+
+**Brand font swap (task 22, Q8/Q28):** if SM supplies a licensed typeface, it goes first in `--lw-font-sans` / `--lw-font-num` in `frontend/src/styles/tokens.css`, with this system stack and Noto Sans kept behind it as the fallback. Components read only the tokens, so no component changes. The full brand swap procedure is in SG-004 "Swapping the brand". The component gallery's Type scale section shows a Filipino + ₱ specimen for checking coverage.
 
 ## Weights
 
@@ -57,3 +59,4 @@ related: [SG-000, SG-004, UX-011, ADR-0003]
 | 0.2.0 | 2026-09-30 | Kiro | Placeholder system-font scale |
 | 0.3.0 | 2026-09-30 | Kiro | Currency/numeric token + ₱ rendering |
 | 0.4.0 | 2026-09-30 | Kiro | Adopted LaneWise v0.5 type tokens (`--lw-*`), scale, weights, tabular numbers |
+| 0.5.0 | 2026-09-30 | Claude | Task 22: brand font swap note, Filipino/₱ gallery specimen |
