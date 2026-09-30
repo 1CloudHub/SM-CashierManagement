@@ -2,19 +2,20 @@
  * Business rule sets and versions — `/rule-sets`, `/rule-versions` (task 10;
  * Req 16; SCR-060, SCR-061; P6, P7, P12).
  *
- * Each route declares its one required permission in `RULE_ROUTES`
- * (`RULE_PERMISSIONS` in @lanewise/shared, from the design RBAC matrix). The
- * check runs through `RuleRouteDeps.authorize`, so wiring these routes into
- * the task 8.1 authorize middleware means passing that middleware's check
- * here; the default only compares the principal's active role with the
- * declared permission. Until 8.1 resolves `activeRole`, every rule route
- * answers 403.
+ * Each route declares its one required permission in `RULE_ROUTES`; the
+ * permission maps to a task 8.1 `authorize(resource, action)` guard through
+ * `RULE_PERMISSION_GRANTS` (the RBAC matrix "Business rules" rows). Publishing
+ * needs a different grant for cost rules (Finance) and non-cost rules (Rules
+ * Steward), which depends on the version addressed, so the publish route is
+ * guarded by `rules.view` and its handler requires the kind-specific grant.
  */
 import {
+  RULE_PERMISSION_GRANTS,
   canPublishRuleVersion,
   diffRulePayloads,
   hasRulePermission,
   isIsoDate,
+  publishPermissionFor,
   isRuleVersionEditable,
   validateRulePayload,
   type RulePermission,
@@ -24,6 +25,7 @@ import {
 } from '@lanewise/shared';
 import type pg from 'pg';
 import { z } from 'zod';
+import { authorize, type RouteGuard } from '../auth/guards.js';
 import { requirePrincipal, type Principal, type RequestContext } from '../context.js';
 import { actorFromPrincipal, withAuditedTransaction, type AuditedTx } from '../db/audit.js';
 import * as rulesRepo from '../db/repositories/rules.js';
@@ -33,22 +35,16 @@ import type { HttpMethod, Router } from '../http/router.js';
 import type { ApiResponse, RoutedRequest } from '../http/types.js';
 import { parseInput } from '../http/validation.js';
 
-/** Checks the caller holds `permission` and returns the principal (throws 401/403). */
-export type Authorize = (context: RequestContext, permission: RulePermission) => Principal;
-
 export interface RuleRouteDeps {
   /** The database pool; throws a 503 `ApiError` when none is configured. */
   readonly db: () => pg.Pool;
-  /** Task 8.1's authorize check; defaults to `authorizeByActiveRole`. */
-  readonly authorize?: Authorize;
 }
 
-/** Default check: the active role must be listed for the permission in the RBAC matrix. */
-export const authorizeByActiveRole: Authorize = (context, permission) => {
-  const principal = requirePrincipal(context);
-  if (!hasRulePermission(principal.activeRole, permission)) throw errors.forbidden();
-  return principal;
-};
+/** The task 8.1 guard for a rule permission. */
+export function ruleGuard(permission: RulePermission): RouteGuard {
+  const { resource, action } = RULE_PERMISSION_GRANTS[permission];
+  return authorize(resource, action);
+}
 
 interface HandlerArgs {
   readonly request: RoutedRequest;
@@ -270,11 +266,12 @@ export const RULE_ROUTES: readonly RuleRoute[] = [
   {
     method: 'POST',
     path: '/rule-versions/:versionId/publish',
-    permission: 'rules.publish',
+    // Narrowed in the handler by the version's cost flag (see file header).
+    permission: 'rules.view',
     handler: async ({ request, context, principal, pool }) => {
       const version = await loadVersion(pool, idParam(request, 'versionId'));
-      // Finance publishes only the cost rules it approved; non-cost rules are the Rules Steward's (Req 16.4).
-      if (!version.isCostRule && principal.activeRole !== 'RST') throw errors.forbidden();
+      // Finance publishes approved cost rules; the Rules Steward non-cost rules (Req 16.3, 16.4).
+      if (!hasRulePermission(principal.activeRole, publishPermissionFor(version.isCostRule))) throw errors.forbidden();
       requireChangeNote(version);
       payloadErrors(version.ruleSetType, version.payload, 'payload');
       if (!canPublishRuleVersion(principal.activeRole, version.isCostRule, version.status)) {
@@ -324,14 +321,12 @@ export const RULE_ROUTES: readonly RuleRoute[] = [
   },
 ];
 
-/** Registers every rule route, each behind its declared permission. */
+/** Registers every rule route behind its declared permission's guard. */
 export function registerRuleRoutes(router: Router, deps: RuleRouteDeps): Router {
-  const authorize = deps.authorize ?? authorizeByActiveRole;
   for (const route of RULE_ROUTES) {
-    router.add(route.method, route.path, async (request, context) => {
-      const principal = authorize(context, route.permission);
-      return route.handler({ request, context, principal, pool: deps.db() });
-    });
+    router.add(route.method, route.path, ruleGuard(route.permission), async (request, context) =>
+      route.handler({ request, context, principal: requirePrincipal(context), pool: deps.db() }),
+    )
   }
   return router;
 }

@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CfnOutput, Duration, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
+import { CfnOutput, Duration, Fn, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import type * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
@@ -20,7 +20,31 @@ export interface ApiStackProps extends StackProps {
    * Every route except `GET /health` requires a valid token.
    */
   readonly userPool: cognito.IUserPool;
+  /**
+   * Browser origins allowed to call the API (CORS), e.g. the SPA's custom
+   * domain and CloudFront domain as `https://…` URLs. Applied to the API
+   * Gateway preflight and to the function's responses (`CORS_ALLOWED_ORIGINS`).
+   * Undefined or empty => any origin (`*`).
+   */
+  readonly allowedOrigins?: readonly string[];
 }
+
+/**
+ * Feature routes served by the API (api/src/app.ts), declared explicitly so
+ * each carries the Cognito authorizer (task 8.1). API Gateway path syntax.
+ * The `{proxy+}` catch-all is protected the same way, so a route missing here
+ * is still never public; the API authorises every request against the active
+ * role and scope on top (P12).
+ */
+export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path: string }[] = [
+  { method: 'GET', path: '/me' },
+  { method: 'PUT', path: '/me/active-role' },
+  { method: 'GET', path: '/stores' },
+  { method: 'GET', path: '/stores/{storeId}' },
+];
+
+/** Request headers the SPA sends: the defaults plus the demo role switcher's `X-Active-Role`. */
+export const CORS_ALLOW_HEADERS: readonly string[] = [...apigateway.Cors.DEFAULT_HEADERS, 'X-Active-Role'];
 
 /** Default location of the API bundle produced by `api/scripts/bundle.mjs`. */
 export const DEFAULT_API_BUNDLE_DIR = path.join(__dirname, '..', '..', 'api', 'dist', 'lambda');
@@ -59,6 +83,7 @@ export class ApiStack extends Stack {
 
     const { config } = props;
     const removalPolicy = config.retainData ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY;
+    const allowedOrigins = props.allowedOrigins && props.allowedOrigins.length > 0 ? [...props.allowedOrigins] : undefined;
 
     // The LaneWise API service (/api, @lanewise/api): a single Node 20 Lambda
     // behind API Gateway, routing requests in-process. The bundle is built by
@@ -86,6 +111,10 @@ export class ApiStack extends Stack {
         LANEWISE_ENV: config.envName,
         LOG_LEVEL: 'info',
         NODE_OPTIONS: '--enable-source-maps',
+        // Demo role switcher (requirement 3); the API authorises every request
+        // against the active role either way (P12).
+        DEMO_ROLE_SWITCHER: config.demoRoleSwitcher ? 'true' : 'false',
+        CORS_ALLOWED_ORIGINS: allowedOrigins ? Fn.join(',', allowedOrigins) : '*',
       },
     });
 
@@ -97,11 +126,12 @@ export class ApiStack extends Stack {
         throttlingRateLimit: 100,
         throttlingBurstLimit: 200,
       },
-      // Permissive CORS for the skeleton; tightened to the CloudFront origin in
-      // later phases once the SPA domain is fixed.
+      // CORS limited to the SPA's origins (custom domain + CloudFront domain);
+      // the function echoes the same allowlist on its responses.
       defaultCorsPreflightOptions: {
-        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        allowOrigins: allowedOrigins ?? apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS,
+        allowHeaders: [...CORS_ALLOW_HEADERS],
       },
     });
 
@@ -131,6 +161,9 @@ export class ApiStack extends Stack {
       anyMethod: true,
       defaultMethodOptions: this.protectedMethodOptions,
     });
+    for (const route of PROTECTED_ROUTES) {
+      api.root.resourceForPath(route.path).addMethod(route.method, integration, this.protectedMethodOptions);
+    }
 
     this.apiUrl = api.url;
 

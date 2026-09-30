@@ -29,7 +29,9 @@
  * stray translation fails CI rather than silently falling back.
  */
 
+import { appEn, appFil } from './app-messages'
 import { authEn, authFil } from './auth-messages'
+import { rosterEn, rosterFil } from './roster-messages'
 import { rulesEn, rulesFil } from './rules-messages'
 import type { Bundle, Locale } from './types'
 
@@ -305,6 +307,6 @@ const fil: Bundle = {
 
 /** All bundles, keyed by locale. English is the canonical key set. */
 export const BUNDLES: Record<Locale, Bundle> = {
-  en: { ...en, ...authEn, ...rulesEn },
-  fil: { ...fil, ...authFil, ...rulesFil },
+  en: { ...en, ...authEn, ...appEn, ...rosterEn, ...rulesEn },
+  fil: { ...fil, ...authFil, ...appFil, ...rosterFil, ...rulesFil },
 }

@@ -8,7 +8,12 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
   COST_RULE_SET_TYPES,
+  ROLE_CODES,
   RULE_PERMISSIONS,
+  RULE_PERMISSION_GRANTS,
+  RULE_PERMISSION_KEYS,
+  can,
+  hasRulePermission,
   RULE_SET_TYPES,
   RULE_VERSION_ACTIONS,
   RULE_VERSION_STATUSES,
@@ -354,23 +359,30 @@ describe('rule version lifecycle', () => {
     );
   });
 
-  it('publishing: Rules Steward publishes non-cost rules; cost rules need approval first', () => {
+  it('publishing: Finance publishes approved cost rules; the Rules Steward publishes non-cost rules', () => {
     fc.assert(
-      fc.property(fc.constantFrom('RST' as const, 'FIN' as const, 'PLN' as const, 'ADM' as const), fc.boolean(), statusArb, (role, isCost, status) => {
+      fc.property(fc.constantFrom(...ROLE_CODES), fc.boolean(), statusArb, (role, isCost, status) => {
         const allowed = canPublishRuleVersion(role, isCost, status);
-        if (allowed) expect(RULE_PERMISSIONS['rules.publish']).toContain(role);
-        if (allowed && isCost) expect(status).toBe('approved');
+        if (allowed && isCost) expect([role, status]).toEqual(['FIN', 'approved']);
         if (allowed && !isCost) expect(role).toBe('RST');
         if (role === 'RST' && !isCost) expect(allowed).toBe(status === 'draft' || status === 'submitted');
+        if (role === 'FIN' && isCost) expect(allowed).toBe(status === 'approved');
       }),
     );
   });
 
-  it('matches the design RBAC matrix', () => {
+  it('derives rule permissions from the design RBAC matrix', () => {
     expect(RULE_PERMISSIONS['rules.edit']).toEqual(['RST']);
     expect(RULE_PERMISSIONS['rules.approve_cost']).toEqual(['FIN']);
+    expect(RULE_PERMISSIONS['rules.publish_cost']).toEqual(['FIN']);
+    expect(RULE_PERMISSIONS['rules.publish_noncost']).toEqual(['RST']);
     expect([...RULE_PERMISSIONS['rules.view']].sort()).toEqual(['EXE', 'FIN', 'HR', 'PLN', 'RST']);
-    expect(RULE_PERMISSIONS['rules.view']).not.toContain('STF');
+    for (const key of RULE_PERMISSION_KEYS) {
+      for (const role of ROLE_CODES) {
+        const { resource, action } = RULE_PERMISSION_GRANTS[key];
+        expect(hasRulePermission(role, key)).toBe(can(role, resource, action));
+      }
+    }
   });
 });
 

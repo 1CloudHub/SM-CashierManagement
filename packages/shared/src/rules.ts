@@ -15,7 +15,8 @@
  */
 import type { ApiErrorDetail } from './api.js';
 import type { IsoDate, IsoDateTime } from './entities.js';
-import type { RoleCode } from './roles.js';
+import { can, type PermissionAction, type RbacResource } from './rbac.js';
+import { ROLE_CODES, type RoleCode } from './roles.js';
 
 // ---------------------------------------------------------------------------
 // Rule-set catalogue
@@ -104,35 +105,59 @@ export function ruleVersionTransition(
 }
 
 // ---------------------------------------------------------------------------
-// Permissions (design.md RBAC matrix: "Business rules" rows). Server-side
-// enforcement is task 8.1's authorize middleware; each rule route declares one
-// of these.
+// Permissions — derived from the RBAC matrix (rbac.ts, task 8.1): the
+// "Business rules" rows. Each rule route is guarded by one of these grants.
 // ---------------------------------------------------------------------------
 
-export const RULE_PERMISSION_KEYS = ['rules.view', 'rules.edit', 'rules.approve_cost', 'rules.publish'] as const;
+export const RULE_PERMISSION_KEYS = [
+  'rules.view',
+  'rules.edit',
+  'rules.approve_cost',
+  'rules.publish_cost',
+  'rules.publish_noncost',
+] as const;
 export type RulePermission = (typeof RULE_PERMISSION_KEYS)[number];
 
-export const RULE_PERMISSIONS: Readonly<Record<RulePermission, readonly RoleCode[]>> = {
+/** The RBAC matrix cell behind each rule permission. */
+export const RULE_PERMISSION_GRANTS: Readonly<
+  Record<RulePermission, { readonly resource: RbacResource; readonly action: PermissionAction }>
+> = {
   /** View rule sets, versions, history and diffs. */
-  'rules.view': ['EXE', 'PLN', 'HR', 'FIN', 'RST'],
-  /** Create and edit draft versions and submit them. */
-  'rules.edit': ['RST'],
-  /** Approve or request changes on a submitted cost rule. */
-  'rules.approve_cost': ['FIN'],
-  /** Publish: the Rules Steward any eligible version; Finance an approved cost rule ("Approve and publish"). */
-  'rules.publish': ['RST', 'FIN'],
+  'rules.view': { resource: 'rules', action: 'view' },
+  /** Create and edit draft versions and submit them (Rules Steward). */
+  'rules.edit': { resource: 'rules', action: 'edit' },
+  /** Approve or request changes on a submitted cost rule (Finance). */
+  'rules.approve_cost': { resource: 'rules_cost_approval', action: 'approve' },
+  /** Publish an approved cost rule — Finance's "Approve and publish" (Q6). */
+  'rules.publish_cost': { resource: 'rules_cost_approval', action: 'approve' },
+  /** Publish a non-cost rule directly (Rules Steward). */
+  'rules.publish_noncost': { resource: 'rules_noncost_publish', action: 'approve' },
 };
 
 export function hasRulePermission(role: RoleCode | null, permission: RulePermission): boolean {
-  return role !== null && RULE_PERMISSIONS[permission].includes(role);
+  const { resource, action } = RULE_PERMISSION_GRANTS[permission];
+  return can(role, resource, action);
 }
 
-/** Whether `role` may publish a version in `status` (Req 16.3, 16.4). */
+/** Roles holding each rule permission, in matrix column order (derived, for display and tests). */
+export const RULE_PERMISSIONS: Readonly<Record<RulePermission, readonly RoleCode[]>> = Object.fromEntries(
+  RULE_PERMISSION_KEYS.map((p) => [p, ROLE_CODES.filter((r) => hasRulePermission(r, p))]),
+) as unknown as Record<RulePermission, readonly RoleCode[]>;
+
+/** The permission needed to publish a version of this kind. */
+export function publishPermissionFor(isCostRule: boolean): RulePermission {
+  return isCostRule ? 'rules.publish_cost' : 'rules.publish_noncost';
+}
+
+/**
+ * Whether `role` may publish a version in `status` (Req 16.3, 16.4): Finance
+ * publishes approved cost rules; the Rules Steward publishes non-cost rules.
+ */
 export function canPublishRuleVersion(role: RoleCode | null, isCostRule: boolean, status: RuleVersionStatus): boolean {
-  if (!hasRulePermission(role, 'rules.publish')) return false;
-  if (ruleVersionTransition(status, isCostRule, 'publish') === null) return false;
-  // Finance only publishes the cost rules it has approved.
-  return role === 'RST' || isCostRule;
+  return (
+    hasRulePermission(role, publishPermissionFor(isCostRule)) &&
+    ruleVersionTransition(status, isCostRule, 'publish') !== null
+  );
 }
 
 // ---------------------------------------------------------------------------

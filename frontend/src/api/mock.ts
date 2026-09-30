@@ -1,0 +1,178 @@
+import {
+  API_SERVICE_NAME,
+  HTTP_STATUS_BY_ERROR_CODE,
+  isRoleCode,
+  type ApiErrorBody,
+  type ApiErrorCode,
+  type HealthResponse,
+  type RoleCode,
+} from '@lanewise/shared'
+import { ACTIVE_ROLE_HEADER, type ApiAdapter, type ApiRequest, type ApiResponse } from './client'
+import type { HomeKpis, HomeScenarioRow, HomeSummary } from './types'
+
+/**
+ * In-memory mock of the LaneWise API (VITE_API_MOCK, task 8.2).
+ *
+ * Serves typed, deterministic sample data so screens can be built before
+ * their endpoints exist. Like the real API it reads the active role from
+ * `X-Active-Role` and shapes every response for that role: a missing or
+ * unknown role is rejected, and a role never receives data it may not see
+ * (Staff gets only their own shifts, no ₱). Figures are the wireframe sample
+ * data — simulated, not SM actuals.
+ *
+ * Add a route per endpoint as feature tasks need them.
+ */
+
+type Handler = (ctx: { role: RoleCode; request: ApiRequest }) => ApiResponse
+
+const KPIS: HomeKpis = {
+  seasonalHires: 284,
+  fullTime: 176,
+  partTime: 108,
+  toRecruitMin: 313,
+  toRecruitMax: 327,
+  firstNeeded: '2026-11-02',
+  offersDue: '2026-10-05',
+  seasonCost: 13_600_000,
+}
+
+const RECENT_SCENARIOS: readonly HomeScenarioRow[] = [
+  { id: 'scn-xmas-2026-v3', name: 'Christmas 2026 v3', status: 'published', stale: false, updatedAt: '2026-10-01T09:00:00+08:00', ownerName: 'Ana' },
+  { id: 'scn-xmas-2026-v4', name: 'Christmas 2026 v4', status: 'submitted', stale: true, updatedAt: '2026-10-03T14:30:00+08:00', ownerName: 'Ana' },
+]
+
+const V4 = { scenarioId: 'scn-xmas-2026-v4', scenarioName: 'Christmas 2026 v4' } as const
+
+export function mockHome(role: RoleCode): HomeSummary {
+  const firstName = 'Juan'
+  switch (role) {
+    case 'PLN':
+      return {
+        role,
+        firstName,
+        attention: [
+          { kind: 'staleScenarios', count: 2 },
+          { kind: 'overCapacity', count: 3, date: '2026-12-24' },
+          { kind: 'runComplete', ...V4 },
+        ],
+        deadlines: [
+          { date: '2026-10-05', kind: 'sendOffers' },
+          { date: '2026-10-12', kind: 'trainingStarts' },
+          { date: '2026-11-02', kind: 'firstWave', count: 56 },
+        ],
+        kpis: KPIS,
+        recentScenarios: RECENT_SCENARIOS,
+      }
+    case 'EXE':
+      return {
+        role,
+        firstName,
+        pendingApproval: { ...V4, step: 'plan' },
+        publishedPlan: { id: 'scn-xmas-2026-v3', name: 'Christmas 2026 v3' },
+        kpis: KPIS,
+        recentScenarios: RECENT_SCENARIOS,
+      }
+    case 'STM':
+      return {
+        role,
+        firstName,
+        storeWeek: {
+          storeName: 'SM Supermarket – Quezon City',
+          departmentName: 'Main checkout lanes',
+          unfilledShifts: 2,
+          unfilledDate: '2026-12-19',
+          failingRuleChecks: 1,
+        },
+      }
+    case 'HR':
+      return {
+        role,
+        firstName,
+        pendingApproval: { ...V4, step: 'headcount', headcount: 251 },
+        recruiting: { offersDue: '2026-10-05', toRecruitMin: 313, toRecruitMax: 327 },
+        kpis: KPIS,
+      }
+    case 'FIN':
+      return {
+        role,
+        firstName,
+        pendingApproval: { ...V4, step: 'budget', seasonCost: 13_100_000 },
+        costWatch: { publishedCost: 13_600_000, draftCost: 13_100_000, draftScenarioName: V4.scenarioName },
+        kpis: KPIS,
+      }
+    case 'RST':
+      return {
+        role,
+        firstName,
+        dataFreshness: [
+          { dataset: 'pos', loadedAt: '2026-09-28T06:00:00+08:00' },
+          { dataset: 'staff', loadedAt: null },
+        ],
+        draftRules: [{ ruleSetId: 'rules-wages', name: 'Wage rates', version: '2026.2' }],
+      }
+    case 'STF':
+      return {
+        role,
+        firstName,
+        nextShifts: {
+          storeName: 'SM Supermarket – Quezon City',
+          departmentName: 'Main checkout lanes',
+          shifts: [
+            { start: '2026-12-15T15:00:00+08:00', end: '2026-12-15T19:00:00+08:00', changed: false },
+            {
+              start: '2026-12-19T12:00:00+08:00',
+              end: '2026-12-19T21:00:00+08:00',
+              mealStart: '2026-12-19T16:00:00+08:00',
+              changed: true,
+            },
+          ],
+        },
+      }
+    case 'ADM':
+      return { role, firstName, pendingInvitations: 3 }
+  }
+}
+
+const ROUTES: Record<string, Handler> = {
+  'GET /health': () =>
+    ok({ status: 'ok', service: API_SERVICE_NAME, env: 'mock', time: new Date().toISOString() } satisfies HealthResponse),
+  'GET /home': ({ role }) => ok(mockHome(role)),
+}
+
+function ok(body: unknown): ApiResponse {
+  return { status: 200, body }
+}
+
+let requestSeq = 0
+function fail(code: ApiErrorCode, message: string): ApiResponse {
+  requestSeq += 1
+  const body: ApiErrorBody = { error: { code, message, requestId: `mock-${requestSeq.toString(16).padStart(6, '0')}` } }
+  return { status: HTTP_STATUS_BY_ERROR_CODE[code], body }
+}
+
+function header(headers: Readonly<Record<string, string>>, name: string): string | undefined {
+  const key = Object.keys(headers).find((k) => k.toLowerCase() === name.toLowerCase())
+  return key === undefined ? undefined : headers[key]
+}
+
+export interface MockAdapterOptions {
+  /** Simulated latency in ms (0 in tests). */
+  readonly latencyMs?: number
+  /** Every request the mock received, for assertions. */
+  readonly log?: ApiRequest[]
+}
+
+export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {}): ApiAdapter {
+  return async (request) => {
+    log?.push(request)
+    if (latencyMs > 0) await new Promise((resolve) => setTimeout(resolve, latencyMs))
+    if (request.signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+
+    const role = header(request.headers, ACTIVE_ROLE_HEADER)
+    if (!isRoleCode(role)) return fail('bad_request', 'The active role is missing or not recognised.')
+
+    const handler = ROUTES[`${request.method} ${request.path.split('?')[0]}`]
+    if (!handler) return fail('not_found', 'We couldn’t find that.')
+    return handler({ role, request })
+  }
+}

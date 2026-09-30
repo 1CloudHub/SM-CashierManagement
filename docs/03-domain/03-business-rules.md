@@ -46,7 +46,7 @@ Business rules are kept as **rule sets**, each a series of immutable, effective-
 | Service levels | `service_levels` | No | service target, shrinkage, shift rules |
 | Transport allowance | `transport_allowance` | Yes | flat ₱ by travel-time band (Q23) |
 
-- **Ownership.** The Rules Steward creates and edits drafts. Finance approves cost rules. Everyone else in the rules RBAC row views them.
+- **Ownership.** The Rules Steward creates and edits drafts and publishes non-cost rules. Finance approves and publishes cost rules. Everyone else in the rules RBAC row views them.
 - **Lifecycle.** Draft → Submitted → (cost rules) Finance approves, or requests changes with a required comment → Published → Superseded. Non-cost rules skip Finance and are published directly by the Rules Steward. A rule set has at most one open version at a time.
 - **Freezing.** A version's values, effective date and change note are frozen once it is submitted. Every submitted version is kept for history.
 - **Effective dates.** Each version carries an effective-from date. A newly published version can't take effect before the version it replaces.

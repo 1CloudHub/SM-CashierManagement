@@ -280,3 +280,14 @@ describe('SCR-061 load failure', () => {
     expect(screen.getByText('No scenarios use an earlier version, so none will be marked stale.')).toBeInTheDocument()
   })
 })
+
+describe('SCR-061 approved cost rule (RBAC matrix)', () => {
+  it('only Finance can publish it; the Rules Steward sees it read-only', async () => {
+    const { unmount } = editor('RST', fakeClient(detail('approved', { financeApprovedAt: '2026-10-01T00:00:00Z' })))
+    await screen.findByRole('heading', { level: 1 })
+    expect(screen.queryByRole('button', { name: 'Publish' })).toBeNull()
+    unmount()
+    editor('FIN', fakeClient(detail('approved', { financeApprovedAt: '2026-10-01T00:00:00Z' })))
+    expect(await screen.findByRole('button', { name: 'Publish' })).toBeInTheDocument()
+  })
+})

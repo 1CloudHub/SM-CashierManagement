@@ -13,22 +13,25 @@ import {
   type RuleVersionDetail,
   type RuleVersionDiff,
 } from '@lanewise/shared';
+import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
 import fc from 'fast-check';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from '../../src/app.js';
-import type { Principal, RequestContext } from '../../src/context.js';
+import { DEFAULT_RBAC_CONFIG } from '../../src/auth/config.js';
 import { withAuditedTransaction } from '../../src/db/audit.js';
 import * as rulesRepo from '../../src/db/repositories/rules.js';
 import { ApiError } from '../../src/http/errors.js';
-import type { Router } from '../../src/http/router.js';
-import { createLogger } from '../../src/logger.js';
+import { createLambdaHandler, type LambdaHandler } from '../../src/lambda.js';
 import { RULE_ROUTES } from '../../src/routes/rules.js';
 import { createTestDatabase, type TestDatabase } from '../support/db.js';
-import { insertScenario, insertUser } from '../support/fixtures.js';
+import { insertScenario } from '../support/fixtures.js';
+import { insertAppUser, seedOrg, setAssignments, uniq } from '../support/rbac.js';
 
 let db: TestDatabase;
-let app: Router;
+let handler: LambdaHandler;
 const users = {} as Record<RoleCode, string>;
+const emails = {} as Record<RoleCode, string>;
+let unassignedEmail: string;
 const sets = {} as Record<'wages' | 'lead_times', string>;
 
 interface Result {
@@ -36,33 +39,47 @@ interface Result {
   readonly body: unknown;
 }
 
+function lambdaFor(app: ReturnType<typeof createApp>): LambdaHandler {
+  return createLambdaHandler({ router: app, env: 'test', logSink: () => undefined });
+}
+
+/**
+ * Calls the real Lambda handler as API Gateway would: verified Cognito claims
+ * for the role's user and the role in `X-Active-Role` (task 8.1). Error bodies
+ * are flattened to `{ code, details }`.
+ */
 async function call(
   role: RoleCode | null,
   method: string,
   path: string,
-  options: { body?: unknown; query?: Record<string, string>; anonymous?: boolean } = {},
+  options: { body?: unknown; query?: Record<string, string>; anonymous?: boolean; via?: LambdaHandler; as?: RoleCode } = {},
 ): Promise<Result> {
-  const match = app.resolve(method, path);
-  if (match.kind !== 'matched') return { statusCode: match.kind === 'not_found' ? 404 : 405, body: null };
-  const principal: Principal | null = options.anonymous
-    ? null
-    : { userId: role ? users[role] : users.RST, email: 'someone@smretail.com', activeRole: role, assignments: [] };
-  const context: RequestContext = {
-    requestId: 'req-test',
-    env: 'test',
-    now: () => new Date(),
-    logger: createLogger({ sink: () => undefined }),
-    principal,
-  };
-  try {
-    return await match.handler(
-      { method, path, headers: {}, query: options.query ?? {}, body: options.body, params: match.params, route: match.pattern },
-      context,
-    );
-  } catch (error) {
-    if (error instanceof ApiError) return { statusCode: error.status, body: { code: error.code, details: error.details } };
-    throw error;
-  }
+  const headers: Record<string, string> = {};
+  if (role !== null) headers['X-Active-Role'] = role;
+  if (options.body !== undefined) headers['Content-Type'] = 'application/json';
+  const who = options.as ?? role;
+  const email = who !== null ? emails[who] : unassignedEmail;
+  const event = {
+    httpMethod: method,
+    path,
+    resource: '/{proxy+}',
+    headers,
+    multiValueHeaders: {},
+    queryStringParameters: options.query ?? null,
+    multiValueQueryStringParameters: null,
+    pathParameters: null,
+    stageVariables: null,
+    body: options.body === undefined ? null : JSON.stringify(options.body),
+    isBase64Encoded: false,
+    requestContext: {
+      requestId: `req-${uniq()}`,
+      authorizer: options.anonymous ? null : { claims: { sub: `sub-${email}`, email } },
+    },
+  } as unknown as APIGatewayProxyEvent;
+  const res = await (options.via ?? handler)(event, { awsRequestId: 'aws' } as Context);
+  const body = JSON.parse(res.body) as unknown;
+  const error = (body as { error?: { code: string; details?: unknown[] } } | null)?.error;
+  return { statusCode: res.statusCode, body: error ? { code: error.code, details: error.details ?? [] } : body };
 }
 
 async function auditCount(): Promise<number> {
@@ -78,16 +95,21 @@ const WAGES = {
 
 beforeAll(async () => {
   db = await createTestDatabase();
-  app = createApp({ db: () => db.pool });
+  handler = lambdaFor(createApp({ db: () => db.pool, rbac: { ...DEFAULT_RBAC_CONFIG, demoRoleSwitcher: false } }));
+  const org = await seedOrg(db.pool);
   for (const role of ROLE_CODES) {
-    users[role] = await insertUser(db.pool);
-    await db.pool.query(`INSERT INTO role_assignment (user_id, role, scope_type, scope_ids) VALUES ($1, $2, $3, $4)`, [
-      users[role],
-      role,
-      role === 'STF' ? 'self' : 'global',
-      role === 'STF' ? [users[role]] : [],
-    ]);
+    emails[role] = `${role.toLowerCase()}.${uniq()}@smretail.com`;
+    users[role] = await insertAppUser(db.pool, emails[role]);
+    const scope =
+      role === 'STF'
+        ? { type: 'self' as const, staffId: org.demoStaffId }
+        : role === 'STM'
+          ? { type: 'store' as const, storeIds: [org.demoStoreId] }
+          : { type: 'global' as const };
+    await setAssignments(db.pool, users[role], [{ role, scope }]);
   }
+  unassignedEmail = `nobody.${uniq()}@smretail.com`;
+  await insertAppUser(db.pool, unassignedEmail);
   const actor = { userId: users.RST, activeRole: 'RST' as const, requestId: null };
   for (const type of ['wages', 'lead_times'] as const) {
     const set = await withAuditedTransaction(db.pool, actor, (tx) => rulesRepo.createRuleSet(tx, { type, name: type }));
@@ -96,7 +118,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await db.dispose();
+  await db?.dispose();
 });
 
 describe('route permissions (declared once per route; P12)', () => {
@@ -104,6 +126,7 @@ describe('route permissions (declared once per route; P12)', () => {
     for (const route of RULE_ROUTES) {
       expect(RULE_PERMISSION_KEYS).toContain(route.permission);
       const sample = route.path.replace(/:[A-Za-z]+/g, '00000000-0000-4000-8000-000000000000');
+      const app = createApp({ db: () => db.pool, rbac: DEFAULT_RBAC_CONFIG });
       expect(app.resolve(route.method, sample).kind, `${route.method} ${route.path}`).toBe('matched');
     }
   });
@@ -123,8 +146,11 @@ describe('route permissions (declared once per route; P12)', () => {
   });
 
   it('needs a signed-in user with an active role', async () => {
-    expect((await call(null, 'GET', '/rule-sets', { anonymous: true })).statusCode).toBe(401);
+    expect((await call('PLN', 'GET', '/rule-sets', { anonymous: true })).statusCode).toBe(401);
+    // A signed-in user without any role assignment has no active role.
     expect((await call(null, 'GET', '/rule-sets')).statusCode).toBe(403);
+    // Outside demo mode a user can't activate a role they don't hold (a planner posing as Rules Steward).
+    expect((await call('RST', 'POST', `/rule-sets/${sets.wages}/versions`, { as: 'PLN', body: {} })).statusCode).toBe(403);
     expect((await call('STF', 'GET', '/rule-sets')).statusCode).toBe(403);
   });
 });
@@ -159,8 +185,11 @@ describe('cost-rule journey (Req 16.1, 16.3, 16.5, 16.6)', () => {
     ).toBe(200);
     expect((await call('RST', 'POST', `/rule-versions/${v1.id}/submit`)).statusCode).toBe(200);
 
-    // Not publishable before Finance approves; Finance must comment to request changes.
-    expect((await call('RST', 'POST', `/rule-versions/${v1.id}/publish`)).statusCode).toBe(409);
+    // Not publishable before Finance approves, and never by the Rules Steward (cost rule).
+    expect((await call('FIN', 'POST', `/rule-versions/${v1.id}/publish`)).statusCode).toBe(409);
+    expect((await call('RST', 'POST', `/rule-versions/${v1.id}/publish`)).statusCode).toBe(403);
+    expect((await call('EXE', 'POST', `/rule-versions/${v1.id}/publish`)).statusCode).toBe(403);
+    // Finance must comment to request changes.
     expect((await call('FIN', 'POST', `/rule-versions/${v1.id}/request-changes`, { body: { comment: ' ' } })).statusCode).toBe(422);
     const changes = await call('FIN', 'POST', `/rule-versions/${v1.id}/request-changes`, { body: { comment: 'Add Visayas' } });
     expect(changes.statusCode).toBe(200);
@@ -215,7 +244,7 @@ describe('cost-rule journey (Req 16.1, 16.3, 16.5, 16.6)', () => {
 
     await call('RST', 'POST', `/rule-versions/${v2.id}/submit`);
     await call('FIN', 'POST', `/rule-versions/${v2.id}/approve`, { body: {} });
-    const pub2 = await call('RST', 'POST', `/rule-versions/${v2.id}/publish`);
+    const pub2 = await call('FIN', 'POST', `/rule-versions/${v2.id}/publish`);
     expect(pub2.body).toMatchObject({ staleScenarioIds: [pinned], supersededVersionId: v1.id });
 
     const history = await call('EXE', 'GET', `/rule-sets/${sets.wages}/versions`);
@@ -274,24 +303,14 @@ describe('reads', () => {
   });
 
   it('answers 503 when no database is configured', async () => {
-    const noDb = createApp({
-      db: () => {
-        throw new ApiError('service_unavailable', 'unavailable');
-      },
-    });
-    const match = noDb.resolve('GET', '/rule-sets');
-    if (match.kind !== 'matched') throw new Error('route missing');
-    await expect(
-      match.handler(
-        { method: 'GET', path: '/rule-sets', headers: {}, query: {}, body: undefined, params: {}, route: match.pattern },
-        {
-          requestId: 'r',
-          env: 'test',
-          now: () => new Date(),
-          logger: createLogger({ sink: () => undefined }),
-          principal: { userId: users.PLN, email: 'p@smretail.com', activeRole: 'PLN', assignments: [] },
+    const noDb = lambdaFor(
+      createApp({
+        db: () => {
+          throw new ApiError('service_unavailable', 'unavailable');
         },
-      ),
-    ).rejects.toMatchObject({ status: 503 });
+        rbac: DEFAULT_RBAC_CONFIG,
+      }),
+    );
+    expect((await call('PLN', 'GET', '/rule-sets', { via: noDb })).statusCode).toBe(503);
   });
 });

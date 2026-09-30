@@ -1,3 +1,4 @@
+import type { Enforcer, RouteGuard } from '../auth/guards.js';
 import { errors } from './errors.js';
 import type { RouteHandler } from './types.js';
 
@@ -10,6 +11,14 @@ interface Route {
   readonly pattern: string;
   readonly segments: readonly Segment[];
   readonly handler: RouteHandler;
+  readonly guard: RouteGuard | null;
+}
+
+/** A registered route as reported by `Router.routes()` (safe to log/inspect). */
+export interface RouteInfo {
+  readonly method: HttpMethod;
+  readonly pattern: string;
+  readonly guard: RouteGuard | null;
 }
 
 export type RouteMatch =
@@ -44,43 +53,81 @@ function decodeSegment(raw: string): string {
   }
 }
 
+export interface RouterOptions {
+  /** Runs non-public guards (api/src/auth/enforcer.ts). Required to register one. */
+  readonly enforcer?: Enforcer;
+}
+
+type RouteArgs = [handler: RouteHandler] | [guard: RouteGuard, handler: RouteHandler];
+
 /**
  * Minimal method + path router. Patterns use `:name` for a single path
  * segment. Trailing and repeated slashes are ignored. Intentionally tiny: API
- * Gateway fronts it, so it needs no middleware stack; cross-cutting concerns
- * (context, errors, logging) live in the Lambda adapter.
+ * Gateway fronts it; cross-cutting concerns (context, errors, logging) live in
+ * the Lambda adapter.
+ *
+ * Each route declares a guard (`publicRoute()`, `authenticated()` or
+ * `authorize(...)`, task 8.1). A non-public guard runs through the enforcer
+ * before the handler, so a handler never runs unauthorised;
+ * `assertGuarded()` rejects any route registered without one (P12).
  */
 export class Router {
-  private readonly routes: Route[] = [];
+  private readonly table: Route[] = [];
+  private readonly enforcer: Enforcer | undefined;
 
-  add(method: HttpMethod, pattern: string, handler: RouteHandler): this {
+  constructor(options: RouterOptions = {}) {
+    this.enforcer = options.enforcer;
+  }
+
+  add(method: HttpMethod, pattern: string, ...args: RouteArgs): this {
+    const [guard, handler] = args.length === 1 ? [null, args[0]] : args;
     const segments = parsePattern(pattern);
     const key = canonical(segments);
-    if (this.routes.some((r) => r.method === method && canonical(r.segments) === key)) {
+    if (this.table.some((r) => r.method === method && canonical(r.segments) === key)) {
       throw new Error(`Duplicate route: ${method} ${pattern}`);
     }
-    this.routes.push({ method, pattern: `/${splitPath(pattern).join('/')}`, segments, handler });
+    let guarded = handler;
+    if (guard !== null && guard.kind !== 'public') {
+      const enforcer = this.enforcer;
+      if (!enforcer) throw new Error(`Route ${method} ${pattern} needs an enforcer for its ${guard.kind} guard`);
+      guarded = async (request, context) => handler(request, await enforcer(guard, request, context));
+    }
+    this.table.push({ method, pattern: `/${splitPath(pattern).join('/')}`, segments, handler: guarded, guard });
     return this;
   }
 
-  get(pattern: string, handler: RouteHandler): this {
-    return this.add('GET', pattern, handler);
+  get(pattern: string, ...args: RouteArgs): this {
+    return this.add('GET', pattern, ...args);
   }
 
-  post(pattern: string, handler: RouteHandler): this {
-    return this.add('POST', pattern, handler);
+  post(pattern: string, ...args: RouteArgs): this {
+    return this.add('POST', pattern, ...args);
   }
 
-  put(pattern: string, handler: RouteHandler): this {
-    return this.add('PUT', pattern, handler);
+  put(pattern: string, ...args: RouteArgs): this {
+    return this.add('PUT', pattern, ...args);
   }
 
-  patch(pattern: string, handler: RouteHandler): this {
-    return this.add('PATCH', pattern, handler);
+  patch(pattern: string, ...args: RouteArgs): this {
+    return this.add('PATCH', pattern, ...args);
   }
 
-  delete(pattern: string, handler: RouteHandler): this {
-    return this.add('DELETE', pattern, handler);
+  delete(pattern: string, ...args: RouteArgs): this {
+    return this.add('DELETE', pattern, ...args);
+  }
+
+  /** Every registered route with its guard, in registration order. */
+  routes(): RouteInfo[] {
+    return this.table.map(({ method, pattern, guard }) => ({ method, pattern, guard }));
+  }
+
+  /** Throws at startup if any route was registered without declaring a guard (P12). */
+  assertGuarded(): this {
+    const unguarded = this.table.filter((r) => r.guard === null).map((r) => `${r.method} ${r.pattern}`);
+    if (unguarded.length > 0) {
+      throw new Error(`Routes without an authorization guard: ${unguarded.join(', ')}`);
+    }
+    return this;
   }
 
   resolve(method: string, path: string): RouteMatch {
@@ -88,7 +135,7 @@ export class Router {
     const parts = splitPath(path);
     const allow: HttpMethod[] = [];
 
-    for (const route of this.routes) {
+    for (const route of this.table) {
       const params = this.match(route.segments, parts);
       if (params === null) continue;
       if (route.method === upper) {

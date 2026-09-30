@@ -92,7 +92,7 @@ export function availableActions(
     submit: canEdit && isCostRule && ruleVersionTransition(status, isCostRule, 'submit') !== null,
     approve: review,
     requestChanges: review && ruleVersionTransition(status, isCostRule, 'request_changes') !== null,
-    approveAndPublish: review && hasRulePermission(role, 'rules.publish'),
+    approveAndPublish: review && hasRulePermission(role, 'rules.publish_cost'),
     publish: canPublishRuleVersion(role, isCostRule, status),
   }
 }

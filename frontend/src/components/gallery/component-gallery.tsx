@@ -14,6 +14,7 @@ import { StatesGallerySection } from './section-states'
 import { LayoutGallerySection } from './section-layout'
 import { PatternsGallerySection } from './section-patterns'
 import { ErrorsGallerySection } from './section-errors'
+import { RosterGallerySection } from './section-roster'
 import { type NavSection } from '@/components/shell'
 
 /**
@@ -81,7 +82,7 @@ function GalleryApp({ accountSlot }: { accountSlot?: ReactNode }) {
         // Gallery stand-in: real routing lands with the screens (task 4+). Map
         // the global g+key nav onto the closest section anchors.
         const anchor =
-          target === 'roster' ? 'layout' : target === 'map' ? 'primitives' : ''
+          target === 'roster' ? 'roster' : target === 'map' ? 'primitives' : ''
         window.location.hash = anchor ? `#${anchor}` : ''
       }}
     >
@@ -148,7 +149,8 @@ function GalleryShell({
         <StatesGallerySection description={GALLERY_SECTIONS[2].description} />
         <LayoutGallerySection description={GALLERY_SECTIONS[3].description} />
         <PatternsGallerySection description={GALLERY_SECTIONS[4].description} />
-        <ErrorsGallerySection description={GALLERY_SECTIONS[5].description} />
+        <RosterGallerySection description={GALLERY_SECTIONS[5].description} />
+        <ErrorsGallerySection description={GALLERY_SECTIONS[6].description} />
       </Stack>
     </AppShell>
   )

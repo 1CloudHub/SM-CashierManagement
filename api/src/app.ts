@@ -1,42 +1,49 @@
 import type pg from 'pg';
+import { rbacConfigFromEnv, type RbacConfig } from './auth/config.js';
+import { createEnforcer } from './auth/enforcer.js';
+import { publicRoute } from './auth/guards.js';
 import { createPool } from './db/pool.js';
 import { errors } from './http/errors.js';
 import { Router } from './http/router.js';
 import { healthHandler } from './routes/health.js';
-import { registerRuleRoutes, type Authorize } from './routes/rules.js';
+import { registerMeRoutes } from './routes/me.js';
+import { registerRuleRoutes } from './routes/rules.js';
+import { registerStoreRoutes } from './routes/stores.js';
 
-export interface AppOptions {
-  /** Database pool provider; defaults to a lazy pool on `DATABASE_URL` (503 when unset). */
-  readonly db?: () => pg.Pool;
-  /** The task 8.1 authorize check for feature routes (see routes/rules.ts). */
-  readonly authorize?: Authorize;
+export interface AppDeps {
+  /** The database pool (created lazily); throws `service_unavailable` when unconfigured. */
+  readonly db: () => pg.Pool;
+  readonly rbac: RbacConfig;
 }
 
-let envPool: pg.Pool | null = null;
-
-/** One pool per Lambda container, created on first use. */
-function poolFromEnv(): pg.Pool {
-  if (envPool) return envPool;
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) throw errors.serviceUnavailable();
-  envPool = createPool({ connectionString, max: 2 });
-  return envPool;
+/** Production dependencies: `DATABASE_URL` (pool created on first use) and the RBAC env flags. */
+export function depsFromEnv(env: NodeJS.ProcessEnv = process.env): AppDeps {
+  let pool: pg.Pool | null = null;
+  return {
+    db: () => {
+      if (pool) return pool;
+      const connectionString = env.DATABASE_URL;
+      if (!connectionString) throw errors.serviceUnavailable();
+      pool = createPool({ connectionString, max: 2 });
+      return pool;
+    },
+    rbac: rbacConfigFromEnv(env),
+  };
 }
 
 /**
- * Builds the application router. Feature routes are registered here as later
- * tasks add them; each must authorise against the active role and scope
- * (task 8.1, P12) and validate input with `parseInput`.
+ * Builds the application router. Every route declares its guard —
+ * `publicRoute()`, `authenticated()` or `authorize(resource, action,
+ * scopeTarget?)` — and the app refuses to start if one doesn't (task 8.1,
+ * P12). Handlers validate input with `parseInput`.
  *
- * API Gateway forwards every path under the root proxy declared in
- * infra/lib/api-stack.ts (behind the Cognito authorizer), so feature routes
- * need no extra API Gateway resource.
+ * API Gateway only forwards the resources declared in infra/lib/api-stack.ts,
+ * so a new route also needs its API Gateway resource (and authorizer).
  */
-export function createApp(options: AppOptions = {}): Router {
-  const router = new Router().get('/health', healthHandler);
-  registerRuleRoutes(router, {
-    db: options.db ?? poolFromEnv,
-    ...(options.authorize ? { authorize: options.authorize } : {}),
-  });
-  return router;
+export function createApp(deps: AppDeps = depsFromEnv()): Router {
+  const router = new Router({ enforcer: createEnforcer(deps) }).get('/health', publicRoute(), healthHandler);
+  registerMeRoutes(router, deps);
+  registerStoreRoutes(router, deps);
+  registerRuleRoutes(router, deps);
+  return router.assertGuarded();
 }

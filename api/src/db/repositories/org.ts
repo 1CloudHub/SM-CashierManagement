@@ -1,7 +1,7 @@
 /**
  * Regions, stores and departments (DOM-002 Store, Department; SCR-052).
  */
-import type { Department, Store, StoreFormat } from '@lanewise/shared';
+import type { Department, Scope, Store, StoreFormat } from '@lanewise/shared';
 import type pg from 'pg';
 import { audit, type AuditedTx } from '../audit.js';
 import type { Queryable } from '../pool.js';
@@ -65,6 +65,37 @@ function toStore(row: StoreRow): StoreRecord {
 export async function getStore(db: Queryable, id: string): Promise<StoreRecord | null> {
   const row = await queryMaybe<StoreRow>(db, `SELECT ${STORE_COLUMNS} FROM store WHERE id = $1`, [id]);
   return row && toStore(row);
+}
+
+/**
+ * Lists the stores inside `scope`, ordered by name (P1). The filter runs in
+ * SQL so out-of-scope rows never leave the database; a `self` scope sees no
+ * store-wide data (P11).
+ */
+export async function listStoresInScope(db: Queryable, scope: Scope): Promise<StoreRecord[]> {
+  let where: string;
+  let values: unknown[];
+  switch (scope.type) {
+    case 'global':
+      where = 'true';
+      values = [];
+      break;
+    case 'region':
+      where = 'region_id = ANY($1::uuid[])';
+      values = [scope.regionIds];
+      break;
+    case 'store':
+      where = 'id = ANY($1::uuid[])';
+      values = [scope.storeIds];
+      break;
+    case 'self':
+      return [];
+  }
+  const { rows } = await db.query<StoreRow>(
+    `SELECT ${STORE_COLUMNS} FROM store WHERE ${where} ORDER BY name, code`,
+    values,
+  );
+  return rows.map(toStore);
 }
 
 export interface CreateStoreInput {
