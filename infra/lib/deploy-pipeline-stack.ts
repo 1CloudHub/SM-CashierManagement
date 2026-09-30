@@ -98,6 +98,18 @@ export class DeployPipelineStack extends Stack {
       autoDeleteObjects: true,
     });
 
+    // The imported roles are immutable, so CDK cannot grant them access to this
+    // bucket through IAM. Grant it on the bucket side instead: the pipeline role
+    // moves artifacts between stages and the CodeBuild role reads/writes them.
+    artifactBucket.addToResourcePolicy(
+      new iam.PolicyStatement({
+        sid: 'PipelineAndBuildArtifacts',
+        principals: [new iam.ArnPrincipal(pipelineRoleArn), new iam.ArnPrincipal(codeBuildRoleArn)],
+        actions: ['s3:GetObject', 's3:GetObjectVersion', 's3:PutObject', 's3:GetBucketVersioning', 's3:GetBucketLocation', 's3:ListBucket'],
+        resources: [artifactBucket.bucketArn, artifactBucket.arnForObjects('*')],
+      }),
+    );
+
     // ── Build project: build the SPA + type-check/synth the CDK app ─────────
     // Produces the SPA dist and the synthesized CDK cloud assembly as the build
     // artifact consumed by the Deploy stage.
@@ -157,6 +169,7 @@ export class DeployPipelineStack extends Stack {
           // The full repo tree is the build input (frontend + infra live at root).
           codeBuildCloneOutput: false,
           triggerOnPush: true,
+          role: pipelineRole,
         }),
       ],
     };
@@ -170,6 +183,7 @@ export class DeployPipelineStack extends Stack {
           project: buildProject,
           input: sourceOutput,
           outputs: [buildOutput],
+          role: pipelineRole,
         }),
       ],
     };
@@ -183,6 +197,7 @@ export class DeployPipelineStack extends Stack {
           actionName: 'CDK_Deploy_Prod',
           project: deployProject,
           input: buildOutput,
+          role: pipelineRole,
         }),
       ],
     };

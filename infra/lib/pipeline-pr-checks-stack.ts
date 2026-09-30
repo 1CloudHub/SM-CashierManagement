@@ -18,6 +18,12 @@ export interface PipelinePrChecksStackProps extends StackProps {
    * are defined once, in `PipelineIamStack`.
    */
   readonly codeBuildRoleArn: string;
+  /**
+   * CodeStar (GitHub) connection ARN from {@link PipelineIamStack}. The project
+   * authenticates its GitHub source and webhook through this connection, so no
+   * account-level GitHub token is needed.
+   */
+  readonly connectionArn: string;
 }
 
 /**
@@ -61,7 +67,7 @@ export class PipelinePrChecksStack extends Stack {
   constructor(scope: Construct, id: string, props: PipelinePrChecksStackProps) {
     super(scope, id, props);
 
-    const { config, codeBuildRoleArn } = props;
+    const { config, codeBuildRoleArn, connectionArn } = props;
     const { github } = config;
 
     this.projectName = `lanewise-${config.envName}-pr-checks`;
@@ -111,6 +117,14 @@ export class PipelinePrChecksStack extends Stack {
         buildImage: codebuild.LinuxBuildImage.STANDARD_7_0,
         computeType: codebuild.ComputeType.SMALL,
       },
+    });
+
+    // Authenticate the GitHub source (checkout, webhook, PR status) through the
+    // CodeStar connection instead of an account-level GitHub token. The L2
+    // GitHubSource has no connection option, so set it on the L1 resource.
+    (project.node.defaultChild as codebuild.CfnProject).addPropertyOverride('Source.Auth', {
+      Type: 'CODECONNECTIONS',
+      Resource: connectionArn,
     });
 
     // `AWS CodeBuild <region> (<project>)` is the commit-status context CodeBuild

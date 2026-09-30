@@ -134,7 +134,11 @@ export class PipelineIamStack extends Stack {
         sid: 'ReportPrStatusViaConnection',
         actions: [
           'codestar-connections:UseConnection',
+          'codestar-connections:GetConnection',
+          'codestar-connections:GetConnectionToken',
           'codeconnections:UseConnection',
+          'codeconnections:GetConnection',
+          'codeconnections:GetConnectionToken',
         ],
         resources: [this.connectionArn],
       }),

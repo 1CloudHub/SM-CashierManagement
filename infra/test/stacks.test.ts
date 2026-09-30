@@ -17,6 +17,7 @@ function synth() {
   const pipelinePrChecks = new PipelinePrChecksStack(app, 'Test-PipelinePrChecks', {
     config,
     codeBuildRoleArn: pipelineIam.codeBuildRole.roleArn,
+    connectionArn: pipelineIam.connectionArn,
   });
   const deployPipeline = new DeployPipelineStack(app, 'Test-DeployPipeline', {
     config,
@@ -277,6 +278,28 @@ describe('deploy pipeline stack', () => {
         BlockPublicPolicy: true,
         IgnorePublicAcls: true,
         RestrictPublicBuckets: true,
+      },
+    });
+  });
+
+  it('runs every action under the pipeline role (no per-action roles to assume)', () => {
+    const pipelines = deployPipeline.findResources('AWS::CodePipeline::Pipeline');
+    const pipeline = Object.values(pipelines)[0] as {
+      Properties: { RoleArn: unknown; Stages: Array<{ Actions: Array<{ RoleArn?: unknown }> }> };
+    };
+    const actions = pipeline.Properties.Stages.flatMap((s) => s.Actions);
+    expect(actions.length).toBeGreaterThan(0);
+    for (const action of actions) {
+      expect(action.RoleArn).toEqual(pipeline.Properties.RoleArn);
+    }
+  });
+
+  it('grants the imported roles artifact access via the bucket policy', () => {
+    deployPipeline.hasResourceProperties('AWS::S3::BucketPolicy', {
+      PolicyDocument: {
+        Statement: Match.arrayWith([
+          Match.objectLike({ Sid: 'PipelineAndBuildArtifacts', Effect: 'Allow' }),
+        ]),
       },
     });
   });

@@ -45,6 +45,7 @@ const pipelinePrChecks = new PipelinePrChecksStack(app, `${prefix}-PipelinePrChe
   env,
   config,
   codeBuildRoleArn: pipelineIam.codeBuildRole.roleArn,
+  connectionArn: pipelineIam.connectionArn,
   description: `LaneWise CI/CD pull-request checks (CodeBuild) — ${config.envName}.`,
 });
 
