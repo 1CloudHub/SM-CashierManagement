@@ -103,7 +103,7 @@ Phase 1 establishes the **design system** (style guide tokens + UX-system compon
   - Implement seasonal team sizing, hiring waves by lead time, and the cost model from wage/premium rule versions.
   - _Requirements: 4, 10_
 - [ ] 6.4 Parity test suite against DOM-001 tolerance
-  - Golden-master/property test running the pipeline on the seeded demo snapshot, asserting parity with v3 per the DOM-001 tolerance table (integers exact; cost ±0.5%; roster on shift-set and hours).
+  - Golden-master/property test running the pipeline on the seeded demo snapshot, asserting parity with v3 per the DOM-001 tolerance table and fixtures A–C (integers exact; cost ±0.5%; roster on shift-set and hours). Fixture A: Erlang example (λ=240, h=2.5 → 13 cashiers @ 90%/60s). Fixture C: QC main lanes Dec 19 (19 peak) and network Dec 19 (254 peak, 555 rostered, 3,688 hours). Assert single-department vs all-stores consistency.
   - _Requirements: 4 (P2, P6)_
 
 - [ ] 7. Authentication (Cognito passkeys) and domain allowlist
