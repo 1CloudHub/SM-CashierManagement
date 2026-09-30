@@ -1,4 +1,5 @@
 import { errors } from './errors.js';
+import type { RoutePermission } from './permissions.js';
 import type { RouteHandler } from './types.js';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -10,6 +11,12 @@ interface Route {
   readonly pattern: string;
   readonly segments: readonly Segment[];
   readonly handler: RouteHandler;
+  readonly permission: RoutePermission | null;
+}
+
+export interface RouteOptions {
+  /** The capability the route requires (see ./permissions.ts); omit only for public routes. */
+  readonly permission?: RoutePermission;
 }
 
 export type RouteMatch =
@@ -18,6 +25,7 @@ export type RouteMatch =
       readonly handler: RouteHandler;
       readonly params: Record<string, string>;
       readonly pattern: string;
+      readonly permission: RoutePermission | null;
     }
   | { readonly kind: 'not_found' }
   | { readonly kind: 'method_not_allowed'; readonly allow: readonly HttpMethod[] };
@@ -53,34 +61,40 @@ function decodeSegment(raw: string): string {
 export class Router {
   private readonly routes: Route[] = [];
 
-  add(method: HttpMethod, pattern: string, handler: RouteHandler): this {
+  add(method: HttpMethod, pattern: string, handler: RouteHandler, options: RouteOptions = {}): this {
     const segments = parsePattern(pattern);
     const key = canonical(segments);
     if (this.routes.some((r) => r.method === method && canonical(r.segments) === key)) {
       throw new Error(`Duplicate route: ${method} ${pattern}`);
     }
-    this.routes.push({ method, pattern: `/${splitPath(pattern).join('/')}`, segments, handler });
+    this.routes.push({
+      method,
+      pattern: `/${splitPath(pattern).join('/')}`,
+      segments,
+      handler,
+      permission: options.permission ?? null,
+    });
     return this;
   }
 
-  get(pattern: string, handler: RouteHandler): this {
-    return this.add('GET', pattern, handler);
+  get(pattern: string, handler: RouteHandler, options?: RouteOptions): this {
+    return this.add('GET', pattern, handler, options);
   }
 
-  post(pattern: string, handler: RouteHandler): this {
-    return this.add('POST', pattern, handler);
+  post(pattern: string, handler: RouteHandler, options?: RouteOptions): this {
+    return this.add('POST', pattern, handler, options);
   }
 
-  put(pattern: string, handler: RouteHandler): this {
-    return this.add('PUT', pattern, handler);
+  put(pattern: string, handler: RouteHandler, options?: RouteOptions): this {
+    return this.add('PUT', pattern, handler, options);
   }
 
-  patch(pattern: string, handler: RouteHandler): this {
-    return this.add('PATCH', pattern, handler);
+  patch(pattern: string, handler: RouteHandler, options?: RouteOptions): this {
+    return this.add('PATCH', pattern, handler, options);
   }
 
-  delete(pattern: string, handler: RouteHandler): this {
-    return this.add('DELETE', pattern, handler);
+  delete(pattern: string, handler: RouteHandler, options?: RouteOptions): this {
+    return this.add('DELETE', pattern, handler, options);
   }
 
   resolve(method: string, path: string): RouteMatch {
@@ -92,7 +106,7 @@ export class Router {
       const params = this.match(route.segments, parts);
       if (params === null) continue;
       if (route.method === upper) {
-        return { kind: 'matched', handler: route.handler, params, pattern: route.pattern };
+        return { kind: 'matched', handler: route.handler, params, pattern: route.pattern, permission: route.permission };
       }
       if (!allow.includes(route.method)) allow.push(route.method);
     }

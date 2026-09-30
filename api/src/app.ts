@@ -1,14 +1,19 @@
+import { envDeps, type AppDeps } from './deps.js';
 import { Router } from './http/router.js';
 import { healthHandler } from './routes/health.js';
+import { registerIngestionRoutes } from './routes/ingestion.js';
 
 /**
  * Builds the application router. Feature routes are registered here as later
- * tasks add them; each must authorise against the active role and scope
- * (task 8.1, P12) and validate input with `parseInput`.
+ * tasks add them; each declares its required permission (`permission` route
+ * option, see http/permissions.ts) so it is authorised against the active role
+ * and scope (task 8.1, P12), and validates input with `parseInput`.
  *
- * API Gateway only forwards the resources declared in infra/lib/api-stack.ts,
- * so a new route also needs its API Gateway resource (and authorizer).
+ * API Gateway proxies every path to this function behind the Cognito
+ * authorizer (infra/lib/api-stack.ts); only `/health` is public.
  */
-export function createApp(): Router {
-  return new Router().get('/health', healthHandler);
+export function createApp(deps: AppDeps = envDeps()): Router {
+  const router = new Router().get('/health', healthHandler);
+  registerIngestionRoutes(router, deps);
+  return router;
 }

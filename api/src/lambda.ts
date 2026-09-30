@@ -9,6 +9,7 @@ import type { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-l
 import { createApp } from './app.js';
 import { principalFromClaims, type RequestContext } from './context.js';
 import { ApiError, errors, internalErrorBody, toErrorBody } from './http/errors.js';
+import { requireActiveRole, type AuthorizeRoute } from './http/permissions.js';
 import type { Router } from './http/router.js';
 import type { ApiRequest, ApiResponse } from './http/types.js';
 import { createLogger, isLogLevel, type LogLevel } from './logger.js';
@@ -22,6 +23,11 @@ export interface LambdaHandlerOptions {
   readonly now?: () => Date;
   readonly logLevel?: LogLevel;
   readonly logSink?: (line: string) => void;
+  /**
+   * Authorises routes that declare a `permission`. Task 8.1 supplies the RBAC
+   * implementation; the default fails closed (`requireActiveRole`).
+   */
+  readonly authorize?: AuthorizeRoute;
 }
 
 export type LambdaHandler = (event: APIGatewayProxyEvent, context: Context) => Promise<APIGatewayProxyResult>;
@@ -79,6 +85,7 @@ export function createLambdaHandler(options: LambdaHandlerOptions = {}): LambdaH
   const router = options.router ?? createApp();
   const env = options.env ?? process.env.LANEWISE_ENV ?? 'unknown';
   const now = options.now ?? (() => new Date());
+  const authorize = options.authorize ?? requireActiveRole;
   const envLevel = process.env.LOG_LEVEL;
   const rootLogger = createLogger({
     level: options.logLevel ?? (isLogLevel(envLevel) ? envLevel : 'info'),
@@ -119,6 +126,7 @@ export function createLambdaHandler(options: LambdaHandlerOptions = {}): LambdaH
         principal: principalFromClaims(claims),
       };
 
+      if (match.permission) await authorize(match.permission, context);
       response = await match.handler({ ...request, params: match.params, route }, context);
     } catch (err) {
       if (err instanceof ApiError) {
