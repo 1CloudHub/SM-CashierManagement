@@ -50,6 +50,7 @@ TOP='''<header class="topbar">
 <div class="pop" id="userpop" hidden style="width:220px"><ul>
 <li><b>Juan dela Cruz</b><br><span class="muted">juan@smretail.com</span></li>
 <li><a href="scr-080-profile.html">Profile, passkeys and preferences</a></li>
+<li><a href="scr-091-help.html">Help and keyboard shortcuts</a></li>
 <li><a href="scr-001-sign-in.html#signed-out">Sign out</a></li></ul></div></div>
 </div></header>'''
 def page(fname,title,crumbs,body,page_roles=ALL,sample=True,mobile_ro=True):
@@ -554,6 +555,26 @@ page("scr-080-profile.html","Profile and preferences",["Profile and preferences"
 <p class="muted">Emails are sent as each event happens (no digest). Turn any non-critical email off above.</p></section>
 <button class="btn primary">Save</button>''',sample=False,mobile_ro=False)
 
+# ---------- SCR-090 Error and status pages ----------
+page("scr-090-error.html","Error and status pages",["Error and status pages"],f'''
+<h1>Error and status pages</h1><p class="muted">Every request-level error has a plain-language message, a reference ID where relevant, and a clear way back to safety. Tabs preview each page.</p>
+<div class="tabs" role="tablist" aria-label="Error states"><button role="tab" aria-selected="true">404</button><button role="tab" aria-selected="false" tabindex="-1">403</button><button role="tab" aria-selected="false" tabindex="-1">401</button><button role="tab" aria-selected="false" tabindex="-1">500 / 503</button><button role="tab" aria-selected="false" tabindex="-1">429</button><button role="tab" aria-selected="false" tabindex="-1">Offline</button></div>
+<section class="card" style="text-align:center"><p style="font-size:40px" aria-hidden="true">🧭</p><h2>Page not found (404)</h2><p>We couldn't find that page. It may have moved.</p><p class="row" style="justify-content:center"><a class="btn primary" href="scr-010-home.html">Go to Home</a><a class="btn" href="scr-041-search.html">Search</a></p></section>
+<div class="grid2">
+<div class="card"><h2>403 No access</h2><p>You're signed in, but this is outside your role or stores. Nothing about it is shown.</p><a class="btn" href="scr-010-home.html">Go to Home</a></div>
+<div class="card"><h2>401 Not signed in</h2><p>Your session ended. Sign in to continue where you left off.</p><a class="btn primary" href="scr-001-sign-in.html">Sign in</a></div>
+<div class="card"><h2>500 / 503 Something went wrong</h2><p>A problem on our side. Try again in a moment.</p><p class="muted">Reference: <code>err-3f9a2c</code></p><p class="row"><button class="btn">Try again</button><a class="btn" href="scr-010-home.html">Go to Home</a></p></div>
+<div class="card"><h2>429 Too many requests</h2><p>You've done that a lot in a short time. Try again shortly.</p><button class="btn">Try again</button></div>
+<div class="card"><h2>Offline</h2><p>Can't reach the server. Your unsaved work is kept.</p><button class="btn">Retry</button></div></div>
+<p class="wfnote">Authenticated errors use the app shell (Home is one click); 401 and pre-auth 500 use the bare layout. Announced to assistive tech; localised (en/fil); no stack traces or object details.''',mobile_ro=False)
+# ---------- SCR-091 Help and shortcuts ----------
+page("scr-091-help.html","Help and shortcuts",["Help and shortcuts"],f'''
+<h1>Help and keyboard shortcuts</h1>
+<div class="grid2">
+<section class="card"><h2>Keyboard shortcuts</h2>{table("Shortcuts",["Keys","Action"],[["/ or ⌘K","Focus search"],["?","Open this shortcut reference"],["g then h","Go to Home"],["g then r","Go to Roster"],["g then m","Go to Network map"],["n","Open notifications"],["Esc","Close a dialog or menu"],["← →","Move between shifts on the timeline"],["Enter","Open the focused shift"]],False)}<p class="muted">Shortcuts are off while typing in a field and never trap focus. Everything is also reachable by pointer.</p></section>
+<section class="card"><h2>Help</h2><ul><li><a href="#">Quick start for your role</a></li><li><a href="#">How staffing is calculated (methodology)</a></li><li><a href="#">How cross-store matching ranks people</a></li><li><a href="#">Approval sequence: headcount, budget, plan</a></li><li><a href="#">Contact support</a></li></ul><p class="muted">In-context "How it works" panels appear on complex screens (Erlang C inputs, matching, approvals).</p></section></div>
+<p class="wfnote">Opened from the user menu or the ? key. Content is localised (en/fil).''',mobile_ro=False)
+
 # ---------- Auth pages (no shell) ----------
 def bare(fname,title,body):
     open(fname,"w").write(f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title} — Wireframe</title><link rel="stylesheet" href="wireframe.css"><script src="wireframe.js" defer></script></head><body><main id="main" style="max-width:560px;margin:48px auto">{body}</main></body></html>''')
@@ -586,7 +607,8 @@ screens=[("SCR-001","scr-001-sign-in.html","Sign in (+ states)","All"),("SCR-002
 ("SCR-040","scr-040-notifications.html","Notifications","All"),("SCR-041","scr-041-search.html","Search results","All"),("SCR-050","scr-050-data-sources.html","Data sources and ingestion","RST PLN ADM"),
 ("SCR-051","scr-051-upload.html","Upload and validation","RST"),("SCR-052","scr-052-master-data.html","Stores, departments, lanes","EXE PLN STM HR RST"),("SCR-053","scr-053-staff.html","Staff and availability","PLN STM HR RST"),
 ("SCR-060","scr-060-rule-sets.html","Rule sets","EXE PLN HR FIN RST"),("SCR-061","scr-061-rule-editor.html","Rule version editor (Finance approves cost rules)","RST FIN"),("SCR-070","scr-070-users.html","Users","ADM"),
-("SCR-071","scr-071-user-edit.html","Invite / edit user","ADM"),("SCR-072","scr-072-roles.html","Roles and permissions","ADM"),("SCR-073","scr-073-audit.html","Audit log","ADM RST"),("SCR-080","scr-080-profile.html","Profile and preferences","All")]
+("SCR-071","scr-071-user-edit.html","Invite / edit user","ADM"),("SCR-072","scr-072-roles.html","Roles and permissions","ADM"),("SCR-073","scr-073-audit.html","Audit log","ADM RST"),("SCR-080","scr-080-profile.html","Profile and preferences","All"),
+("SCR-090","scr-090-error.html","Error and status pages (4xx/5xx, offline)","All"),("SCR-091","scr-091-help.html","Help and keyboard shortcuts","All")]
 rows="".join(f'<tr><th scope="row">{i}</th><td><a href="{f}">{n}</a></td><td>{r}</td></tr>' for i,f,n,r in screens)
 journeys=[("J1 Headcount, budget and plan approval","HR: SCR-033 approve headcount · Finance: SCR-033 approve budget (or Executive records either as secured outside) → Executive: SCR-033 → SCR-024 → Approve"),("J2 Planner refreshes a plan","SCR-040 → SCR-030 → SCR-031 → SCR-023 → SCR-032 → Submit"),("J3 Capacity investigation","SCR-010 → SCR-020 heatmap → SCR-021 → Adjust settings"),
 ("J4 Store manager emergency off","Home (STM) → SCR-022 → shift cell → Emergency off → pick replacement → Save"),("J5 HR recruiting","SCR-040 → SCR-023 timeline → Export → SCR-053"),("J6 Rules steward publishes wages","SCR-060 → SCR-061 → Publish → SCR-030 (stale)"),("J7 First passkey sign-in","SCR-001 → SCR-002 (email code, create passkey, starting role) → SCR-010"),("J8 Staff checks roster","Notification → SCR-025 (phone)"),("J10 Cover a gap from nearby staff","SCR-022 open shift → SCR-026 map → pick candidates / borrow from store → offers → staff accepts on SCR-025 → roster shows borrowed cashier")]

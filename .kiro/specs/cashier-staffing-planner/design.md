@@ -1,6 +1,6 @@
 # Design Document — Cashier Staffing Planner
 
-> Status: Draft v0.7.0 (design-first). Requirements derived in `requirements.md`; each property links to the requirements it validates. Tasks derived after review.
+> Status: Draft v0.9.0 (design-first). Requirements derived in `requirements.md`; each property links to the requirements it validates. Tasks derived after review.
 > Clickable wireframes: `wireframes/index.html` (open in a browser).
 
 ## Overview
@@ -102,6 +102,20 @@ flowchart TD
 | Tablet | 600–1023 px | Icon nav rail; KPIs 3 per row; charts full width |
 | Laptop | 1024–1439 px | Expanded nav; KPIs 4–6 per row; settings drawer overlays content |
 | Desktop | ≥ 1440 px | Content max width 1600 px; settings drawer can dock beside content |
+
+**Grid and layout system.** A responsive 12-column grid (4 on mobile) with token-driven gutters, margins and container widths. All values are layout tokens (spacing scale, container widths) consumed via the Tailwind config — no ad-hoc widths.
+
+| Breakpoint | Columns | Gutter | Outer margin | Content max width | KPI cards / row |
+|---|---|---|---|---|---|
+| Mobile < 600 | 4 | 16 px | 16 px | fluid | 2 |
+| Tablet 600–1023 | 8 | 20 px | 24 px | fluid | 3 |
+| Laptop 1024–1439 | 12 | 24 px | 32 px | 1280 px | 4–6 |
+| Desktop ≥ 1440 | 12 | 24 px | auto (centred) | 1600 px | 6 |
+
+- **Layout primitives:** a set of composable components — `Page` (shell + max-width container), `Grid`/`Col` (the 12/8/4 grid), `Stack` (vertical rhythm from the spacing scale), `Cluster` (horizontal groups with wrap), `Split`/`Sidebar` (content + docked drawer), and `Section` (labelled card region). Screens compose these rather than writing bespoke CSS.
+- **Spacing scale:** a single scale (e.g. 4/8/12/16/24/32/48) as tokens; margins, gutters and stack gaps all reference it.
+- **Density:** dense data regions (tables, the roster timeline/grid) use a compact spacing variant while keeping tap targets ≥ 44 px on touch.
+- **Breakpoint behaviour** for each screen is defined in the Breakpoints table above and enforced through the grid primitives, so responsiveness is consistent rather than per-screen.
 
 Roster grids (cashier × hour, cashier × day) are dense. On mobile they switch to a list: one card per cashier showing their shift, or one card per day.
 
@@ -208,7 +222,9 @@ V = view, E = edit, A = approve/publish, X = export, M = manage (create/edit/del
 | SCR-071 | Invite / edit user | ADM | Assign roles and scope | NEW |
 | SCR-072 | Roles and permissions | ADM | Read-only view of the RBAC matrix | NEW |
 | SCR-073 | Audit log | ADM RST | Who changed what, when; filterable and exportable | NEW |
-| SCR-080 | Profile and preferences | All | Profile, passkeys (add/remove), default scope, notification channels | NEW |
+| SCR-080 | Profile and preferences | All | Profile, passkeys (add/remove), default scope, language, notification channels | NEW |
+| SCR-090 | Error and status pages | All | 400/401/403/404/429/500/503 and offline, each with a way back to safety | NEW |
+| SCR-091 | Help and shortcuts | All | Help panel, keyboard-shortcut reference (opened with ?), links to methodology and support | NEW |
 
 ### User journeys
 
@@ -785,7 +801,7 @@ Approval steps for a submitted scenario:
 
 | State | Pattern |
 |---|---|
-| Loading | Skeletons for KPIs and tables; charts show a labeled placeholder |
+| Loading | Skeletons for KPIs, tables and cards that match the final layout (no layout shift); charts, timeline and map show a labelled placeholder; a deferred spinner only for short waits; skeleton shimmer respects `prefers-reduced-motion` |
 | Empty | Explains why and what to do: "No published plan for this season yet. [Open scenarios]" |
 | No access (in scope) | "You don't have access to this store." Never shows partial data |
 | Error | Inline message with a retry and a reference ID; form fields show field-level errors |
@@ -793,6 +809,56 @@ Approval steps for a submitted scenario:
 | Unsaved changes | Leaving the page prompts "Discard changes?" |
 | Destructive actions (deactivate, archive, publish rules) | Confirmation dialog naming the object and its effect |
 | Success | A toast for 5 s (announced via `aria-live="polite"`); the result is also visible on the page |
+
+**Design tokens, theme and brand mark**
+
+- **Tokens everywhere.** All colour, typography, spacing, radius, elevation and motion values are design tokens (CSS variables), defined once (SG-002/004/005/007) and consumed by every component and screen. No raw hex, px font sizes or ad-hoc timings in components. This is enforced in review and, where possible, by lint.
+- **Theme.** A single theme object drives:
+  - **Colour palette:** brand, neutral, and semantic ramps (success, warning, danger, info); each has an accessible on-colour for text. The data-visualisation categorical palette (SG-010) is separate and always paired with a label. Supports a future dark mode (SG-009) by swapping token values, not components.
+  - **Motion:** named duration and easing tokens (e.g. instant/fast/base/slow) and a small set of standard transitions (fade, slide, expand). All motion respects `prefers-reduced-motion` and drops to no-motion.
+- **App brand mark (icon/logo).** A single simple mark represents the app across contexts, built as SVG and exported to the sizes each context needs:
+  - browser tab **favicon** (16/32/48 and SVG), PWA/app icons (180 maskable, 192, 512), the sign-in **hero** lockup (mark + wordmark), the top-bar brand, social/OG preview, and a monochrome variant for print and low-colour contexts.
+  - The mark is theme-aware (uses brand tokens) and legible at 16 px. Until SM brand guidelines arrive (Q8), a neutral placeholder mark is used and swapped via tokens.
+
+**Microcopy and voice**
+
+- One voice across the app, defined in UX-003: clear, supportive, plain language; sentence case for labels and buttons; verbs on actions ("Approve budget", not "OK"); no jargon or blame in errors.
+- Standard patterns: buttons say what happens ("Send offers", "Publish plan"); empty states explain why and offer the next step; errors say what went wrong and how to recover; destructive confirmations name the object and its effect.
+- All microcopy lives in the i18n resource bundles (en/fil), never hardcoded, so tone stays consistent and translatable. A microcopy reference in UX-003 lists the canonical strings for common actions, states and errors.
+
+**ARIA and labelling standard**
+
+- Every interactive element has an accessible name; icon-only buttons carry `aria-label`; inputs have associated `<label>`s. Composite widgets (tabs, dialogs, menus, the roster grid, the timeline) follow the documented ARIA patterns in UX-004.
+- Cell actions in dense grids use descriptive labels ("Mark PT-02 unavailable on Sat Dec 19"), not just icons. Live regions announce async results (`aria-live="polite"` for success, `assertive` for errors). Labels come from the i18n bundles so they are localised.
+- The labelling standard (UX-004) is the single source; components ship with correct roles/names by default so screens don't re-invent them.
+
+**Keyboard shortcuts**
+
+- A small, discoverable global scheme: `/` or ⌘K focus search, `?` opens the shortcut reference (SCR-091), `g` then a key jumps to a section (g h Home, g r Roster, g m Map), `n` opens notifications, Esc closes dialogs/menus.
+- Context shortcuts on the roster timeline: arrow keys move focus between shifts, Enter opens the shift editor, and every pointer action (drag/resize/bulk) has a keyboard equivalent.
+- Shortcuts never trap focus, are disabled while typing in inputs, and are all listed in the help reference. They are additive — nothing is reachable only by shortcut.
+
+**Help**
+
+- **In-context help:** each screen has a help affordance; complex areas (Erlang C inputs, matching ranking, approval sequence) use "How it works" disclosures drawn from the methodology (DOM-001) and business rules (DOM-003).
+- **Help panel (SCR-091):** opened from the user menu or `?`; holds the keyboard-shortcut reference, a short guide per role, and links to support and the methodology. Localised (en/fil).
+- Field-level help uses hint text and, where needed, an info popover with a plain-language explanation; never rely on a tooltip alone for essential information (it must also be available to keyboard and screen-reader users).
+
+**Error and status pages (4xx / 5xx)**
+
+- Dedicated full-page states for request-level errors, each with a plain-language explanation and a **way back to safety** (primary action to Home or the previous safe screen, plus sign-in when relevant). No dead ends.
+
+| Page | When | Primary way back |
+|---|---|---|
+| 400 Bad request | Malformed request or bad link parameters | "Go to Home"; clear the bad filters |
+| 401 Not signed in | Session missing/expired on a protected route | "Sign in" (returns to the same URL after auth) |
+| 403 No access | Authenticated but out of role/scope (see Scope isolation) | "Go to Home"; reveals nothing about the object |
+| 404 Not found | Unknown route or missing object | "Go to Home"; global search |
+| 429 Too many requests | Rate limited | Explains retry-after; "Try again" |
+| 500 / 503 Something went wrong | Server or dependency error | Reference ID for support; "Try again" and "Go to Home" |
+| Offline / network | Client cannot reach the API | "Retry"; keeps any local draft |
+
+- Error pages use the app shell where the user is authenticated (so nav home is one click) and the bare layout when not (401/500 pre-auth). They carry a reference ID, are announced to assistive tech, never expose stack traces or object details, and are localised (en/fil).
 
 **Sample-data provenance**
 - A banner on every page while any dataset in use is flagged synthetic. Exports include a "SAMPLE DATA" header row. The printed summary shows the badge.
@@ -997,7 +1063,10 @@ at most one offer per open shift can be accepted; all other offers for that shif
 | No eligible candidates within the travel limit | Panel suggests widening the limit, borrowing from a surplus store, or accepting a lower service level |
 | Two cashiers accept the same offer | The first acceptance wins; the second sees "This shift has just been filled" |
 | Lending store becomes short after approving a transfer | Warning to both store managers before confirming |
-| Out-of-scope deep link | "No access" state; nothing about the object is revealed |
+| Out-of-scope deep link | 403 "No access" page; nothing about the object is revealed; way back to Home |
+| Unknown route or missing object | 404 page with Home and global search |
+| Server or dependency error | 500/503 page with a reference ID, Try again and Go to Home; no stack trace shown |
+| Client offline | Offline page with Retry; local draft preserved |
 
 ## Testing Strategy
 

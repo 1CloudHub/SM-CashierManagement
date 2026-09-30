@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Audit log — Wireframe</title><link rel="stylesheet" href="wireframe.css"><script src="wireframe.js" defer></script></head>
-<body data-page-roles="adm rst" data-mobile-ro><a class="skip" href="#main">Skip to content</a>
+<title>Help and shortcuts — Wireframe</title><link rel="stylesheet" href="wireframe.css"><script src="wireframe.js" defer></script></head>
+<body data-page-roles="adm exe pln stm hr fin rst stf"><a class="skip" href="#main">Skip to content</a>
 <header class="topbar">
 <button class="iconbtn menu-toggle" id="menu-toggle" aria-controls="sidenav" aria-expanded="false" aria-label="Open navigation">≡</button>
 <a class="brand" href="scr-010-home.html">SM Cashier Planner</a>
@@ -70,18 +70,19 @@
 <ul>
 <li data-roles="adm"><a href="scr-070-users.html"><span class="ico" aria-hidden="true">U</span><span class="lbl">Users</span></a></li>
 <li data-roles="adm"><a href="scr-072-roles.html"><span class="ico" aria-hidden="true">P</span><span class="lbl">Roles and permissions</span></a></li>
-<li data-roles="adm rst"><a href="scr-073-audit.html" aria-current="page"><span class="ico" aria-hidden="true">A</span><span class="lbl">Audit log</span></a></li>
+<li data-roles="adm rst"><a href="scr-073-audit.html"><span class="ico" aria-hidden="true">A</span><span class="lbl">Audit log</span></a></li>
 </ul></div>
 </nav>
 <main id="main" tabindex="-1">
-<nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="index.html">Screen map</a></li><li><a href="scr-070-users.html">Admin</a></li><li>Audit log</li></ol></nav>
-
+<nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="index.html">Screen map</a></li><li>Help and shortcuts</li></ol></nav>
+<p class="sample" role="note">⚠ Sample data — figures are simulated, not SM actuals.</p>
 <div class="noaccess" id="noaccess" hidden><h1>No access</h1><p>Your role doesn't include this screen. <a href="scr-010-home.html">Go to Home</a></p></div>
 <div id="content">
-<p class="ro-note" role="note">Read-only on a phone. Open on a tablet or computer to edit.</p>
 
-<div class="row spread"><h1>Audit log</h1><button class="btn">Export CSV</button></div>
-<div class="ctx"><div><label for="ad">From</label><input id="ad" type="date"></div><div><label for="ad2">To</label><input id="ad2" type="date"></div><div><label for="au">User</label><select id="au"><option>Anyone</option></select></div><div><label for="at">Event type</label><select id="at"><option>All</option><option>scenario.*</option><option>rules.*</option><option>data.*</option><option>user.*</option><option>export</option></select></div><div><label for="ao">Object</label><input id="ao" type="search"></div></div>
-<div class="tablewrap"><table><caption>Events</caption><thead><tr><th scope="col"><button class=sort>Time</button></th><th scope="col"><button class=sort>User</button></th><th scope="col"><button class=sort>Event</button></th><th scope="col"><button class=sort>Object</button></th><th scope="col"><button class=sort>Detail</button></th></tr></thead><tbody><tr><th scope="row">Oct 3 10:14</th><td>Ana Reyes</td><td>scenario.submitted</td><td>Christmas 2026 v4</td><td>—</td></tr><tr><th scope="row">Oct 1 16:30</th><td>M. Cruz</td><td>scenario.published</td><td>Christmas 2026 v3</td><td>replaces v2</td></tr><tr><th scope="row">Sep 15 11:02</th><td>R. Santos</td><td>rules.published</td><td>Wage rates 2026.1</td><td>NCR 85 → 87</td></tr></tbody></table></div>
-<p class="wfnote">Rules Stewards see data and rules events only.</p>
+
+<h1>Help and keyboard shortcuts</h1>
+<div class="grid2">
+<section class="card"><h2>Keyboard shortcuts</h2><div class="tablewrap"><table><caption>Shortcuts</caption><thead><tr><th scope="col">Keys</th><th scope="col">Action</th></tr></thead><tbody><tr><th scope="row">/ or ⌘K</th><td>Focus search</td></tr><tr><th scope="row">?</th><td>Open this shortcut reference</td></tr><tr><th scope="row">g then h</th><td>Go to Home</td></tr><tr><th scope="row">g then r</th><td>Go to Roster</td></tr><tr><th scope="row">g then m</th><td>Go to Network map</td></tr><tr><th scope="row">n</th><td>Open notifications</td></tr><tr><th scope="row">Esc</th><td>Close a dialog or menu</td></tr><tr><th scope="row">← →</th><td>Move between shifts on the timeline</td></tr><tr><th scope="row">Enter</th><td>Open the focused shift</td></tr></tbody></table></div><p class="muted">Shortcuts are off while typing in a field and never trap focus. Everything is also reachable by pointer.</p></section>
+<section class="card"><h2>Help</h2><ul><li><a href="#">Quick start for your role</a></li><li><a href="#">How staffing is calculated (methodology)</a></li><li><a href="#">How cross-store matching ranks people</a></li><li><a href="#">Approval sequence: headcount, budget, plan</a></li><li><a href="#">Contact support</a></li></ul><p class="muted">In-context "How it works" panels appear on complex screens (Erlang C inputs, matching, approvals).</p></section></div>
+<p class="wfnote">Opened from the user menu or the ? key. Content is localised (en/fil).
 </div></main></div></body></html>

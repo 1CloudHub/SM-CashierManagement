@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Audit log — Wireframe</title><link rel="stylesheet" href="wireframe.css"><script src="wireframe.js" defer></script></head>
-<body data-page-roles="adm rst" data-mobile-ro><a class="skip" href="#main">Skip to content</a>
+<title>Error and status pages — Wireframe</title><link rel="stylesheet" href="wireframe.css"><script src="wireframe.js" defer></script></head>
+<body data-page-roles="adm exe pln stm hr fin rst stf"><a class="skip" href="#main">Skip to content</a>
 <header class="topbar">
 <button class="iconbtn menu-toggle" id="menu-toggle" aria-controls="sidenav" aria-expanded="false" aria-label="Open navigation">≡</button>
 <a class="brand" href="scr-010-home.html">SM Cashier Planner</a>
@@ -70,18 +70,24 @@
 <ul>
 <li data-roles="adm"><a href="scr-070-users.html"><span class="ico" aria-hidden="true">U</span><span class="lbl">Users</span></a></li>
 <li data-roles="adm"><a href="scr-072-roles.html"><span class="ico" aria-hidden="true">P</span><span class="lbl">Roles and permissions</span></a></li>
-<li data-roles="adm rst"><a href="scr-073-audit.html" aria-current="page"><span class="ico" aria-hidden="true">A</span><span class="lbl">Audit log</span></a></li>
+<li data-roles="adm rst"><a href="scr-073-audit.html"><span class="ico" aria-hidden="true">A</span><span class="lbl">Audit log</span></a></li>
 </ul></div>
 </nav>
 <main id="main" tabindex="-1">
-<nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="index.html">Screen map</a></li><li><a href="scr-070-users.html">Admin</a></li><li>Audit log</li></ol></nav>
-
+<nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="index.html">Screen map</a></li><li>Error and status pages</li></ol></nav>
+<p class="sample" role="note">⚠ Sample data — figures are simulated, not SM actuals.</p>
 <div class="noaccess" id="noaccess" hidden><h1>No access</h1><p>Your role doesn't include this screen. <a href="scr-010-home.html">Go to Home</a></p></div>
 <div id="content">
-<p class="ro-note" role="note">Read-only on a phone. Open on a tablet or computer to edit.</p>
 
-<div class="row spread"><h1>Audit log</h1><button class="btn">Export CSV</button></div>
-<div class="ctx"><div><label for="ad">From</label><input id="ad" type="date"></div><div><label for="ad2">To</label><input id="ad2" type="date"></div><div><label for="au">User</label><select id="au"><option>Anyone</option></select></div><div><label for="at">Event type</label><select id="at"><option>All</option><option>scenario.*</option><option>rules.*</option><option>data.*</option><option>user.*</option><option>export</option></select></div><div><label for="ao">Object</label><input id="ao" type="search"></div></div>
-<div class="tablewrap"><table><caption>Events</caption><thead><tr><th scope="col"><button class=sort>Time</button></th><th scope="col"><button class=sort>User</button></th><th scope="col"><button class=sort>Event</button></th><th scope="col"><button class=sort>Object</button></th><th scope="col"><button class=sort>Detail</button></th></tr></thead><tbody><tr><th scope="row">Oct 3 10:14</th><td>Ana Reyes</td><td>scenario.submitted</td><td>Christmas 2026 v4</td><td>—</td></tr><tr><th scope="row">Oct 1 16:30</th><td>M. Cruz</td><td>scenario.published</td><td>Christmas 2026 v3</td><td>replaces v2</td></tr><tr><th scope="row">Sep 15 11:02</th><td>R. Santos</td><td>rules.published</td><td>Wage rates 2026.1</td><td>NCR 85 → 87</td></tr></tbody></table></div>
-<p class="wfnote">Rules Stewards see data and rules events only.</p>
+
+<h1>Error and status pages</h1><p class="muted">Every request-level error has a plain-language message, a reference ID where relevant, and a clear way back to safety. Tabs preview each page.</p>
+<div class="tabs" role="tablist" aria-label="Error states"><button role="tab" aria-selected="true">404</button><button role="tab" aria-selected="false" tabindex="-1">403</button><button role="tab" aria-selected="false" tabindex="-1">401</button><button role="tab" aria-selected="false" tabindex="-1">500 / 503</button><button role="tab" aria-selected="false" tabindex="-1">429</button><button role="tab" aria-selected="false" tabindex="-1">Offline</button></div>
+<section class="card" style="text-align:center"><p style="font-size:40px" aria-hidden="true">🧭</p><h2>Page not found (404)</h2><p>We couldn't find that page. It may have moved.</p><p class="row" style="justify-content:center"><a class="btn primary" href="scr-010-home.html">Go to Home</a><a class="btn" href="scr-041-search.html">Search</a></p></section>
+<div class="grid2">
+<div class="card"><h2>403 No access</h2><p>You're signed in, but this is outside your role or stores. Nothing about it is shown.</p><a class="btn" href="scr-010-home.html">Go to Home</a></div>
+<div class="card"><h2>401 Not signed in</h2><p>Your session ended. Sign in to continue where you left off.</p><a class="btn primary" href="scr-001-sign-in.html">Sign in</a></div>
+<div class="card"><h2>500 / 503 Something went wrong</h2><p>A problem on our side. Try again in a moment.</p><p class="muted">Reference: <code>err-3f9a2c</code></p><p class="row"><button class="btn">Try again</button><a class="btn" href="scr-010-home.html">Go to Home</a></p></div>
+<div class="card"><h2>429 Too many requests</h2><p>You've done that a lot in a short time. Try again shortly.</p><button class="btn">Try again</button></div>
+<div class="card"><h2>Offline</h2><p>Can't reach the server. Your unsaved work is kept.</p><button class="btn">Retry</button></div></div>
+<p class="wfnote">Authenticated errors use the app shell (Home is one click); 401 and pre-auth 500 use the bare layout. Announced to assistive tech; localised (en/fil); no stack traces or object details.
 </div></main></div></body></html>

@@ -4,6 +4,10 @@ All notable documentation and code changes. Format: `[doc-id or area] version �
 
 ## Unreleased
 
+- [spec] cashier-staffing-planner design v0.9.0: added a token-driven grid and layout system (12/8/4 columns, gutters, margins, container widths per breakpoint) with layout primitives (Page, Grid/Col, Stack, Cluster, Split/Sidebar, Section); task 1.6 now covers grid + layout. (2026-09-30)
+- [spec] cashier-staffing-planner design v0.8.0 + wireframes: added design-tokens/theme + motion, app brand mark, 4xx/5xx + offline error pages (SCR-090) with a way back to safety, microcopy/voice, ARIA/labelling standard, keyboard shortcuts + help (SCR-091), and explicit loading/skeleton states. (2026-09-30)
+- [spec] cashier-staffing-planner tasks: reordered to lead with the design system, git branching (GitHub Flow), and deployment/CI-CD (S3+CloudFront SPA, Lambda+API GW, GitHub Actions+OIDC, merge-to-main deploy) plus a walking skeleton; task 1 expanded into 10 design-system subtasks; new wave-based DAG. (2026-09-30)
+- [ADR-0003, ADR-0004] 1.0.0 — design-system foundation (Tailwind + shadcn/ui, token-driven) and deployment/CI-CD topology. (2026-09-30)
 - [spec] cashier-staffing-planner tasks v0.1.0: 23-task implementation plan (55 leaf tasks) with per-task requirement refs, embedded property-based tests (P1–P19), wave-based dependency graph. (2026-09-30)
 - [ADR-0002] 1.0.0 — application stack decision (React+TS SPA, Node+TS API, PostgreSQL, S3, SQS workers, Cognito, SES, Amazon Location Service, CDK). (2026-09-30)
 - [TS-001] 0.2.0 — summarised the chosen stack per ADR-0002. (2026-09-30)
