@@ -168,12 +168,15 @@ export interface RuleVersionDetail extends RuleVersionSummary {
   readonly payload: Readonly<Record<string, unknown>>;
   readonly changeNote: string;
   readonly createdBy: string;
+  readonly createdByName: string | null;
   readonly submittedAt: IsoDateTime | null;
   readonly financeApprovedBy: string | null;
+  readonly financeApprovedByName: string | null;
   readonly financeApprovedAt: IsoDateTime | null;
   /** Finance's comment on the last request for changes. */
   readonly reviewComment: string | null;
   readonly publishedBy: string | null;
+  readonly publishedByName: string | null;
   readonly publishedAt: IsoDateTime | null;
   readonly synthetic: boolean;
 }
