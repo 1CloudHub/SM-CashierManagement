@@ -22,6 +22,23 @@ export interface ApiStackProps extends StackProps {
   readonly userPool: cognito.IUserPool;
 }
 
+/**
+ * Feature routes served by the API (api/src/app.ts), declared explicitly so
+ * each carries the Cognito authorizer (task 8.1). API Gateway path syntax.
+ * The `{proxy+}` catch-all is protected the same way, so a route missing here
+ * is still never public; the API authorises every request against the active
+ * role and scope on top (P12).
+ */
+export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path: string }[] = [
+  { method: 'GET', path: '/me' },
+  { method: 'PUT', path: '/me/active-role' },
+  { method: 'GET', path: '/stores' },
+  { method: 'GET', path: '/stores/{storeId}' },
+];
+
+/** Request headers the SPA sends: the defaults plus the demo role switcher's `X-Active-Role`. */
+export const CORS_ALLOW_HEADERS: readonly string[] = [...apigateway.Cors.DEFAULT_HEADERS, 'X-Active-Role'];
+
 /** Default location of the API bundle produced by `api/scripts/bundle.mjs`. */
 export const DEFAULT_API_BUNDLE_DIR = path.join(__dirname, '..', '..', 'api', 'dist', 'lambda');
 
@@ -86,6 +103,9 @@ export class ApiStack extends Stack {
         LANEWISE_ENV: config.envName,
         LOG_LEVEL: 'info',
         NODE_OPTIONS: '--enable-source-maps',
+        // Demo role switcher (requirement 3); the API authorises every request
+        // against the active role either way (P12).
+        DEMO_ROLE_SWITCHER: config.demoRoleSwitcher ? 'true' : 'false',
       },
     });
 
@@ -102,6 +122,7 @@ export class ApiStack extends Stack {
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS,
+        allowHeaders: [...CORS_ALLOW_HEADERS],
       },
     });
 
@@ -131,6 +152,9 @@ export class ApiStack extends Stack {
       anyMethod: true,
       defaultMethodOptions: this.protectedMethodOptions,
     });
+    for (const route of PROTECTED_ROUTES) {
+      api.root.resourceForPath(route.path).addMethod(route.method, integration, this.protectedMethodOptions);
+    }
 
     this.apiUrl = api.url;
 

@@ -5,7 +5,7 @@ import { App } from 'aws-cdk-lib';
 import { Annotations, Match, Template } from 'aws-cdk-lib/assertions';
 import { describe, expect, it } from 'vitest';
 import { resolveEnvironment } from '../config/environments';
-import { ApiStack, DEFAULT_API_BUNDLE_DIR } from '../lib/api-stack';
+import { ApiStack, DEFAULT_API_BUNDLE_DIR, PROTECTED_ROUTES } from '../lib/api-stack';
 import { AuthStack, DEFAULT_PRE_SIGN_UP_BUNDLE_DIR, TOKEN_POLICY } from '../lib/auth-stack';
 import { DeployPipelineStack } from '../lib/deploy-pipeline-stack';
 import { PipelineIamStack } from '../lib/pipeline-iam-stack';
@@ -142,6 +142,44 @@ describe('API stack', () => {
     expect(anyMethods).toHaveLength(2);
     for (const m of anyMethods) {
       expect((m as { Properties: { AuthorizationType: string } }).Properties.AuthorizationType).toBe('COGNITO_USER_POOLS');
+    }
+  });
+
+  it('declares every API feature route behind the Cognito authorizer (task 8.1)', () => {
+    const resources = api.findResources('AWS::ApiGateway::Resource');
+    const methods = api.findResources('AWS::ApiGateway::Method');
+    const pathOf = (id: string): string => {
+      const r = resources[id] as { Properties: { PathPart: string; ParentId: unknown } } | undefined;
+      if (!r) return '';
+      const parent = r.Properties.ParentId as { Ref?: string };
+      return `${parent.Ref ? pathOf(parent.Ref) : ''}/${r.Properties.PathPart}`;
+    };
+    const declared = Object.values(methods).map((m) => {
+      const p = (m as { Properties: { HttpMethod: string; AuthorizationType: string; ResourceId: { Ref?: string } } })
+        .Properties;
+      return { key: `${p.HttpMethod} ${p.ResourceId.Ref ? pathOf(p.ResourceId.Ref) : '/'}`, auth: p.AuthorizationType };
+    });
+    expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
+      expect.arrayContaining(['GET /me', 'PUT /me/active-role', 'GET /stores', 'GET /stores/{storeId}']),
+    );
+    for (const route of PROTECTED_ROUTES) {
+      const match = declared.filter((d) => d.key === `${route.method} ${route.path}`);
+      expect(match, `${route.method} ${route.path}`).toHaveLength(1);
+      expect(match[0]?.auth).toBe('COGNITO_USER_POOLS');
+    }
+  });
+
+  it('passes the demo role switcher flag to the API and allows the X-Active-Role header in CORS', () => {
+    api.hasResourceProperties('AWS::Lambda::Function', {
+      Environment: { Variables: Match.objectLike({ DEMO_ROLE_SWITCHER: 'true' }) },
+    });
+    const options = Object.values(api.findResources('AWS::ApiGateway::Method')).filter(
+      (m) => (m as { Properties: { HttpMethod: string } }).Properties.HttpMethod === 'OPTIONS',
+    );
+    expect(options.length).toBeGreaterThan(0);
+    for (const m of options) {
+      const headers = JSON.stringify(m);
+      expect(headers).toContain('X-Active-Role');
     }
   });
 
