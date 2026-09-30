@@ -5,8 +5,11 @@ the deployment topology from **ADR-0004** and docs **DEP-003 / DEP-004 / DEP-005
 
 - **SPA hosting** — private Amazon S3 bucket served through Amazon CloudFront via
   Origin Access Control (OAC), with SPA (client-side routing) fallback to
-  `index.html`. (`lib/spa-hosting-stack.ts`)
-- **API** — AWS Lambda behind Amazon API Gateway (REST). Runs the bundled
+  `index.html`. Optionally on a custom domain (ACM certificate + Route 53 alias
+  records); prod uses `https://lanewise.prototypes.1cloudhub.com`.
+  (`lib/spa-hosting-stack.ts`)
+- **API** — AWS Lambda behind Amazon API Gateway (REST), CORS limited to the
+  SPA's origins. Runs the bundled
   `@lanewise/api` service (`/api`, built to `api/dist/lambda`) and exposes the
   public `/health` endpoint; every other route goes through the Cognito
   user-pool authorizer (task 7). Data services are added in later phases.
@@ -59,8 +62,35 @@ npx cdk synth -c env=prod
 LANEWISE_ENV=prod npx cdk synth
 ```
 
-The stacks are `LaneWise-prod-SpaHosting`, `LaneWise-prod-Api` and
-`LaneWise-prod-PipelineIam`.
+The stacks are `LaneWise-prod-SpaHosting`, `LaneWise-prod-Auth`,
+`LaneWise-prod-Api`, `LaneWise-prod-PipelineIam`, `LaneWise-prod-PipelinePrChecks`
+and `LaneWise-prod-DeployPipeline`.
+
+## Custom domain (SPA)
+
+Config-driven (`config/environments.ts`): set `domainName` and `hostedZone:
+{ id, name }` (an existing Route 53 public hosted zone that contains the name).
+`LaneWise-<env>-SpaHosting` then:
+
+- issues an ACM certificate for `domainName`, DNS-validated in the imported
+  zone (`HostedZone.fromHostedZoneAttributes`; the zone itself and its other
+  records are not managed here);
+- adds the name + certificate to the CloudFront distribution (SNI, TLS 1.2+);
+  the default `*.cloudfront.net` domain keeps working;
+- creates Route 53 `A` and `AAAA` alias records pointing at the distribution;
+- outputs `SpaUrl` (the custom domain when set).
+
+CloudFront only accepts certificates from **us-east-1**, so an environment with a
+custom domain must deploy the SPA stack there (a CloudFormation rule fails the
+deploy otherwise). Leave `domainName` unset to serve only the CloudFront domain.
+
+Prod: `lanewise.prototypes.1cloudhub.com` in zone `prototypes.1cloudhub.com`
+(`Z10306162UR77DOLJD1L3`, account 675379425271, us-east-1).
+
+**CORS.** The API allows only the SPA's origins — `https://<domainName>` and
+`https://<cloudfront domain>` — on the API Gateway preflight and on the
+function's responses (`CORS_ALLOWED_ORIGINS`). Without an allowlist it falls
+back to `*`.
 
 ## ⚠️ Manual step: authorise the GitHub App (one-time)
 
@@ -97,25 +127,29 @@ if the org/repo/connection name differs.
 - **Tokens.** ID/access tokens 60 minutes (= the idle timeout), refresh token
   12 hours (absolute cap; the SPA revokes it on idle sign-out), auth session
   10 minutes.
-- **Relying party.** Passkeys are bound to the SPA's CloudFront domain unless
-  `auth.relyingPartyId` is set. Set the custom domain *before* users register
-  passkeys — changing it later invalidates every passkey.
+- **Relying party.** Passkeys are bound to `auth.relyingPartyId`, else
+  `domainName`, else the SPA's CloudFront domain. Prod:
+  `lanewise.prototypes.1cloudhub.com` — so passkey sign-in works only on the
+  custom domain, not on the `*.cloudfront.net` URL. Changing it later
+  invalidates every registered passkey.
+- **Email one-time codes (SES).** `auth.email` names the Amazon SES sender;
+  with it set the pool sends through SES (`EmailSendingAccount: DEVELOPER`) and
+  `EMAIL_OTP` is an allowed first factor. Prod sends as
+  `LaneWise <noreply@1cloudhub.com>` from the verified `1cloudhub.com` domain
+  identity in us-east-1 (DKIM verified; account out of the SES sandbox). Cognito
+  sends through its `AWSServiceRoleForAmazonCognitoIdpEmailService`
+  service-linked role (created automatically on deploy; same-account identity,
+  so no SES sending-authorization policy is needed). With `auth.email` unset,
+  email OTP stays **off** and `cdk synth` warns
+  (`lanewise:auth:email-otp-disabled`). To change the sender: verify the new
+  identity in SES (out of the sandbox) in `sesRegion`, then update
+  `auth.email = { fromEmail, fromName?, sesVerifiedDomain?, sesRegion }`.
+- **No hosted UI.** The app client has OAuth disabled, so there are no
+  callback/logout URLs to maintain for the domain.
 - **SPA config.** The deploy stage writes `runtime-config.json` (pool id,
-  client id, region, API URL) into the SPA bucket from the stack outputs.
-
-### ⚠️ Manual step: verify an SES identity for the one-time codes
-
-Cognito sends email one-time codes only through Amazon SES. Until
-`auth.email` is set in `config/environments.ts`, email OTP stays **off** and
-`cdk synth` warns (`lanewise:auth:email-otp-disabled`) — nobody can finish
-first sign-in. To enable it:
-
-1. In SES (in the region you'll name as `sesRegion`), verify the sender domain
-   or address (e.g. `no-reply@lanewise.smretail.com`) and request production
-   access (out of the sandbox) so codes reach any smretail.com / 1cloudhub.com
-   inbox.
-2. Set `auth.email = { fromEmail, fromName?, sesVerifiedDomain?, sesRegion }`
-   for the environment and merge; the pipeline deploys it.
+  client id, region, self sign-up flag, API URL) into the SPA bucket from the
+  stack outputs. None of it depends on the SPA origin, so it is the same for
+  the custom and CloudFront domains.
 
 ## Adding `staging` later
 

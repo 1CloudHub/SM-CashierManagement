@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { API_ERROR_CODES, type ApiErrorBody, type HealthResponse } from '@lanewise/shared';
 import { createApp } from '../src/app.js';
 import { parseInput } from '../src/http/validation.js';
-import { createLambdaHandler } from '../src/lambda.js';
+import { createLambdaHandler, parseAllowedOrigins } from '../src/lambda.js';
 
 const FIXED_NOW = new Date('2026-10-01T08:00:00.000Z');
 
@@ -202,5 +202,51 @@ describe('error model', () => {
         },
       ),
     );
+  });
+});
+
+describe('CORS response headers', () => {
+  const SPA = 'https://lanewise.prototypes.1cloudhub.com';
+  const CF = 'https://d111111abcdef8.cloudfront.net';
+
+  function withOrigins(allowedOrigins?: readonly string[]) {
+    const handler = createLambdaHandler({
+      router: createApp(),
+      env: 'prod',
+      now: () => FIXED_NOW,
+      logSink: () => undefined,
+      ...(allowedOrigins ? { allowedOrigins } : {}),
+    });
+    return (origin?: string) =>
+      handler(event(origin ? { headers: { Origin: origin } } : {}), lambdaContext);
+  }
+
+  it('allows any origin when no allowlist is configured', async () => {
+    const res = await withOrigins([])(SPA);
+    expect(res.headers?.['Access-Control-Allow-Origin']).toBe('*');
+  });
+
+  it('echoes an allowlisted origin (custom domain or CloudFront domain) and varies on Origin', async () => {
+    const call = withOrigins([SPA, CF]);
+    for (const origin of [SPA, CF]) {
+      const res = await call(origin);
+      expect(res.headers).toMatchObject({ 'Access-Control-Allow-Origin': origin, Vary: 'Origin' });
+    }
+  });
+
+  it('omits Access-Control-Allow-Origin for other or missing origins', async () => {
+    const call = withOrigins([SPA, CF]);
+    for (const origin of ['https://evil.example.com', `${SPA}.evil.io`, undefined]) {
+      const res = await call(origin);
+      expect(res.statusCode).toBe(200);
+      expect(res.headers?.['Access-Control-Allow-Origin']).toBeUndefined();
+      expect(res.headers?.Vary).toBe('Origin');
+    }
+  });
+
+  it('parses the CORS_ALLOWED_ORIGINS env format', () => {
+    expect(parseAllowedOrigins(undefined)).toEqual([]);
+    expect(parseAllowedOrigins('*')).toEqual([]);
+    expect(parseAllowedOrigins(` ${SPA} ,${CF},`)).toEqual([SPA, CF]);
   });
 });
