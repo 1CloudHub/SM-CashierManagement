@@ -53,6 +53,8 @@ export const errors = {
   unsupportedMediaType: () =>
     new ApiError('unsupported_media_type', 'Request body must be application/json.'),
   payloadTooLarge: () => new ApiError('payload_too_large', 'Request body is too large.'),
+  /** The request conflicts with the object's current state (message is user-safe). */
+  conflict: (message: string) => new ApiError('conflict', message),
   serviceUnavailable: () =>
     new ApiError('service_unavailable', 'The service is temporarily unavailable. Try again shortly.'),
 } as const;

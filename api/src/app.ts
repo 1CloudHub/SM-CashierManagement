@@ -7,6 +7,7 @@ import { errors } from './http/errors.js';
 import { Router } from './http/router.js';
 import { healthHandler } from './routes/health.js';
 import { registerMeRoutes } from './routes/me.js';
+import { registerRuleRoutes } from './routes/rules.js';
 import { registerStoreRoutes } from './routes/stores.js';
 
 export interface AppDeps {
@@ -43,5 +44,6 @@ export function createApp(deps: AppDeps = depsFromEnv()): Router {
   const router = new Router({ enforcer: createEnforcer(deps) }).get('/health', publicRoute(), healthHandler);
   registerMeRoutes(router, deps);
   registerStoreRoutes(router, deps);
+  registerRuleRoutes(router, deps);
   return router.assertGuarded();
 }

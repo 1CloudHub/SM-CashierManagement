@@ -221,7 +221,12 @@ describe('P12 active-role enforcement', () => {
             expect(after).toEqual(before);
             return;
           }
-          expect(res.status === 200 || res.status === 422, `${request.method} ${request.path}: ${res.raw}`).toBe(true);
+          // Past the guard, a handler may still answer 404 for an unknown object on a
+          // route whose path parameter is not a scope target (e.g. a rule version id).
+          const unscopedParam = request.targetId !== null && request.guard.kind === 'authorize' && !request.guard.scopeTarget;
+          const accepted = [200, 422, ...(unscopedParam ? [404] : [])];
+          expect(accepted.includes(res.status), `${request.method} ${request.path}: ${res.raw}`).toBe(true);
+          if (res.status === 404) expect(after).toEqual(before);
           if (request.method === 'GET') {
             expect(after).toEqual(before);
           } else if (request.pattern === '/me/active-role') {
