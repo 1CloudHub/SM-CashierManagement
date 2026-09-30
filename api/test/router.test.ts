@@ -1,5 +1,8 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
+import { publicRoute } from '../src/auth/guards.js';
+import type { RequestContext } from '../src/context.js';
+import { costFigure } from '../src/http/cost.js';
 import { ApiError } from '../src/http/errors.js';
 import { Router } from '../src/http/router.js';
 
@@ -83,5 +86,17 @@ describe('Router', () => {
         },
       ),
     );
+  });
+
+  it('removes every cost figure from a response without a principal (task 21)', async () => {
+    const router = new Router().get('/open', publicRoute(), () => ({
+      statusCode: 200,
+      body: { label: 'x', seasonCost: costFigure({ level: 'network' }, 13_600_000) },
+    }));
+    const match = router.resolve('GET', '/open');
+    if (match.kind !== 'matched') throw new Error('route not matched');
+    const context = { principal: null } as unknown as RequestContext;
+    const res = await match.handler({ method: 'GET', path: '/open', headers: {}, query: {}, body: undefined, params: {}, route: '/open' }, context);
+    expect(res.body).toEqual({ label: 'x' });
   });
 });

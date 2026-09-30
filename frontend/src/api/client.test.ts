@@ -1,4 +1,4 @@
-import { ROLE_CODES, type RoleCode } from '@lanewise/shared'
+import { ROLE_CODES, costLevelsFor, type RoleCode } from '@lanewise/shared'
 import fc from 'fast-check'
 import { describe, expect, it, vi } from 'vitest'
 import { ACTIVE_ROLE_HEADER, ApiError, createApiClient, fetchAdapter, type ApiRequest } from './client'
@@ -75,8 +75,14 @@ describe('mock /home is shaped by the active role', () => {
       fc.property(role, (r) => {
         const home = mockHome(r)
         expect(home.role).toBe(r)
-        const hasCost = home.kpis !== undefined || home.costWatch !== undefined || home.pendingApproval?.seasonCost !== undefined
+        const hasCost =
+          home.kpis?.seasonCost !== undefined ||
+          home.costWatch?.publishedCost !== undefined ||
+          home.costWatch?.draftCost !== undefined ||
+          home.pendingApproval?.seasonCost !== undefined
         if (hasCost) expect(COST_ROLES).toContain(r)
+        // Every ₱ figure on Home is network level: none for a Store Manager (25.1).
+        if (!costLevelsFor(r).includes('network')) expect(JSON.stringify(home)).not.toMatch(/cost"\s*:/i)
         if (r === 'STF') {
           expect(Object.keys(home).sort()).toEqual(['firstName', 'nextShifts', 'role'])
         } else {

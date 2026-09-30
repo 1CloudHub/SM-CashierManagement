@@ -11,7 +11,9 @@ import type {
  * Built from the @lanewise/shared entity types; they move into the shared
  * package when the API implements them. Every figure is already filtered to
  * the active role's permissions and scope by the server (P1, P11) — e.g. a
- * Staff home never carries a ₱ amount or another cashier's name.
+ * Staff home never carries a ₱ amount or another cashier's name. ₱ fields
+ * are optional because the server removes them for roles that may not see
+ * cost at that level (task 21); render them with `<CostValue>`.
  */
 
 /** `GET /home` — the SCR-010 dashboard for the active role. */
@@ -64,7 +66,7 @@ export interface HomePendingApproval {
   readonly step: ApprovalStepKind
   /** Headcount asked for (headcount step). */
   readonly headcount?: number
-  /** Season cost in ₱ (budget step). */
+  /** Season cost in ₱ (budget step; network level). */
   readonly seasonCost?: number
 }
 
@@ -83,8 +85,9 @@ export interface HomeRecruiting {
 }
 
 export interface HomeCostWatch {
-  readonly publishedCost: number
-  readonly draftCost: number
+  /** Network-level ₱ figures. */
+  readonly publishedCost?: number
+  readonly draftCost?: number
   readonly draftScenarioName: string
 }
 
@@ -120,7 +123,8 @@ export interface HomeKpis {
   readonly toRecruitMax: number
   readonly firstNeeded: IsoDate
   readonly offersDue: IsoDate
-  readonly seasonCost: number
+  /** Network-level ₱ figure. */
+  readonly seasonCost?: number
 }
 
 export interface HomeScenarioRow

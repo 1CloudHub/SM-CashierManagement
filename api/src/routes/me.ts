@@ -6,6 +6,7 @@
 import { randomUUID } from 'node:crypto';
 import {
   ROLE_CODES,
+  costLevelsFor,
   effectivePermissions,
   resolveActiveRole,
   selectableRoles,
@@ -74,6 +75,7 @@ async function buildMe(
     scope,
     permissions: effectivePermissions(activeRole),
     nav: visibleNav(activeRole),
+    costLevels: costLevelsFor(activeRole),
     // Staff: only their own record, never another cashier's (P11).
     staff: scope?.type === 'self' ? await ownStaff(db, scope.staffId) : null,
   };
