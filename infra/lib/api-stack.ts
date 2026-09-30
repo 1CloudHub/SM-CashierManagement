@@ -55,6 +55,15 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'PUT', path: '/me/active-role' },
   { method: 'GET', path: '/stores' },
   { method: 'GET', path: '/stores/{storeId}' },
+  // Task 15: home-area consent and location privacy.
+  { method: 'GET', path: '/me/consents' },
+  { method: 'POST', path: '/me/consents' },
+  { method: 'DELETE', path: '/me/consents/{purpose}' },
+  { method: 'GET', path: '/me/home-area' },
+  { method: 'PUT', path: '/me/home-area' },
+  { method: 'DELETE', path: '/me/home-area' },
+  { method: 'GET', path: '/me/home-area/barangays' },
+  { method: 'GET', path: '/staff/{staffId}/home-area' },
 ];
 
 /** Request headers the SPA sends: the defaults plus the demo role switcher's `X-Active-Role`. */

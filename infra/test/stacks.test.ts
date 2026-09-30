@@ -266,6 +266,19 @@ describe('API stack', () => {
     expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
       expect.arrayContaining(['GET /me', 'PUT /me/active-role', 'GET /stores', 'GET /stores/{storeId}']),
     );
+    // Task 15 location-privacy routes (api/src/routes/location-privacy.ts).
+    expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
+      expect.arrayContaining([
+        'GET /me/consents',
+        'POST /me/consents',
+        'DELETE /me/consents/{purpose}',
+        'GET /me/home-area',
+        'PUT /me/home-area',
+        'DELETE /me/home-area',
+        'GET /me/home-area/barangays',
+        'GET /staff/{staffId}/home-area',
+      ]),
+    );
     for (const route of PROTECTED_ROUTES) {
       const match = declared.filter((d) => d.key === `${route.method} ${route.path}`);
       expect(match, `${route.method} ${route.path}`).toHaveLength(1);
