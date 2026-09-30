@@ -9,7 +9,10 @@
 // A second bundle, `dist/migrate/index.mjs` (+ the SQL in
 // `dist/migrate/migrations/`), is the `npm run db:migrate` CLI (task 5.1).
 //
-// A third bundle, `dist/pre-sign-up/index.mjs`, is the Cognito pre-sign-up
+// `dist/seed-demo/index.mjs` is the `npm run db:seed:demo` CLI (task 23):
+// seeds or resets the synthetic demo network.
+//
+// A further bundle, `dist/pre-sign-up/index.mjs`, is the Cognito pre-sign-up
 // trigger (email-domain allowlist, task 7.2), deployed by the CDK AuthStack
 // (infra/lib/auth-stack.ts) with handler `index.handler`.
 import { cp, rm } from 'node:fs/promises';
@@ -48,6 +51,10 @@ const migrateOut = join(root, 'dist', 'migrate');
 await rm(migrateOut, { recursive: true, force: true });
 await build({ ...common, entryPoints: { index: join(root, 'src', 'db', 'migrate-cli.ts') }, outdir: migrateOut });
 await cp(join(root, 'migrations'), join(migrateOut, 'migrations'), { recursive: true });
+
+const seedDemoOut = join(root, 'dist', 'seed-demo');
+await rm(seedDemoOut, { recursive: true, force: true });
+await build({ ...common, entryPoints: { index: join(root, 'src', 'db', 'demo', 'seed-cli.ts') }, outdir: seedDemoOut });
 
 const preSignUpOut = join(root, 'dist', 'pre-sign-up');
 await rm(preSignUpOut, { recursive: true, force: true });

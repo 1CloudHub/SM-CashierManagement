@@ -6,6 +6,7 @@ export * from './audit.js';
 export * from './migrate.js';
 export * from './pool.js';
 export * from './rows.js';
+export * as demoData from './demo/index.js';
 export * as exportsRepo from './repositories/exports.js';
 export * as ingestionRepo from './repositories/ingestion.js';
 export * as orgRepo from './repositories/org.js';

@@ -2,7 +2,7 @@
  * Export auditing (Req 22.1, P7). Exports change no domain rows, but each one
  * is still recorded as exactly one `export` event.
  */
-import type { AuditEvent } from '@lanewise/shared';
+import { provenanceOf, type AuditEvent } from '@lanewise/shared';
 import { audit, type AuditedTx } from '../audit.js';
 
 export interface ExportRecordInput {
@@ -33,4 +33,23 @@ export function recordExport(tx: AuditedTx, input: ExportRecordInput): Promise<A
     },
     synthetic: input.synthetic,
   });
+}
+
+/** An export would combine synthetic (demo) and real records (P18). */
+export class MixedProvenanceError extends Error {
+  constructor() {
+    super('an export must be entirely synthetic or entirely real (P18)');
+    this.name = 'MixedProvenanceError';
+  }
+}
+
+/**
+ * The `synthetic` flag for an export of `records`: true when all are demo
+ * data, false when all are real (or there are none). Throws
+ * MixedProvenanceError for a mix, so no export ever combines them (Req 19.3).
+ */
+export function exportSynthetic(records: readonly { readonly synthetic: boolean }[]): boolean {
+  const provenance = provenanceOf(records);
+  if (provenance === 'mixed') throw new MixedProvenanceError();
+  return provenance === 'synthetic';
 }
