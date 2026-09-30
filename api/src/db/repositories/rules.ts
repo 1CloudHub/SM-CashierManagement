@@ -122,7 +122,7 @@ export async function createRuleVersion(
       tx,
       `INSERT INTO rule_version (rule_set_id, is_cost_rule, version, effective_from, payload, change_note, created_by, synthetic)
        SELECT rs.id, rs.is_cost_rule,
-              coalesce((SELECT max(version) FROM rule_version WHERE rule_set_id = rs.id), 0) + 1,
+              coalesce((SELECT max(version) FROM rule_version WHERE rule_set_id = rs.id AND synthetic = $6), 0) + 1,
               $2, $3, $4, $5, $6
          FROM rule_set rs WHERE rs.id = $1
        RETURNING ${VERSION_COLUMNS}`,
