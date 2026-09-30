@@ -4,6 +4,7 @@ import { useRouteFocus } from '@/components/a11y'
 import { HelpProvider } from '@/components/help'
 import { ProfileScreen } from '@/features/auth/profile-screen'
 import { HomeScreen } from '@/features/home/home-screen'
+import { RuleSetsPage, RuleVersionEditorPage } from '@/features/rules/pages'
 import { SCREEN_BY_ID, SCREENS, type ScreenDef, type ScreenId } from './screens'
 import { GLOBAL_SEARCH_ID, useShellSlots } from './app-layout'
 import { useRouter } from './router'
@@ -18,6 +19,8 @@ import { Guarded, HelpScreen, NotFoundScreen, PlaceholderScreen, StatusScreen } 
  */
 const BUILT: Partial<Record<ScreenId, () => React.ReactNode>> = {
   'SCR-010': () => <HomeScreen />,
+  'SCR-060': () => <RuleSetsPage />,
+  'SCR-061': () => <RuleVersionEditorPage />,
   // SCR-080 keeps its own shell from task 7 until it moves into AppLayout.
   'SCR-080': () => <ProfileScreen />,
   'SCR-090': () => <StatusScreen />,
