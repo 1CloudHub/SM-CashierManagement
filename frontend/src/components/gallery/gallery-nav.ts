@@ -34,7 +34,7 @@ export const GALLERY_SECTIONS: readonly GallerySection[] = [
     id: 'foundations',
     label: 'Foundations',
     description:
-      'The design tokens every component reads: colour, type scale, spacing, shape and motion. No component hardcodes these values.',
+      'The LaneWise brand (mark, ramps) and the design tokens every component reads: colour, type scale, spacing, shape and motion. No component hardcodes these values.',
   },
   {
     id: 'primitives',
