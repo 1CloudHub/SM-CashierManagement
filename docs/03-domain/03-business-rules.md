@@ -48,7 +48,7 @@ Business rules are kept as **rule sets**, each a series of immutable, effective-
 
 - **Ownership.** The Rules Steward creates and edits drafts and publishes non-cost rules. Finance approves and publishes cost rules. Everyone else in the rules RBAC row views them.
 - **Lifecycle.** Draft → Submitted → (cost rules) Finance approves, or requests changes with a required comment → Published → Superseded. Non-cost rules skip Finance and are published directly by the Rules Steward. A rule set has at most one open version at a time.
-- **Freezing.** A version's values, effective date and change note are frozen once it is submitted. Every submitted version is kept for history.
+- **Freezing.** A version's values, effective date and change note are frozen once it is submitted. Every submitted version is kept for history (seeded demo versions excepted: the demo reset replaces the whole synthetic series).
 - **Effective dates.** Each version carries an effective-from date. A newly published version can't take effect before the version it replaces.
 - **Results.** Scenario runs record the exact rule versions they used, so publishing a new version never changes existing results.
 - **Publishing.** Scenarios pinned to an earlier version are flagged stale, and their owners, planners, Finance and HR are notified.

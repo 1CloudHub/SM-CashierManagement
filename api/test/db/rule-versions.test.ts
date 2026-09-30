@@ -188,6 +188,24 @@ describe('Finance gate and publishing (Req 16.3–16.6)', () => {
     const kept = versions.find((v) => v.status === 'superseded');
     await expect(db.pool.query('DELETE FROM rule_version WHERE id = $1', [kept?.id])).rejects.toMatchObject({ code: '23514' });
   });
+
+  it('lets the demo reset remove a synthetic version (task 23), never a real one', async () => {
+    const versions = await rulesRepo.listRuleVersions(db.pool, wages.id);
+    const real = versions.find((v) => v.status === 'superseded');
+    const { rows } = await db.pool.query<{ id: string }>(
+      `INSERT INTO rule_version (rule_set_id, is_cost_rule, version, effective_from, status, payload, change_note,
+                                 created_by, submitted_at, finance_approved_by, finance_approved_at, published_by,
+                                 published_at, synthetic)
+       SELECT rule_set_id, is_cost_rule, 900, effective_from, status, payload, change_note,
+              created_by, submitted_at, finance_approved_by, finance_approved_at, published_by, published_at, true
+         FROM rule_version WHERE id = $1
+       RETURNING id`,
+      [real?.id],
+    );
+    const demoId = rows[0]?.id;
+    expect((await db.pool.query('DELETE FROM rule_version WHERE id = $1', [demoId])).rowCount).toBe(1);
+    await expect(db.pool.query('DELETE FROM rule_version WHERE id = $1', [real?.id])).rejects.toMatchObject({ code: '23514' });
+  });
 });
 
 // ---------------------------------------------------------------------------
