@@ -6,7 +6,7 @@ import { Cluster, Col, Grid, Section, Stack } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { CardSkeleton } from '@/components/ui/card'
-import { Currency, Num } from '@/components/ui/currency'
+import { Num } from '@/components/ui/currency'
 import { KpiCard } from '@/components/ui/kpi-card'
 import { StatusPill } from '@/components/ui/pill'
 import { StateBlock } from '@/components/ui/state-block'
@@ -20,6 +20,7 @@ import {
   TableRowHeader,
   TableWrap,
 } from '@/components/ui/table'
+import { CostValue } from '@/features/cost'
 import { useI18n } from '@/i18n'
 import { useHome } from './use-home'
 
@@ -27,7 +28,8 @@ import { useHome } from './use-home'
  * SCR-010 Home (wireframes/scr-010-home.html): the role-based dashboard.
  * Content comes from `GET /home`, which the server shapes for the active role
  * (the mock adapter does the same), so each role sees only its own variant —
- * e.g. Staff never receives a ₱ figure or another cashier (P11).
+ * e.g. Staff never receives a ₱ figure or another cashier (P11). Every ₱
+ * figure renders through `<CostValue>` (task 21).
  */
 
 // Plan dates are calendar dates; shifts are shown in store (Manila) time.
@@ -251,7 +253,7 @@ function RoleCards({ data, now }: { data: HomeSummary; now: number }) {
               <Stack gap={3}>
                 <p className="text-body">
                   {t('home.fin.approvalBody', { name: data.pendingApproval.scenarioName })}{' '}
-                  <Currency value={data.pendingApproval.seasonCost ?? 0} compact />
+                  <CostValue value={data.pendingApproval.seasonCost} level="network" compact />
                 </p>
                 <div>
                   <LinkButton href="/approvals" primary>
@@ -265,11 +267,11 @@ function RoleCards({ data, now }: { data: HomeSummary; now: number }) {
             {data.costWatch && (
               <ul className="flex flex-col gap-1 text-body">
                 <li>
-                  {t('home.fin.costPublished')} <Currency value={data.costWatch.publishedCost} compact />
+                  {t('home.fin.costPublished')} <CostValue value={data.costWatch.publishedCost} level="network" compact />
                 </li>
                 <li>
                   {t('home.fin.costDraft', { name: data.costWatch.draftScenarioName })}{' '}
-                  <Currency value={data.costWatch.draftCost} compact />
+                  <CostValue value={data.costWatch.draftCost} level="network" compact />
                 </li>
                 <li>
                   <TextLink href="/scenarios/compare">{t('nav.compare')}</TextLink>
@@ -399,7 +401,7 @@ function Kpis({ kpis }: { kpis: NonNullable<HomeSummary['kpis']> }) {
         <Col span={2} spanTablet={4} spanLaptop={3}>
           <KpiCard
             label={t('home.kpi.seasonCost')}
-            value={<Currency value={kpis.seasonCost} compact />}
+            value={<CostValue value={kpis.seasonCost} level="network" compact />}
             detail={t('home.kpi.seasonCostDetail')}
           />
         </Col>

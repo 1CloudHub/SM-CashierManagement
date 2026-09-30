@@ -30,8 +30,8 @@ describe('SCR-010 Home', () => {
     expect(await axe(container)).toHaveNoViolations()
   })
 
-  it('never shows ₱ figures to Staff, Admin or the Rules Steward', async () => {
-    for (const role of ['STF', 'ADM', 'RST'] as const) {
+  it('never shows ₱ figures to Staff, Admin, the Rules Steward or (network cost) a Store Manager', async () => {
+    for (const role of ['STF', 'ADM', 'RST', 'STM'] as const) {
       const { container, unmount } = renderApp({ path: '/', role })
       await screen.findByRole('heading', { name: HEADLINE[role] })
       expect(container).not.toHaveTextContent('₱')

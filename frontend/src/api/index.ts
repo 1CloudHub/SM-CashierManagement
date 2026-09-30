@@ -17,5 +17,5 @@ export {
   type RequestOptions,
 } from './client'
 export { ApiProvider, useApi } from './context'
-export { createMockAdapter, mockHome, type MockAdapterOptions } from './mock'
+export { createMockAdapter, mockHome, mockViewer, type MockAdapterOptions } from './mock'
 export type * from './types'
