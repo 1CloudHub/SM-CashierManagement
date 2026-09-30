@@ -1,5 +1,4 @@
 import { useEffect, type ReactNode } from 'react'
-import { App } from '@/App'
 import { AnnouncerProvider } from '@/components/a11y'
 import { Cluster, Page } from '@/components/layout'
 import { ErrorPage } from '@/components/errors'
@@ -8,12 +7,12 @@ import { ToastProvider } from '@/components/ui/toast'
 import { AuthProvider, useAuth } from '@/features/auth/auth-context'
 import type { AuthClient } from '@/features/auth/auth-client'
 import { FirstSignInScreen } from '@/features/auth/first-sign-in-screen'
-import { AccountMenu, ProfileScreen } from '@/features/auth/profile-screen'
 import { consumeReturnTo, rememberReturnTo } from '@/features/auth/return-to'
 import { SessionGuard } from '@/features/auth/session-guard'
 import { SignInScreen } from '@/features/auth/sign-in-screen'
 import { I18nProvider, useI18n } from '@/i18n'
 import { RouterProvider, useRouter } from './router'
+import { SignedInApp } from './signed-in-app'
 
 /**
  * Application root (task 7): providers + the auth gate.
@@ -21,16 +20,17 @@ import { RouterProvider, useRouter } from './router'
  *   signedOut    → /sign-in (SCR-001) or /first-sign-in (SCR-002); any other
  *                  URL is remembered and redirected to /sign-in
  *   needsPasskey → /first-sign-in, step 2 (the app stays locked)
- *   signedIn     → the app, inside the idle-timeout guard
+ *   signedIn     → the app (route table in ./app-routes), inside the
+ *                  idle-timeout guard
  */
-export function Root({ client }: { client: AuthClient }) {
+export function Root({ client, apiBaseUrl }: { client: AuthClient; apiBaseUrl?: string | null }) {
   return (
     <I18nProvider>
       <AnnouncerProvider>
         <ToastProvider>
           <RouterProvider>
             <AuthProvider client={client}>
-              <AuthRoutes />
+              <AuthRoutes apiBaseUrl={apiBaseUrl} />
             </AuthProvider>
           </RouterProvider>
         </ToastProvider>
@@ -53,7 +53,11 @@ function FullPageLoading() {
   )
 }
 
-export function AuthRoutes({ home }: { home?: ReactNode }) {
+/**
+ * `home` replaces the whole signed-in app with a single `/` screen (auth-gate
+ * tests); every other path is then a 404.
+ */
+export function AuthRoutes({ home, apiBaseUrl }: { home?: ReactNode; apiBaseUrl?: string | null }) {
   const { status } = useAuth()
   const { location, href } = useRouter()
   const path = location.pathname
@@ -76,10 +80,10 @@ export function AuthRoutes({ home }: { home?: ReactNode }) {
   if (path === '/sign-in') return <ReturnAfterSignIn />
   return (
     <SessionGuard>
-      {path === '/profile' ? (
-        <ProfileScreen />
+      {home === undefined ? (
+        <SignedInApp apiBaseUrl={apiBaseUrl} />
       ) : path === '/' || path === '/index.html' ? (
-        (home ?? <App accountSlot={<AccountMenu />} />)
+        home
       ) : (
         <ErrorPage kind="404" layout="bare" />
       )}
