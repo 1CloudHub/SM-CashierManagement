@@ -218,8 +218,12 @@ export interface RuleVersionDiff {
 }
 
 // ---------------------------------------------------------------------------
-// Payload shapes (engine contract)
+// Payload shapes (engine contract). Every payload may also carry the engine's
+// optional `id` / `effectiveFrom` (see `ENGINE_PAYLOAD_IDENTITY_KEYS`).
 // ---------------------------------------------------------------------------
+
+/** Engine identity keys a payload may carry; dropped when a draft copies a version. */
+export const ENGINE_PAYLOAD_IDENTITY_KEYS = ['id', 'effectiveFrom'] as const;
 
 export type ContractTypeKey = 'FT' | 'PT' | 'FLOAT';
 export type DayTypeKey = 'regular' | 'special' | 'regularHoliday';
@@ -282,8 +286,10 @@ export interface LeadTimesRulePayload {
 
 /** `holidays` → the PH holiday calendar (domain calendar Holiday by date). */
 export interface HolidaysRulePayload {
+  readonly calendarYear?: number;
   readonly holidays: readonly {
     readonly date: IsoDate;
+    readonly id?: string;
     readonly name: string;
     readonly dayType: Exclude<DayTypeKey, 'regular'>;
   }[];
@@ -291,7 +297,7 @@ export interface HolidaysRulePayload {
 
 /** `transport_allowance` → flat allowance (₱) by travel-time band (Q23), bands ascending. */
 export interface TransportAllowanceRulePayload {
-  readonly bands: readonly { readonly upToMinutes: number; readonly amount: number }[];
+  readonly bands: readonly { readonly maxTravelMin: number; readonly allowancePhp: number }[];
 }
 
 export interface RulePayloadByType {
@@ -371,14 +377,26 @@ const date: Check = (v, path, issues) => {
   if (!isIsoDate(v)) fail(issues, path, 'Must be a date (YYYY-MM-DD).');
 };
 
-/** A strict object: every listed key required, no others. */
-function obj(shape: Readonly<Record<string, Check>>, refine?: (v: Record<string, unknown>, path: Path, issues: Issues) => void): Check {
+/** Marks a field of `obj()` as optional. */
+interface Optional {
+  readonly optional: Check;
+}
+const opt = (check: Check): Optional => ({ optional: check });
+
+/** A strict object: every listed key required (unless `opt`), no others. */
+function obj(
+  shape: Readonly<Record<string, Check | Optional>>,
+  refine?: (v: Record<string, unknown>, path: Path, issues: Issues) => void,
+): Check {
   return (v, path, issues) => {
     if (!isPlainObject(v)) return fail(issues, path, 'Must be an object.');
     const before = issues.length;
-    for (const [key, check] of Object.entries(shape)) {
-      if (!Object.prototype.hasOwnProperty.call(v, key)) fail(issues, [...path, key], 'Required.');
-      else check(v[key], [...path, key], issues);
+    for (const [key, field] of Object.entries(shape)) {
+      const optional = typeof field !== 'function';
+      const check = typeof field === 'function' ? field : field.optional;
+      if (!Object.prototype.hasOwnProperty.call(v, key)) {
+        if (!optional) fail(issues, [...path, key], 'Required.');
+      } else check(v[key], [...path, key], issues);
     }
     for (const key of Object.keys(v)) {
       if (!Object.prototype.hasOwnProperty.call(shape, key)) fail(issues, [...path, key], 'Unknown field.');
@@ -421,8 +439,16 @@ const byContract = (check: Check): Check => obj({ FT: check, PT: check, FLOAT: c
 
 const hours24 = num({ min: 0, max: 24 });
 
+/**
+ * The engine's own version identity (`id`, `effectiveFrom` on the domain
+ * rule-version types) may ride along in a payload, as the seeded demo
+ * versions do. The rule version row's effective date is the authoritative one.
+ */
+const ENGINE_IDENTITY = { id: opt(text(100)), effectiveFrom: opt(date) } as const;
+
 const SCHEMAS: Readonly<Record<RuleSetType, Check>> = {
   service_levels: obj({
+    ...ENGINE_IDENTITY,
     serviceTarget: obj({
       serviceLevel: num({ min: 0, max: 1, exclusiveMin: true, exclusiveMax: true }),
       thresholdSec: num({ min: 1, max: 3600, int: true }),
@@ -454,6 +480,7 @@ const SCHEMAS: Readonly<Record<RuleSetType, Check>> = {
     ),
   }),
   labor: obj({
+    ...ENGINE_IDENTITY,
     maxConsecutiveDays: num({ min: 1, max: 14, int: true }),
     restAfterConsecutiveDays: num({ min: 1, max: 14, int: true }),
     mandatoryRestHours: num({ min: 1, max: 168, int: true }),
@@ -461,12 +488,14 @@ const SCHEMAS: Readonly<Record<RuleSetType, Check>> = {
     maxWeeklyHours: byContract(num({ min: 1, max: 168 })),
   }),
   wages: obj({
+    ...ENGINE_IDENTITY,
     hourlyRateByRegion: dict(num({ min: 0, max: 100_000, exclusiveMin: true }), { minKeys: 1, maxKeys: 50 }),
     defaultHourlyRate: num({ min: 0, max: 100_000, exclusiveMin: true }),
     employerLoading: num({ min: 0, max: 1 }),
   }),
   premiums: obj(
     {
+      ...ENGINE_IDENTITY,
       dayTypeMultiplier: obj({
         regular: num({ min: 1, max: 10 }),
         special: num({ min: 1, max: 10 }),
@@ -483,6 +512,7 @@ const SCHEMAS: Readonly<Record<RuleSetType, Check>> = {
     },
   ),
   lead_times: obj({
+    ...ENGINE_IDENTITY,
     leadTimeDays: byContract(num({ min: 0, max: 365, int: true })),
     contractWeeklyHours: byContract(num({ min: 1, max: 168 })),
     recruitingBuffer: num({ min: 0, max: 1 }),
@@ -503,8 +533,10 @@ const SCHEMAS: Readonly<Record<RuleSetType, Check>> = {
     ),
   }),
   holidays: obj({
+    ...ENGINE_IDENTITY,
+    calendarYear: opt(num({ min: 2000, max: 2100, int: true })),
     holidays: list(
-      obj({ date, name: text(100), dayType: oneOf(['special', 'regularHoliday']) }),
+      obj({ date, id: opt(text(100)), name: text(100), dayType: oneOf(['special', 'regularHoliday']) }),
       { maxLength: 400 },
       (items, path, issues) => {
         const seen = new Set<string>();
@@ -517,14 +549,15 @@ const SCHEMAS: Readonly<Record<RuleSetType, Check>> = {
     ),
   }),
   transport_allowance: obj({
+    ...ENGINE_IDENTITY,
     bands: list(
-      obj({ upToMinutes: num({ min: 1, max: 1440, int: true }), amount: num({ min: 0, max: 100_000 }) }),
+      obj({ maxTravelMin: num({ min: 1, max: 1440, int: true }), allowancePhp: num({ min: 0, max: 100_000 }) }),
       { minLength: 1, maxLength: 20 },
       (items, path, issues) => {
-        const bs = items as { upToMinutes: number }[];
+        const bs = items as { maxTravelMin: number }[];
         for (let i = 1; i < bs.length; i += 1) {
-          if ((bs[i]?.upToMinutes ?? 0) <= (bs[i - 1]?.upToMinutes ?? 0)) {
-            fail(issues, [...path, i, 'upToMinutes'], 'Bands must be in ascending order of travel time.');
+          if ((bs[i]?.maxTravelMin ?? 0) <= (bs[i - 1]?.maxTravelMin ?? 0)) {
+            fail(issues, [...path, i, 'maxTravelMin'], 'Bands must be in ascending order of travel time.');
           }
         }
       },

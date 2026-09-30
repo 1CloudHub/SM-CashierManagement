@@ -63,11 +63,13 @@ $$;
 CREATE TRIGGER rule_version_guard BEFORE UPDATE ON rule_version
   FOR EACH ROW EXECUTE FUNCTION lw_rule_version_guard();
 
--- Every version is kept (Req 16.1): only an unsubmitted draft may be deleted.
+-- Every real version is kept (Req 16.1): only an unsubmitted draft may be
+-- deleted. Seeded demo (synthetic) versions are exempt so the demo reset
+-- (task 23, Req 19) can replace the demo series; real ones never are.
 CREATE FUNCTION lw_rule_version_keep() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
-  IF OLD.status <> 'draft' THEN
+  IF OLD.status <> 'draft' AND NOT OLD.synthetic THEN
     RAISE EXCEPTION 'rule version % is % and is kept for history', OLD.id, OLD.status
       USING ERRCODE = 'check_violation';
   END IF;

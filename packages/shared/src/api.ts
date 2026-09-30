@@ -3,6 +3,7 @@
  * model, the health-check response and the identity/RBAC contracts.
  */
 import type { IsoDateTime, StoreFormat } from './entities.js';
+import type { CostLevel } from './cost.js';
 import type { NavKey, PermissionAction, RbacResource } from './rbac.js';
 import type { RoleCode, Scope } from './roles.js';
 
@@ -98,6 +99,11 @@ export interface MeResponse {
   readonly scope: Scope | null;
   readonly permissions: Partial<Record<RbacResource, PermissionAction[]>>;
   readonly nav: readonly NavKey[];
+  /**
+   * Levels at which the active role may see ₱ figures (requirement 25); the
+   * server still removes out-of-scope figures from every response.
+   */
+  readonly costLevels: readonly CostLevel[];
   /** Staff (self scope) only: the caller's own staff record, never anyone else's (P11). */
   readonly staff: { readonly id: string; readonly name: string } | null;
 }

@@ -56,8 +56,11 @@ export const RULE_FIELD_NAMES = [
   'date',
   'dayType',
   'bands',
-  'upToMinutes',
-  'amount',
+  'maxTravelMin',
+  'allowancePhp',
+  'calendarYear',
+  'id',
+  'effectiveFrom',
 ] as const
 
 const fieldsEn: Record<(typeof RULE_FIELD_NAMES)[number], string> = {
@@ -109,8 +112,11 @@ const fieldsEn: Record<(typeof RULE_FIELD_NAMES)[number], string> = {
   date: 'Date',
   dayType: 'Day type',
   bands: 'Travel bands',
-  upToMinutes: 'Up to (minutes)',
-  amount: 'Allowance (₱)',
+  maxTravelMin: 'Up to (minutes of travel)',
+  allowancePhp: 'Allowance (₱)',
+  calendarYear: 'Calendar year',
+  id: 'Reference',
+  effectiveFrom: 'Engine effective date',
 }
 
 const fieldsFil: Record<(typeof RULE_FIELD_NAMES)[number], string> = {
@@ -162,8 +168,11 @@ const fieldsFil: Record<(typeof RULE_FIELD_NAMES)[number], string> = {
   date: 'Petsa',
   dayType: 'Uri ng araw',
   bands: 'Mga travel band',
-  upToMinutes: 'Hanggang (minuto)',
-  amount: 'Allowance (₱)',
+  maxTravelMin: 'Hanggang (minuto ng biyahe)',
+  allowancePhp: 'Allowance (₱)',
+  calendarYear: 'Taon ng kalendaryo',
+  id: 'Reference',
+  effectiveFrom: 'Petsang epektibo sa engine',
 }
 
 const prefix = (fields: Record<string, string>): Bundle =>

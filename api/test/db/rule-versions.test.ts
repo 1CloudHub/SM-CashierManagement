@@ -350,3 +350,17 @@ async function checkSequence(run: TestDatabase, ops: readonly Op[], synthetic: b
   );
   expect(heads).toEqual([]);
 }
+
+describe('demo seed alignment (task 23)', () => {
+  it('every seeded demo rule version validates against the engine schema and matches the cost flag', async () => {
+    const { buildDemoDataset } = await import('../../src/db/demo/index.js');
+    const { validateRulePayload, isCostRuleSetType, isRuleSetType } = await import('@lanewise/shared');
+    for (const v of buildDemoDataset().ruleVersions) {
+      expect(isRuleSetType(v.ruleSetType), v.ruleSetType).toBe(true);
+      if (!isRuleSetType(v.ruleSetType)) continue;
+      expect(v.isCostRule, v.ruleSetType).toBe(isCostRuleSetType(v.ruleSetType));
+      const result = validateRulePayload(v.ruleSetType, v.payload);
+      expect(result.ok ? [] : result.issues, v.ruleSetType).toEqual([]);
+    }
+  });
+});

@@ -10,6 +10,7 @@
  * guarded by `rules.view` and its handler requires the kind-specific grant.
  */
 import {
+  ENGINE_PAYLOAD_IDENTITY_KEYS,
   RULE_PERMISSION_GRANTS,
   canPublishRuleVersion,
   diffRulePayloads,
@@ -185,7 +186,12 @@ export const RULE_ROUTES: readonly RuleRoute[] = [
             details: [{ path: 'body.payload', message: 'Required.' }],
           });
         }
-        content = (await loadVersion(pool, base.id)).payload;
+        // The copied engine identity (`id`, `effectiveFrom`) belongs to the old version.
+        content = Object.fromEntries(
+          Object.entries((await loadVersion(pool, base.id)).payload).filter(
+            ([k]) => !(ENGINE_PAYLOAD_IDENTITY_KEYS as readonly string[]).includes(k),
+          ),
+        );
       }
       payloadErrors(ruleSet.type, content, 'body.payload');
       const created = await mutate(pool, principal, context, (tx) =>

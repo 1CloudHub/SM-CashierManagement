@@ -174,6 +174,9 @@ export const appEn: Bundle = {
   'scenario.status.published': 'Published',
   'scenario.status.superseded': 'Superseded',
   'scenario.status.archived': 'Archived',
+
+  // ── Cost visibility (task 21, requirement 25) ─────────────────────────
+  'cost.hidden': 'Hidden for your role',
 }
 
 export const appFil: Bundle = {
@@ -338,4 +341,7 @@ export const appFil: Bundle = {
   'scenario.status.published': 'Na-publish',
   'scenario.status.superseded': 'Napalitan na',
   'scenario.status.archived': 'Naka-archive',
+
+  // ── Cost visibility (task 21, requirement 25) ─────────────────────────
+  'cost.hidden': 'Nakatago para sa iyong tungkulin',
 }

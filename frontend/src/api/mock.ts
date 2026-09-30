@@ -1,9 +1,14 @@
 import {
   API_SERVICE_NAME,
   HTTP_STATUS_BY_ERROR_CODE,
+  costFigure,
   isRoleCode,
+  shapeCost,
   type ApiErrorBody,
   type ApiErrorCode,
+  type CostDraft,
+  type CostTarget,
+  type CostViewer,
   type HealthResponse,
   type RoleCode,
 } from '@lanewise/shared'
@@ -17,15 +22,31 @@ import type { HomeKpis, HomeScenarioRow, HomeSummary } from './types'
  * their endpoints exist. Like the real API it reads the active role from
  * `X-Active-Role` and shapes every response for that role: a missing or
  * unknown role is rejected, and a role never receives data it may not see
- * (Staff gets only their own shifts, no ₱). Figures are the wireframe sample
- * data — simulated, not SM actuals.
+ * (Staff gets only their own shifts, no ₱). ₱ figures are built with
+ * `costFigure` and every response goes through the same `shapeCost` policy
+ * as the API (task 21), with each role's demo scope. Figures are the
+ * wireframe sample data — simulated, not SM actuals.
  *
  * Add a route per endpoint as feature tasks need them.
  */
 
 type Handler = (ctx: { role: RoleCode; request: ApiRequest }) => ApiResponse
 
-const KPIS: HomeKpis = {
+const NETWORK: CostTarget = { level: 'network' }
+
+/** The demo scope per role, as the API applies it (Store Manager = the QC store, Staff = self). */
+export function mockViewer(role: RoleCode): CostViewer {
+  switch (role) {
+    case 'STM':
+      return { role, scope: { type: 'store', storeIds: ['store-smsm-qc'] } }
+    case 'STF':
+      return { role, scope: { type: 'self', staffId: 'staff-pt-02' } }
+    default:
+      return { role, scope: { type: 'global' } }
+  }
+}
+
+const KPIS: CostDraft<HomeKpis> = {
   seasonalHires: 284,
   fullTime: 176,
   partTime: 108,
@@ -33,7 +54,7 @@ const KPIS: HomeKpis = {
   toRecruitMax: 327,
   firstNeeded: '2026-11-02',
   offersDue: '2026-10-05',
-  seasonCost: 13_600_000,
+  seasonCost: costFigure(NETWORK, 13_600_000),
 }
 
 const RECENT_SCENARIOS: readonly HomeScenarioRow[] = [
@@ -43,7 +64,12 @@ const RECENT_SCENARIOS: readonly HomeScenarioRow[] = [
 
 const V4 = { scenarioId: 'scn-xmas-2026-v4', scenarioName: 'Christmas 2026 v4' } as const
 
+/** `GET /home` for `role`, shaped by the cost policy (P11, requirement 25). */
 export function mockHome(role: RoleCode): HomeSummary {
+  return shapeCost<HomeSummary>(mockHomeDraft(role), mockViewer(role))
+}
+
+function mockHomeDraft(role: RoleCode): CostDraft<HomeSummary> {
   const firstName = 'Juan'
   switch (role) {
     case 'PLN':
@@ -96,8 +122,12 @@ export function mockHome(role: RoleCode): HomeSummary {
       return {
         role,
         firstName,
-        pendingApproval: { ...V4, step: 'budget', seasonCost: 13_100_000 },
-        costWatch: { publishedCost: 13_600_000, draftCost: 13_100_000, draftScenarioName: V4.scenarioName },
+        pendingApproval: { ...V4, step: 'budget', seasonCost: costFigure(NETWORK, 13_100_000) },
+        costWatch: {
+          publishedCost: costFigure(NETWORK, 13_600_000),
+          draftCost: costFigure(NETWORK, 13_100_000),
+          draftScenarioName: V4.scenarioName,
+        },
         kpis: KPIS,
       }
     case 'RST':
@@ -136,7 +166,7 @@ export function mockHome(role: RoleCode): HomeSummary {
 const ROUTES: Record<string, Handler> = {
   'GET /health': () =>
     ok({ status: 'ok', service: API_SERVICE_NAME, env: 'mock', time: new Date().toISOString() } satisfies HealthResponse),
-  'GET /home': ({ role }) => ok(mockHome(role)),
+  'GET /home': ({ role }) => ok(mockHomeDraft(role)),
 }
 
 function ok(body: unknown): ApiResponse {
@@ -173,6 +203,8 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
 
     const handler = ROUTES[`${request.method} ${request.path.split('?')[0]}`]
     if (!handler) return fail('not_found', 'We couldn’t find that.')
-    return handler({ role, request })
+    const res = handler({ role, request })
+    // Like the API: strip any ₱ figure the role may not see, on every route.
+    return { ...res, body: shapeCost<unknown>(res.body, mockViewer(role)) }
   }
 }

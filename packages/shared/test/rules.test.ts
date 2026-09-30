@@ -135,7 +135,7 @@ const transport = fc
     fc
       .array(fc.integer({ min: 0, max: 1000 }), { minLength: mins.length, maxLength: mins.length })
       .map((amounts) => ({
-        bands: [...mins].sort((a, b) => a - b).map((upToMinutes, i) => ({ upToMinutes, amount: amounts[i] ?? 0 })),
+        bands: [...mins].sort((a, b) => a - b).map((maxTravelMin, i) => ({ maxTravelMin, allowancePhp: amounts[i] ?? 0 })),
       })),
   );
 
@@ -220,7 +220,7 @@ const DOMAIN_DEMO: Record<RuleSetType, Record<string, unknown>> = {
     ],
   },
   holidays: { holidays: [{ date: '2026-12-25', name: 'Christmas Day', dayType: 'regularHoliday' }] },
-  transport_allowance: { bands: [{ upToMinutes: 30, amount: 0 }, { upToMinutes: 60, amount: 100 }] },
+  transport_allowance: { bands: [{ maxTravelMin: 30, allowancePhp: 0 }, { maxTravelMin: 60, allowancePhp: 100 }] },
 };
 
 // ---------------------------------------------------------------------------
@@ -274,6 +274,22 @@ describe('rule payload validation (the schema the engine consumes)', () => {
     );
   });
 
+  it('accepts the engine identity fields a version may carry (as the demo seed stores them)', () => {
+    fc.assert(
+      fc.property(typedPayload, isoDate, ({ type, payload }, effectiveFrom) => {
+        const withIdentity = { id: `${type}-demo-2026.1`, effectiveFrom, ...payload };
+        expect(validateRulePayload(type, withIdentity).ok).toBe(true);
+        expect(validateRulePayload(type, { ...withIdentity, effectiveFrom: '2026-13-01' }).ok).toBe(false);
+      }),
+    );
+    expect(
+      validateRulePayload('holidays', {
+        calendarYear: 2026,
+        holidays: [{ date: '2026-12-25', id: 'christmas-day', name: 'Christmas Day', dayType: 'regularHoliday' }],
+      }).ok,
+    ).toBe(true);
+  });
+
   it('rejects non-object payloads and out-of-range values', () => {
     for (const type of RULE_SET_TYPES) {
       expect(validateRulePayload(type, null).ok).toBe(false);
@@ -303,7 +319,7 @@ describe('rule payload validation (the schema the engine consumes)', () => {
     expect(dupHoliday.ok).toBe(false);
 
     const unsortedBands = validateRulePayload('transport_allowance', {
-      bands: [{ upToMinutes: 60, amount: 100 }, { upToMinutes: 30, amount: 0 }],
+      bands: [{ maxTravelMin: 60, allowancePhp: 100 }, { maxTravelMin: 30, allowancePhp: 0 }],
     });
     expect(unsortedBands.ok).toBe(false);
 

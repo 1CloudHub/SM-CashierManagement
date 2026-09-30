@@ -1,4 +1,5 @@
 import type { Enforcer, RouteGuard } from '../auth/guards.js';
+import { shapeResponseCost } from './cost.js';
 import { errors } from './errors.js';
 import type { RouteHandler } from './types.js';
 
@@ -69,7 +70,9 @@ type RouteArgs = [handler: RouteHandler] | [guard: RouteGuard, handler: RouteHan
  * Each route declares a guard (`publicRoute()`, `authenticated()` or
  * `authorize(...)`, task 8.1). A non-public guard runs through the enforcer
  * before the handler, so a handler never runs unauthorised;
- * `assertGuarded()` rejects any route registered without one (P12).
+ * `assertGuarded()` rejects any route registered without one (P12). Every
+ * response body then goes through `shapeResponseCost` (./cost.ts), which
+ * removes the cost figures the active role may not see (task 21).
  */
 export class Router {
   private readonly table: Route[] = [];
@@ -86,12 +89,17 @@ export class Router {
     if (this.table.some((r) => r.method === method && canonical(r.segments) === key)) {
       throw new Error(`Duplicate route: ${method} ${pattern}`);
     }
-    let guarded = handler;
-    if (guard !== null && guard.kind !== 'public') {
-      const enforcer = this.enforcer;
-      if (!enforcer) throw new Error(`Route ${method} ${pattern} needs an enforcer for its ${guard.kind} guard`);
-      guarded = async (request, context) => handler(request, await enforcer(guard, request, context));
+    const enforcer = this.enforcer;
+    if (guard !== null && guard.kind !== 'public' && !enforcer) {
+      throw new Error(`Route ${method} ${pattern} needs an enforcer for its ${guard.kind} guard`);
     }
+    // Enforce the guard, run the handler, then strip any ₱ figure the active
+    // role may not see (task 21) — for every route, so no endpoint can skip it.
+    const guarded: RouteHandler = async (request, context) => {
+      const authorised =
+        enforcer && guard !== null && guard.kind !== 'public' ? await enforcer(guard, request, context) : context;
+      return shapeResponseCost(await handler(request, authorised), authorised.principal);
+    };
     this.table.push({ method, pattern: `/${splitPath(pattern).join('/')}`, segments, handler: guarded, guard });
     return this;
   }
