@@ -32,10 +32,11 @@ phases:
     runtime-versions:
       nodejs: 20
     commands:
-      # Dependencies arrive in the build artifact; only reinstall if missing
-      # (e.g. if artifact packing dropped node_modules).
       - echo "install — ensuring infra dependencies are present"
-      - cd "$CODEBUILD_SRC_DIR/infra" && ([ -d node_modules ] || npm ci)
+      # Always reinstall: node_modules from the Build artifact is not usable,
+      # because zipping it flattens the node_modules/.bin symlinks into copies
+      # (e.g. .bin/cdk then fails with "Cannot find module '../lib'").
+      - cd "$CODEBUILD_SRC_DIR/infra" && npm ci
 
   build:
     commands:
@@ -47,6 +48,11 @@ phases:
 
   post_build:
     commands:
+      # post_build runs even when build fails; only publish after a successful deploy.
+      - |
+        if [ "$CODEBUILD_BUILD_SUCCEEDING" != "1" ]; then
+          echo "cdk deploy failed — skipping SPA publish"; exit 1
+        fi
       - echo "publish SPA — sync frontend/dist to S3 + invalidate CloudFront"
       # Resolve the SPA bucket + distribution id from the stack outputs.
       - |

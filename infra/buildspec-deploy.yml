@@ -37,8 +37,11 @@ phases:
       - cd "$CODEBUILD_SRC_DIR/infra" && npx cdk synth
 
 artifacts:
-  # Carry the full workspace forward to the Deploy stage: built SPA
-  # (frontend/dist), the infra app, and installed dependencies.
+  # Carry the workspace forward to the Deploy stage: built SPA (frontend/dist)
+  # and the infra app. node_modules is excluded: the artifact zip flattens its
+  # .bin symlinks, so the Deploy stage reinstalls dependencies instead.
   files:
     - '**/*'
+  exclude-paths:
+    - '**/node_modules/**'
   base-directory: .
