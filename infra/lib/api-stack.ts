@@ -55,6 +55,11 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'PUT', path: '/me/active-role' },
   { method: 'GET', path: '/stores' },
   { method: 'GET', path: '/stores/{storeId}' },
+  { method: 'GET', path: '/search' },
+  { method: 'GET', path: '/saved-views' },
+  { method: 'POST', path: '/saved-views' },
+  { method: 'PATCH', path: '/saved-views/{viewId}' },
+  { method: 'DELETE', path: '/saved-views/{viewId}' },
 ];
 
 /** Request headers the SPA sends: the defaults plus the demo role switcher's `X-Active-Role`. */

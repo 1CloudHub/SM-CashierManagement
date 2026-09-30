@@ -28,7 +28,18 @@ describe('route registration check (P12)', () => {
       if (route.guard?.kind === 'authorize') expect(RBAC_RESOURCES).toContain(route.guard.resource);
     }
     expect(routes.map((r) => `${r.method} ${r.pattern}`)).toEqual(
-      expect.arrayContaining(['GET /health', 'GET /me', 'PUT /me/active-role', 'GET /stores', 'GET /stores/:storeId']),
+      expect.arrayContaining([
+        'GET /health',
+        'GET /me',
+        'PUT /me/active-role',
+        'GET /stores',
+        'GET /stores/:storeId',
+        'GET /search',
+        'GET /saved-views',
+        'POST /saved-views',
+        'PATCH /saved-views/:viewId',
+        'DELETE /saved-views/:viewId',
+      ]),
     );
   });
 

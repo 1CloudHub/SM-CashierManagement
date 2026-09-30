@@ -11,5 +11,7 @@ export * as exportsRepo from './repositories/exports.js';
 export * as ingestionRepo from './repositories/ingestion.js';
 export * as orgRepo from './repositories/org.js';
 export * as rulesRepo from './repositories/rules.js';
+export * as savedViewsRepo from './repositories/saved-views.js';
 export * as scenariosRepo from './repositories/scenarios.js';
+export * as searchRepo from './repositories/search.js';
 export * as usersRepo from './repositories/users.js';

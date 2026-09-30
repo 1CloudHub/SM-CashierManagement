@@ -279,7 +279,17 @@ describe('API stack', () => {
       return { key: `${p.HttpMethod} ${p.ResourceId.Ref ? pathOf(p.ResourceId.Ref) : '/'}`, auth: p.AuthorizationType };
     });
     expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
-      expect.arrayContaining(['GET /me', 'PUT /me/active-role', 'GET /stores', 'GET /stores/{storeId}']),
+      expect.arrayContaining([
+        'GET /me',
+        'PUT /me/active-role',
+        'GET /stores',
+        'GET /stores/{storeId}',
+        'GET /search',
+        'GET /saved-views',
+        'POST /saved-views',
+        'PATCH /saved-views/{viewId}',
+        'DELETE /saved-views/{viewId}',
+      ]),
     );
     for (const route of PROTECTED_ROUTES) {
       const match = declared.filter((d) => d.key === `${route.method} ${route.path}`);
