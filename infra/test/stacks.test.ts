@@ -273,6 +273,23 @@ describe('API stack', () => {
     }
   });
 
+  it('protects every task 10 rule route with the Cognito authorizer', () => {
+    expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
+      expect.arrayContaining([
+        'GET /rule-sets',
+        'GET /rule-sets/{ruleSetId}/versions',
+        'POST /rule-sets/{ruleSetId}/versions',
+        'GET /rule-versions/{versionId}',
+        'PATCH /rule-versions/{versionId}',
+        'POST /rule-versions/{versionId}/submit',
+        'POST /rule-versions/{versionId}/approve',
+        'POST /rule-versions/{versionId}/request-changes',
+        'POST /rule-versions/{versionId}/publish',
+        'GET /rule-versions/{versionId}/diff',
+      ]),
+    );
+  });
+
   it('passes the demo role switcher flag to the API and allows the X-Active-Role header in CORS', () => {
     api.hasResourceProperties('AWS::Lambda::Function', {
       Environment: { Variables: Match.objectLike({ DEMO_ROLE_SWITCHER: 'true' }) },
