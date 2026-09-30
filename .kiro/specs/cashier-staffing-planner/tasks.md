@@ -42,6 +42,7 @@ Phase 1 establishes the **design system** (style guide tokens + UX-system compon
   - _Requirements: 24 (UX-001, UX-004, NFR-A11Y-001)_
 - [ ] 1.8 Internationalisation and microcopy/voice
   - Set up the i18n framework with en/fil resource bundles, the language switcher, and locale-aware date/number/₱ formatting.
+  - Add the numeric/currency type token (`--font-num`, tabular figures) and a shared Currency/Num component: render ₱ as the Unicode peso sign (U+20B1) with a font fallback that includes the glyph, right-aligned tabular columns; verify ₱ renders on Windows/macOS/iOS/Android/Linux (SG-002).
   - Establish the microcopy/voice conventions (UX-003) with a canonical string reference for common actions, states and errors; all UI text, labels and errors sourced from bundles (no hardcoding).
   - _Requirements: 23, 24 (UX-003, UX-011, NFR-L10N-001)_
 - [ ] 1.9 Keyboard shortcuts and help

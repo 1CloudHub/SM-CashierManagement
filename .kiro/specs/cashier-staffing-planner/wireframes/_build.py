@@ -26,7 +26,7 @@ def nav(cur):
     out.append('</nav>'); return "\n".join(out)
 TOP='''<header class="topbar">
 <button class="iconbtn menu-toggle" id="menu-toggle" aria-controls="sidenav" aria-expanded="false" aria-label="Open navigation">≡</button>
-<a class="brand" href="scr-010-home.html">SM Cashier Planner</a>
+<a class="brand" href="scr-010-home.html">LaneWise <span class="brand-sub">by SM Retail</span></a>
 <form class="search" id="searchform" role="search" action="scr-041-search.html"><label class="sr-only" for="q">Search</label>
 <input id="q" name="q" type="search" placeholder="Search stores, departments, scenarios, staff…  ( / )"></form>
 <button class="iconbtn search-toggle" id="search-toggle" aria-controls="searchform" aria-label="Search">⌕</button>
@@ -580,7 +580,7 @@ def bare(fname,title,body):
     open(fname,"w").write(f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title} — Wireframe</title><link rel="stylesheet" href="wireframe.css"><script src="wireframe.js" defer></script></head><body><main id="main" style="max-width:560px;margin:48px auto">{body}</main></body></html>''')
 bare("scr-001-sign-in.html","Sign in",'''<p class="crumbs"><a href="index.html">Screen map</a></p>
 <div class="tabs" role="tablist" aria-label="Wireframe states"><button role="tab" aria-selected="true" aria-controls="st1">Default</button><button role="tab" aria-selected="false" tabindex="-1" aria-controls="st2">Domain not allowed</button><button role="tab" aria-selected="false" tabindex="-1" aria-controls="st3">Passkey failed</button><button role="tab" aria-selected="false" tabindex="-1" aria-controls="st4">Session expired</button><button role="tab" aria-selected="false" tabindex="-1" aria-controls="st5">No passkey support</button></div>
-<div class="card"><h1 style="text-align:center">SM Cashier Planner</h1>
+<div class="card"><h1 style="text-align:center">LaneWise<br><span style="font-weight:400;font-size:13px;color:#666">by SM Retail</span></h1>
 <div id="st2" role="tabpanel" hidden><p class="alert" role="alert">This work email domain isn't allowed. Use an @smretail.com or @1cloudhub.com address.</p></div>
 <div id="st3" role="tabpanel" hidden><p class="alert" role="alert">The passkey prompt was cancelled or didn't work. Try again, or set up a passkey on this device with an email code.</p></div>
 <div id="st4" role="tabpanel" hidden><p class="alert info">You were signed out after 60 minutes of inactivity. Unsaved changes were kept as a draft.</p></div>

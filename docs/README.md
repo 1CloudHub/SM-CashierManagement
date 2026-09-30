@@ -1,4 +1,4 @@
-# SM Cashier Management — Documentation
+# LaneWise by SM Retail — Documentation
 
 Start with `00-governance/00-conventions.md` for naming, IDs and versioning.
 

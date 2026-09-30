@@ -4,6 +4,14 @@ All notable documentation and code changes. Format: `[doc-id or area] version �
 
 ## Unreleased
 
+- [brand] Adopted "LaneWise by SM Retail" design system v0.5 as the working design system. Renamed the product from "SM Cashier Planner" across spec, wireframes, docs, README and app shell. Saved brand reference in docs/references/brand/. (2026-09-30)
+- [SG-002, SG-003, SG-004, SG-007, SG-009] 0.3–0.4 — LaneWise tokens (`--lw-*`): blue/red palette with light+dark AA-verified semantic ramps, Okabe–Ito data-viz, system-font type scale with ₱/ñ fallback, motion tokens, square/no-shadow/2px-outline shape, dark mode as a value swap. (2026-09-30)
+- [GOV-003] 0.2.0 — logged brand/trademark/font/parity/deploy risks (R-001…R-006). [GOV-005] 0.2.0 — Q28 LaneWise brand+legal sign-off; Q8 superseded. [ADR-0003] 1.2.0 — LaneWise as design system of record. (2026-09-30)
+- [spec] design v0.11.0 / requirements v0.3.0 — product name LaneWise by SM Retail. (2026-09-30)
+- [SG-002] 0.3.0 — added a numeric/currency type token (`--font-num`) with a ₱ (U+20B1) font fallback and tabular figures; currency rendering rules for reliable peso glyph and column alignment. (2026-09-30)
+- [spec] cashier-staffing-planner design v0.10.0 + tasks: currency rendering via a shared Currency/Num component (tabular ₱, glyph-safe fallback, cross-platform verification) in the i18n pattern and task 1.8. (2026-09-30)
+- [SG-002, SG-003, SG-004, SG-007] 0.2.0 — neutral SM-flavoured brand as design tokens: blue primary + red accent palette with semantic and data-viz ramps (AA verified), system-font type scale, motion tokens, and a placeholder app mark with a favicon-to-hero export matrix. (2026-09-30)
+- [ADR-0003] 1.1.0 — recorded the placeholder brand direction. (2026-09-30)
 - [spec] cashier-staffing-planner design v0.9.0: added a token-driven grid and layout system (12/8/4 columns, gutters, margins, container widths per breakpoint) with layout primitives (Page, Grid/Col, Stack, Cluster, Split/Sidebar, Section); task 1.6 now covers grid + layout. (2026-09-30)
 - [spec] cashier-staffing-planner design v0.8.0 + wireframes: added design-tokens/theme + motion, app brand mark, 4xx/5xx + offline error pages (SCR-090) with a way back to safety, microcopy/voice, ARIA/labelling standard, keyboard shortcuts + help (SCR-091), and explicit loading/skeleton states. (2026-09-30)
 - [spec] cashier-staffing-planner tasks: reordered to lead with the design system, git branching (GitHub Flow), and deployment/CI-CD (S3+CloudFront SPA, Lambda+API GW, GitHub Actions+OIDC, merge-to-main deploy) plus a walking skeleton; task 1 expanded into 10 design-system subtasks; new wave-based DAG. (2026-09-30)

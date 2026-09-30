@@ -1,9 +1,11 @@
 # Design Document — Cashier Staffing Planner
 
-> Status: Draft v0.9.0 (design-first). Requirements derived in `requirements.md`; each property links to the requirements it validates. Tasks derived after review.
+> Status: Draft v0.11.0 (design-first). Requirements derived in `requirements.md`; each property links to the requirements it validates. Tasks derived after review.
 > Clickable wireframes: `wireframes/index.html` (open in a browser).
 
 ## Overview
+
+**Product name:** LaneWise by SM Retail (endorsed sub-brand; design system per SG-004 / brand doc LaneWise v0.5, pending SM brand + legal sign-off — GOV-005 Q28).
 
 A production rebuild of the SM Retail cashier staffing prototype (v3). The prototype is a single-page calculator plus a printable leadership summary. The rebuild keeps every prototype capability and wraps it in a multi-user application.
 
@@ -72,7 +74,7 @@ flowchart TD
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ [≡] SM Cashier Planner  [ Search… ⌘K ]  Viewing as [Planner ▾]  🔔3  (JD▾)     │
+│ [≡] LaneWise · by SM Retail   [ Search… ⌘K ]  Viewing as [Planner ▾]  🔔3 (JD▾) │
 ├───────────────┬──────────────────────────────────────────────────────────────┤
 │ Home          │ Home › Plan › Network view                                   │
 │ PLAN          │ ┌ ⚠ Sample data — figures are simulated, not SM actuals ──┐ │
@@ -400,7 +402,7 @@ The clickable HTML wireframes in `wireframes/` are the reference. The sketches b
 **SCR-001 Sign in**
 ```
             ┌──────────────────────────────────────┐
-            │          SM Cashier Planner           │
+            │        LaneWise · by SM Retail        │
             │  Work email [ juan@smretail.com   ]   │
             │  [   Sign in with a passkey   ]       │
             │  New here or new device? Continue →   │
@@ -775,6 +777,7 @@ Approval steps for a submitted scenario:
 **Language (English + Filipino)**
 - The UI ships in English and Filipino. A language switcher sits in the top bar and in Profile (SCR-080); the choice persists per user.
 - All UI text, dates, numbers and ₱ formatting come from externalised resource bundles (en, fil). No user-facing string is hardcoded.
+- **Currency rendering:** ₱ amounts use the numeric type token (`--font-num`) with tabular figures and a font fallback that includes the peso sign (U+20B1), so ₱ renders reliably across platforms and columns align. Amounts are formatted via the locale and emitted as the Unicode symbol from data, never a hardcoded glyph. A shared Currency/Num component enforces this (SG-002).
 - Staff-facing screens (My roster, offers, notifications, requests) are the priority for translation; admin screens follow.
 - Emails and push notifications use the recipient's language preference.
 

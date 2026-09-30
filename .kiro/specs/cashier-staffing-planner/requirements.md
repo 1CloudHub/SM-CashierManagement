@@ -1,6 +1,6 @@
 # Requirements Document
 
-> Status: Draft v0.2.0. Derived from `design.md` v0.7.0. Wireframes: `wireframes/index.html`.
+> Status: Draft v0.3.0. Product name: LaneWise by SM Retail. Derived from `design.md` v0.7.0. Wireframes: `wireframes/index.html`.
 > EARS acceptance criteria. Each requirement lists the design Correctness Properties it upholds (P1–P19) where applicable.
 
 ## Introduction
