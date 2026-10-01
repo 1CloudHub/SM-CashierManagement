@@ -1,14 +1,18 @@
 import type pg from 'pg';
 import { rbacConfigFromEnv, type RbacConfig } from './auth/config.js';
 import { createEnforcer } from './auth/enforcer.js';
+import type { RequestContext } from './context.js';
 import { publicRoute } from './auth/guards.js';
 import { createPool } from './db/pool.js';
 import { errors } from './http/errors.js';
 import { Router } from './http/router.js';
 import { createS3Storage, type IngestionStorage } from './ingestion/storage.js';
+import { dispatchPendingEmails } from './notifications/dispatch.js';
+import { createSesSender, type EmailSender } from './notifications/email.js';
 import { healthHandler } from './routes/health.js';
 import { registerIngestionRoutes } from './routes/ingestion.js';
 import { registerMeRoutes } from './routes/me.js';
+import { registerNotificationRoutes } from './routes/notifications.js';
 import { registerSavedViewRoutes } from './routes/saved-views.js';
 import { registerSearchRoutes } from './routes/search.js';
 import { registerRuleRoutes } from './routes/rules.js';
@@ -21,15 +25,34 @@ export interface AppDeps {
   readonly rbac: RbacConfig;
   /** Ingestion object storage (created lazily); throws `service_unavailable` when unconfigured. */
   readonly storage: () => IngestionStorage;
+  /**
+   * Notification email sender (task 19); `null` (or absent) when SES is not
+   * configured — notifications are then kept pending, not emailed.
+   */
+  readonly emailSender?: () => EmailSender | null;
+  /** SPA origin used for deep links in notification emails. */
+  readonly appBaseUrl?: string;
+}
+
+/** The SPA origin for email deep links: `APP_BASE_URL`, else the first allowed CORS origin. */
+export function appBaseUrlFromEnv(env: NodeJS.ProcessEnv): string {
+  if (env.APP_BASE_URL) return env.APP_BASE_URL;
+  const first = (env.CORS_ALLOWED_ORIGINS ?? '')
+    .split(',')
+    .map((o) => o.trim())
+    .find((o) => o.startsWith('https://'));
+  return first ?? '';
 }
 
 /**
  * Production dependencies: `DATABASE_URL` (pool created on first use), the
- * RBAC env flags and the uploads bucket `UPLOADS_BUCKET` (infra/lib/data-stack.ts).
+ * RBAC env flags, the uploads bucket `UPLOADS_BUCKET` (infra/lib/data-stack.ts)
+ * and the SES sender `SES_FROM_ADDRESS` / `SES_REGION` (infra/lib/notifications.ts).
  */
 export function depsFromEnv(env: NodeJS.ProcessEnv = process.env): AppDeps {
   let pool: pg.Pool | null = null;
   let storage: IngestionStorage | null = null;
+  let sender: EmailSender | null = null;
   return {
     db: () => {
       if (pool) return pool;
@@ -46,6 +69,15 @@ export function depsFromEnv(env: NodeJS.ProcessEnv = process.env): AppDeps {
       storage = createS3Storage(bucket);
       return storage;
     },
+    emailSender: () => {
+      if (sender) return sender;
+      const from = env.SES_FROM_ADDRESS;
+      const region = env.SES_REGION ?? env.AWS_REGION;
+      if (!from || !region) return null;
+      sender = createSesSender({ region, from });
+      return sender;
+    },
+    appBaseUrl: appBaseUrlFromEnv(env),
   };
 }
 
@@ -59,7 +91,13 @@ export function depsFromEnv(env: NodeJS.ProcessEnv = process.env): AppDeps {
  * so a new route also needs its API Gateway resource (and authorizer).
  */
 export function createApp(deps: AppDeps = depsFromEnv()): Router {
-  const router = new Router({ enforcer: createEnforcer(deps) }).get('/health', publicRoute(), healthHandler);
+  // Notification emails go out right after the write that raised them (task 19).
+  const afterWrite = async (context: RequestContext): Promise<void> => {
+    const sender = deps.emailSender?.() ?? null;
+    if (!sender) return;
+    await dispatchPendingEmails(deps.db(), sender, { appBaseUrl: deps.appBaseUrl ?? '', logger: context.logger });
+  };
+  const router = new Router({ enforcer: createEnforcer(deps), afterWrite }).get('/health', publicRoute(), healthHandler);
   registerMeRoutes(router, deps);
   registerStoreRoutes(router, deps);
   registerSearchRoutes(router, deps);
@@ -67,5 +105,6 @@ export function createApp(deps: AppDeps = depsFromEnv()): Router {
   registerIngestionRoutes(router, deps);
   registerRuleRoutes(router, deps);
   registerScenarioRoutes(router, deps);
+  registerNotificationRoutes(router, deps);
   return router.assertGuarded();
 }
