@@ -94,8 +94,10 @@ describe('App (component gallery)', () => {
     ).toBe(true)
   })
 
+  // axe over the whole gallery takes ~4.5s alone and longer under a full
+  // parallel run, past vitest's 5s default; give it room instead of flaking.
   it('has no axe violations', async () => {
     const { container } = render(<App />)
     expect(await axe(container)).toHaveNoViolations()
-  })
+  }, 20_000)
 })
