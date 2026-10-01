@@ -3,7 +3,7 @@
     LaneWise brand mark, square lockup (task 22, SG-004): three checkout lanes
     of rising height on a shared floor line. Same geometry as the BrandMark
     component (src/components/brand/brand-mark.tsx). A favicon cannot read CSS
-    variables, so it carries the --lw-brand / --lw-on-brand light values
+    variables, so it carries the lw-brand / lw-on-brand token light values
     (blue-600 #1d4ed8 / slate-0 #ffffff) as the one intentional raw-hex asset.
     Re-export it when the brand ramps change (SG-004 "Swapping the brand", Q8).
   -->
