@@ -224,11 +224,15 @@ describe('map config', () => {
     expect(parseMapConfig(null)).toBeNull()
   })
 
-  it('is never loaded in mock mode, and reads runtime-config.json otherwise', async () => {
+  it('reads runtime-config.json (also with mock data), and the build env only outside mock mode', async () => {
     const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ map: good }), { headers: { 'content-type': 'application/json' } }))
-    expect(await loadMapConfig({ mock: true, fetch: fetchImpl })).toBeNull()
-    expect(fetchImpl).not.toHaveBeenCalled()
+    // The deployed demo serves mock data but still gets the deploy's map key.
+    expect(await loadMapConfig({ mock: true, fetch: fetchImpl })).toEqual(good)
     expect(await loadMapConfig({ mock: false, fetch: fetchImpl, env: {} })).toEqual(good)
+    const missing = vi.fn(async () => new Response('', { status: 404 }))
+    const envKey = { VITE_MAP_REGION: good.region, VITE_MAP_NAME: good.mapName, VITE_MAP_API_KEY: good.apiKey }
+    expect(await loadMapConfig({ mock: true, fetch: missing, env: envKey })).toBeNull()
+    expect(await loadMapConfig({ mock: false, fetch: missing, env: envKey })).toEqual(good)
     const empty = vi.fn(async () => new Response('{}', { headers: { 'content-type': 'application/json' } }))
     expect(await loadMapConfig({ mock: false, fetch: empty, env: {} })).toBeNull()
   })
