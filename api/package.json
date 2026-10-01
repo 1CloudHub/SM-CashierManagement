@@ -18,6 +18,7 @@
     "db:seed:demo": "node dist/seed-demo/index.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "3.1144.0",
     "@aws-sdk/client-s3": "3.1144.0",
     "@aws-sdk/client-sqs": "3.1144.0",
     "@aws-sdk/client-sesv2": "3.1144.0",
