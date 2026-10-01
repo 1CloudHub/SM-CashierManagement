@@ -119,6 +119,20 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'GET', path: '/stores/{storeId}/rosters/{rosterId}/shifts/{shiftId}/replacements' },
   { method: 'POST', path: '/stores/{storeId}/rosters/{rosterId}/overrides/check' },
   { method: 'POST', path: '/stores/{storeId}/rosters/{rosterId}/overrides' },
+  // Task 14: network view, department day plan, hiring plan and long-roster
+  // background jobs, leadership summary (SCR-020/021/023/024).
+  { method: 'GET', path: '/scenarios/{scenarioId}/network' },
+  { method: 'GET', path: '/scenarios/{scenarioId}/network/export' },
+  { method: 'GET', path: '/scenarios/{scenarioId}/departments/{departmentId}/day' },
+  { method: 'GET', path: '/scenarios/{scenarioId}/departments/{departmentId}/day/export' },
+  { method: 'GET', path: '/scenarios/{scenarioId}/hiring-plan' },
+  { method: 'POST', path: '/scenarios/{scenarioId}/hiring-plan/jobs' },
+  { method: 'GET', path: '/scenarios/{scenarioId}/hiring-plan/jobs/{jobId}' },
+  { method: 'GET', path: '/scenarios/{scenarioId}/hiring-plan/export' },
+  { method: 'POST', path: '/scenarios/{scenarioId}/rosters/jobs' },
+  { method: 'GET', path: '/scenarios/{scenarioId}/rosters/jobs/{jobId}' },
+  { method: 'GET', path: '/scenarios/{scenarioId}/summary' },
+  { method: 'GET', path: '/scenarios/{scenarioId}/summary/export' },
 ];
 
 /** Request headers the SPA sends: the defaults plus the demo role switcher's `X-Active-Role`. */

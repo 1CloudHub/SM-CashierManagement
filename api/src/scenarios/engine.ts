@@ -104,9 +104,28 @@ export function ruleSetFromPins(pins: readonly PinnedRuleVersion[]): RuleSet {
 
 let demoSnapshotCache: demo.DemoSnapshot | null = null;
 
-function contextFor(snapshot: PinnedSnapshot, rules: RuleSet, settings: ScenarioSettingsValues): PlanningContext {
-  const isDemo = snapshot.synthetic && (snapshot.storageKey === null || snapshot.storageKey.startsWith('demo://'));
-  if (!isDemo) {
+/** Whether a POS snapshot is the seeded demo data the engine can regenerate without S3. */
+export function isDemoSnapshot(snapshot: PinnedSnapshot): boolean {
+  return snapshot.synthetic && (snapshot.storageKey === null || snapshot.storageKey.startsWith('demo://'));
+}
+
+/**
+ * The engine context for pinned inputs (task 14 reuses it for the network
+ * view, department plan and background jobs). Throws `EngineInputError` for
+ * uploaded data, which the engine cannot read yet.
+ */
+export function planningContextFor(input: {
+  readonly settings: Pick<ScenarioSettingsValues, 'growth' | 'allowPartTime'>;
+  readonly snapshots: readonly PinnedSnapshot[];
+  readonly ruleVersions: readonly PinnedRuleVersion[];
+}): PlanningContext {
+  const pos = input.snapshots.find((s) => s.datasetType === 'pos');
+  if (!pos) throw new EngineInputError('The scenario has no POS snapshot pinned.');
+  return contextFor(pos, ruleSetFromPins(input.ruleVersions), input.settings);
+}
+
+function contextFor(snapshot: PinnedSnapshot, rules: RuleSet, settings: Pick<ScenarioSettingsValues, 'growth' | 'allowPartTime'>): PlanningContext {
+  if (!isDemoSnapshot(snapshot)) {
     throw new EngineInputError('Runs on uploaded data are processed by the background job worker, which is not enabled yet.');
   }
   demoSnapshotCache ??= demo.createDemoSnapshot();
