@@ -6,6 +6,7 @@ import { API_MOCK } from '@/app/config'
 import { useScreenCrumbs } from '@/app/screen-crumbs'
 import { SCREEN_BY_ID } from '@/app/screens'
 import { useI18n } from '@/i18n'
+import { createOffersClient } from '@/features/offers'
 import { networkMapApiFromClient } from './api'
 import { loadMapConfig, type MapRuntimeConfig } from './map-config'
 import { NetworkMapScreen } from './network-map-screen'
@@ -33,12 +34,13 @@ export function NetworkMapPage() {
   const { role } = useActiveRole()
   const client = useApi()
   const api = useMemo(() => networkMapApiFromClient(client), [client])
+  const offers = useMemo(() => createOffersClient(client), [client])
   const mapConfig = useMapConfig()
   const screen = SCREEN_BY_ID['SCR-026']
   const crumbs = useScreenCrumbs(screen)
   return (
     <AppLayout title={t(screen.titleKey)} crumbs={crumbs}>
-      <NetworkMapScreen api={api} role={role} mapConfig={mapConfig} />
+      <NetworkMapScreen api={api} role={role} mapConfig={mapConfig} offers={offers} />
     </AppLayout>
   )
 }

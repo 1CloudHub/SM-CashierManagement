@@ -7,9 +7,10 @@ import { ProfileScreen } from '@/features/auth/profile-screen'
 import { DataSourcesPage, UploadPage } from '@/features/data/pages'
 import { DepartmentPage, HiringPage, NetworkPage, SummaryPage } from '@/features/planning/pages'
 import { HomeScreen } from '@/features/home/home-screen'
+import { NetworkMapPage } from '@/features/network-map/pages'
+import { MyRosterPage } from '@/features/offers/pages'
 import { RosterPage } from '@/features/roster/pages'
 import { NotificationsPage } from '@/features/notifications/pages'
-import { NetworkMapPage } from '@/features/network-map/pages'
 import { SearchResultsScreen } from '@/features/search/search-results-screen'
 import { RuleSetsPage, RuleVersionEditorPage } from '@/features/rules/pages'
 import { ScenarioComparePage, ScenarioListPage, ScenarioSettingsPage } from '@/features/scenarios/pages'
@@ -27,12 +28,13 @@ import { Guarded, HelpScreen, NotFoundScreen, PlaceholderScreen, StatusScreen } 
  */
 const BUILT: Partial<Record<ScreenId, () => React.ReactNode>> = {
   'SCR-010': () => <HomeScreen />,
-  'SCR-022': () => <RosterPage />,
   'SCR-020': () => <NetworkPage />,
   'SCR-021': () => <DepartmentPage />,
   'SCR-023': () => <HiringPage />,
   'SCR-024': () => <SummaryPage />,
   'SCR-026': () => <NetworkMapPage />,
+  'SCR-022': () => <RosterPage />,
+  'SCR-025': () => <MyRosterPage />,
   'SCR-030': () => <ScenarioListPage />,
   'SCR-031': () => <ScenarioSettingsPage />,
   'SCR-032': () => <ScenarioComparePage />,

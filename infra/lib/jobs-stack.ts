@@ -2,6 +2,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { CfnOutput, Duration, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
 import type * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as logs from 'aws-cdk-lib/aws-logs';
@@ -54,6 +56,7 @@ export class JobsStack extends Stack {
   public readonly queue: sqs.Queue;
   public readonly deadLetterQueue: sqs.Queue;
   public readonly worker: lambda.Function;
+  public readonly offerExpirySchedule: events.Rule;
 
   constructor(scope: Construct, id: string, props: JobsStackProps) {
     super(scope, id, props);
@@ -111,6 +114,14 @@ export class JobsStack extends Stack {
         maxConcurrency: jobs.maxConcurrency,
       }),
     );
+
+    // Task 17.1: shift offers expire 30 minutes after they are sent (Req 13.2);
+    // the worker's sweep marks due offers expired and notifies the senders.
+    this.offerExpirySchedule = new events.Rule(this, 'OfferExpirySweep', {
+      description: 'Expires LaneWise shift offers past their 30 minutes and notifies the senders (task 17.1).',
+      schedule: events.Schedule.rate(Duration.minutes(1)),
+      targets: [new eventsTargets.LambdaFunction(this.worker, { retryAttempts: 0 })],
+    });
 
     new CfnOutput(this, 'JobsQueueUrl', {
       value: this.queue.queueUrl,

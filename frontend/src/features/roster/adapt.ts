@@ -51,7 +51,7 @@ export function toRosterModel(detail: RosterDetail): RosterModel {
     name: s.name,
     contract: s.borrowedFrom ? 'borrowed' : CONTRACT[s.contract],
     skills: [...new Set([s.departmentId, ...s.trainedDepartmentIds])],
-    ...(s.borrowedFrom ? { homeStore: { name: s.borrowedFrom, travelMin: 0 } } : {}),
+    ...(s.borrowedFrom ? { homeStore: { name: s.borrowedFrom, travelMin: s.borrowedTravelMin ?? 0 } } : {}),
   }))
   const scheduled = detail.shifts.filter((s) => s.status === 'scheduled')
   const shifts: RosterShift[] = scheduled.flatMap((s) => {

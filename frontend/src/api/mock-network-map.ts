@@ -306,3 +306,23 @@ export function parseMockNetworkQuery(q: URLSearchParams): NetworkMapQuery | nul
     ...(formats.length > 0 ? { formats: formats as StoreFormat[] } : {}),
   }
 }
+
+/** The map's stores (ids, codes, names) for the task 17 mock offers store. */
+export const MOCK_MAP_STORES: readonly { readonly id: string; readonly code: string; readonly name: string }[] = STORES.map(({ id, code, name }) => ({ id, code, name }))
+
+/** A map candidate the mock offers store may send an offer to (eligible ones only; pseudonymous display name). */
+export function mockMapCandidate(staffId: string) {
+  const c = CANDIDATES.find((x) => `staff-${x.displayId.toLowerCase()}` === staffId && x.exclude === undefined)
+  if (!c) return null
+  const b = BARANGAYS[c.barangay] ?? BARANGAYS[0]!
+  return {
+    staffId,
+    displayId: c.displayId,
+    name: `Cashier ${c.displayId}`,
+    homeStoreId: c.homeStoreId,
+    homeArea: { barangay: b.name, city: b.city },
+    travelMin: c.baseMin,
+    weekHours: c.weekly[0],
+    limit: c.weekly[1],
+  }
+}

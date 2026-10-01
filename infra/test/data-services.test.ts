@@ -252,6 +252,15 @@ describe('Jobs stack', () => {
     jobs.hasResourceProperties('AWS::SQS::Queue', { QueueName: 'lanewise-prod-jobs-dlq', SqsManagedSseEnabled: true });
   });
 
+  it('invokes the worker every minute for the shift-offer expiry sweep (task 17.1)', () => {
+    jobs.hasResourceProperties('AWS::Events::Rule', {
+      ScheduleExpression: 'rate(1 minute)',
+      State: 'ENABLED',
+      Targets: Match.arrayWith([Match.objectLike({ Arn: Match.anyValue(), RetryPolicy: { MaximumRetryAttempts: 0 } })]),
+    });
+    jobs.hasResourceProperties('AWS::Lambda::Permission', { Action: 'lambda:InvokeFunction', Principal: 'events.amazonaws.com' });
+  });
+
   it('runs the worker in the VPC with partial batch failures and capped concurrency', () => {
     jobs.hasResourceProperties('AWS::Lambda::Function', {
       FunctionName: 'lanewise-prod-jobs-worker',
