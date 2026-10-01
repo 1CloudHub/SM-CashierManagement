@@ -6,7 +6,9 @@ import { Skeleton } from './skeleton'
  * Table (SG-006, UX-005, accessibility).
  *
  * Token-driven table primitives with:
- *   - a scroll container (TableWrap) with a 2px outline,
+ *   - a scroll container (TableWrap) with a 1px outline that is keyboard
+ *     focusable, so a wide or tall table can be scrolled without a mouse
+ *     (WCAG 2.1.1; axe scrollable-region-focusable),
  *   - STICKY header row and STICKY first column (via `stickyFirstCol`),
  *   - sortable headers using a real <button> + `aria-sort` (SortHeader),
  *   - numeric columns right-aligned with tabular figures,
@@ -23,8 +25,9 @@ export function TableWrap({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
+      tabIndex={0}
       className={cn(
-        'relative max-h-[70vh] overflow-auto border border-outline-subtle bg-surface',
+        'relative max-h-[70vh] overflow-auto border border-outline-subtle bg-surface focus-visible:outline-focus-ring',
         className,
       )}
       {...props}
