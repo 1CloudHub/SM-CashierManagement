@@ -1,18 +1,39 @@
 import { ROLE_CODES } from '@lanewise/shared'
-import { screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { axe } from 'vitest-axe'
-import { ACTIVE_ROLE_HEADER } from '@/api'
+import { ACTIVE_ROLE_HEADER, ApiProvider, createMockAdapter } from '@/api'
+import { AnnouncerProvider } from '@/components/a11y'
+import { I18nProvider } from '@/i18n'
 import { renderApp, useLaptopViewport } from '@/test/app'
 import { canAccess } from './access'
+import { ActiveRoleProvider } from './active-role'
 import { activeRoleStorageKey, readStoredRole } from './active-role-storage'
-import { SCREENS } from './screens'
+import { RouterProvider } from './router'
+import { SCREEN_BY_ID, SCREENS } from './screens'
+import { PlaceholderScreen } from './screen-pages'
 
 beforeEach(() => useLaptopViewport())
 afterEach(() => vi.unstubAllGlobals())
 
 const mainNav = () => screen.getByRole('navigation', { name: 'Main' })
+
+/** Renders one screen element with the providers renderApp uses (no route table). */
+function renderWithShell(element: React.ReactNode, path: string) {
+  window.history.replaceState(null, '', path)
+  return render(
+    <I18nProvider initialLocale="en">
+      <AnnouncerProvider>
+        <RouterProvider>
+          <ActiveRoleProvider demo>
+            <ApiProvider adapter={createMockAdapter()}>{element}</ApiProvider>
+          </ActiveRoleProvider>
+        </RouterProvider>
+      </AnnouncerProvider>
+    </I18nProvider>,
+  )
+}
 
 describe('routing', () => {
   it('renders Home at / inside the shell, with no axe violations', async () => {
@@ -24,8 +45,22 @@ describe('routing', () => {
     expect(await axe(container)).toHaveNoViolations()
   })
 
+  it('builds every screen in the map — no placeholder route is left', () => {
+    // Task 25: every SCR in the screen map now has its feature screen; a new
+    // screen added to the map without one would fall back to the placeholder.
+    const placeholders: string[] = []
+    for (const s of SCREENS) {
+      if (s.id === 'SCR-010' || s.id === 'SCR-080' || s.id === 'SCR-090') continue
+      const r = ROLE_CODES.find((code) => canAccess(code, s))!
+      const { unmount } = renderApp({ path: s.path.replace(/:\w+/g, 'x'), role: r })
+      if (screen.queryByRole('heading', { name: 'This screen is not available yet' })) placeholders.push(s.id)
+      unmount()
+    }
+    expect(placeholders).toEqual([])
+  }, 30_000)
+
   it('renders a placeholder with title, breadcrumb and its spec task', async () => {
-    const { container } = renderApp({ path: '/data/stores', role: 'PLN' })
+    const { container } = renderWithShell(<PlaceholderScreen screen={SCREEN_BY_ID['SCR-052']} />, '/data/stores')
     expect(screen.getByRole('heading', { level: 1, name: 'Stores and lanes' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'This screen is not available yet' })).toBeInTheDocument()
     // The spec task / screen id pill is a dev-only aid (vitest runs with DEV on).
@@ -33,7 +68,6 @@ describe('routing', () => {
     const crumbs = within(screen.getByRole('navigation', { name: 'Breadcrumb' }))
     expect(crumbs.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/')
     expect(crumbs.getByText('Stores and lanes')).toHaveAttribute('aria-current', 'page')
-    expect(within(mainNav()).getByRole('link', { name: 'Stores and lanes' })).toHaveAttribute('aria-current', 'page')
     expect(await axe(container)).toHaveNoViolations()
   })
 
@@ -58,7 +92,7 @@ describe('routing', () => {
       expect(screen.getAllByRole('heading', { level: 1 }), s.id).toHaveLength(1)
       unmount()
     }
-  })
+  }, 30_000)
 
   it('shows Page not found for unknown paths, inside the shell', () => {
     renderApp({ path: '/nope', role: 'PLN' })

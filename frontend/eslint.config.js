@@ -56,7 +56,7 @@ const tokenEnforcement = [
 ]
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'e2e-results', 'playwright-report']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -110,6 +110,15 @@ export default defineConfig([
     files: ['src/**/*.{test,spec}.{ts,tsx}', 'src/test/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-syntax': 'off',
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
+    // Playwright journeys (task 25) run in Node against the dev server.
+    files: ['e2e/**/*.ts', 'playwright.config.ts'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+    rules: {
+      'react-hooks/rules-of-hooks': 'off',
       'react-refresh/only-export-components': 'off',
     },
   },
