@@ -49,7 +49,7 @@ function synth() {
 }
 
 const DOMAIN = 'lanewise.prototypes.1cloudhub.com';
-const ZONE_ID = 'Z10306162UR77DOLJD1L3';
+const ZONE_ID = 'Z02168532NL1LBQPBHSV0';
 
 /**
  * Prod config with the custom domain switched on. Prod currently has the custom
@@ -61,7 +61,7 @@ function withDomain(): EnvironmentConfig {
   return {
     ...base,
     domainName: DOMAIN,
-    hostedZone: { id: ZONE_ID, name: 'prototypes.1cloudhub.com' },
+    hostedZone: { id: ZONE_ID, name: 'lanewise.prototypes.1cloudhub.com' },
     auth: { ...base.auth, relyingPartyId: DOMAIN },
   };
 }
