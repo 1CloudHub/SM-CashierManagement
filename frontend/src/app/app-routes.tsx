@@ -7,15 +7,16 @@ import { ProfileScreen } from '@/features/auth/profile-screen'
 import { DataSourcesPage, UploadPage } from '@/features/data/pages'
 import { DepartmentPage, HiringPage, NetworkPage, SummaryPage } from '@/features/planning/pages'
 import { HomeScreen } from '@/features/home/home-screen'
+import { NetworkMapPage } from '@/features/network-map/pages'
+import { MyRosterPage } from '@/features/offers/pages'
 import { RosterPage } from '@/features/roster/pages'
 import { NotificationsPage } from '@/features/notifications/pages'
-import { NetworkMapPage } from '@/features/network-map/pages'
 import { SearchResultsScreen } from '@/features/search/search-results-screen'
 import { RuleSetsPage, RuleVersionEditorPage } from '@/features/rules/pages'
 import { ScenarioComparePage, ScenarioListPage, ScenarioSettingsPage } from '@/features/scenarios/pages'
 import { SCREEN_BY_ID, SCREENS, type ScreenDef, type ScreenId } from './screens'
-import { GLOBAL_SEARCH_ID, useShellSlots } from './app-layout'
-import { useRouter } from './router'
+import { AppUserMenu, GLOBAL_SEARCH_ID } from './app-layout'
+import { Redirect, useRouter } from './router'
 import { Guarded, HelpScreen, NotFoundScreen, PlaceholderScreen, StatusScreen } from './screen-pages'
 
 /**
@@ -27,12 +28,13 @@ import { Guarded, HelpScreen, NotFoundScreen, PlaceholderScreen, StatusScreen } 
  */
 const BUILT: Partial<Record<ScreenId, () => React.ReactNode>> = {
   'SCR-010': () => <HomeScreen />,
-  'SCR-022': () => <RosterPage />,
   'SCR-020': () => <NetworkPage />,
   'SCR-021': () => <DepartmentPage />,
   'SCR-023': () => <HiringPage />,
   'SCR-024': () => <SummaryPage />,
   'SCR-026': () => <NetworkMapPage />,
+  'SCR-022': () => <RosterPage />,
+  'SCR-025': () => <MyRosterPage />,
   'SCR-030': () => <ScenarioListPage />,
   'SCR-031': () => <ScenarioSettingsPage />,
   'SCR-032': () => <ScenarioComparePage />,
@@ -41,7 +43,6 @@ const BUILT: Partial<Record<ScreenId, () => React.ReactNode>> = {
   'SCR-041': () => <SearchResultsScreen />,
   'SCR-060': () => <RuleSetsPage />,
   'SCR-061': () => <RuleVersionEditorPage />,
-  // SCR-080 keeps its own shell from task 7 until it moves into AppLayout.
   'SCR-050': () => <DataSourcesPage />,
   'SCR-051': () => <UploadPage />,
   'SCR-080': () => <ProfileScreen />,
@@ -69,6 +70,8 @@ function WithHelp() {
       onNavigate={(target) => navigate(NAV_TARGETS[target])}
       onFocusSearch={() => document.getElementById(GLOBAL_SEARCH_ID)?.focus()}
       onOpenNotifications={() => navigate('/notifications')}
+      methodologyHref="/help#methodology"
+      supportHref="/help#support"
     >
       <Outlet />
     </HelpProvider>
@@ -76,11 +79,10 @@ function WithHelp() {
 }
 
 export function AppRoutes() {
-  const slots = useShellSlots()
   return (
     <Routes>
       {/* The gallery owns its own providers (help, toast, i18n). */}
-      <Route path="/gallery" element={<App accountSlot={slots.account} />} />
+      <Route path="/gallery" element={<App accountSlot={<AppUserMenu />} />} />
       <Route element={<WithHelp />}>
         {SCREENS.map((screen) => (
           <Route key={screen.id} path={screen.path} element={screenElement(screen)} />
@@ -88,6 +90,8 @@ export function AppRoutes() {
         {/* SCR-071 also edits an existing user. */}
         <Route path="/admin/users/:userId" element={screenElement(SCREEN_BY_ID['SCR-071'])} />
         <Route path="/index.html" element={screenElement(SCREEN_BY_ID['SCR-010'])} />
+        {/* SCR-090 without a kind: the generic status page is "not found". */}
+        <Route path="/status" element={<Redirect to="/status/404" />} />
         <Route path="*" element={<NotFoundScreen />} />
       </Route>
     </Routes>

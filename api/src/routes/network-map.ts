@@ -11,7 +11,7 @@
  * pseudonymised (ID, home store, barangay — Req 12.5). Auto-match is offered
  * to the roles that may send offers (Planner; Store Manager for their own
  * store) and only PROPOSES: it creates nothing, sends nothing and so writes
- * no audit event. Sending is task 17.
+ * no audit event. Sending the offers and borrow requests is task 17 (`routes/offers.ts`).
  *
  * Every body passes the P15 guard in the service.
  */

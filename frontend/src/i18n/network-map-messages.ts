@@ -123,8 +123,12 @@ export const networkMapEn: Bundle = {
   'map.reason.TOO_FAR': 'Too far',
   'map.panel.withoutConsent': '{count} cashiers aren’t shown because they don’t share a home area.',
   'map.panel.offer': 'Offer shift to {count} selected',
-  'map.panel.offerNote':
-    'Offers go to cashiers’ phones; the first to accept gets the shift. Sending offers isn’t available yet — nothing is sent from this screen.',
+  'map.panel.offerNote': 'Offers go to cashiers’ phones and expire in 30 minutes; the first to accept gets the shift.',
+  'map.panel.offerSent': 'Offers sent to {count} cashiers.',
+  'map.panel.offerFailed': 'The offers weren’t sent. Refresh the list and try again.',
+  'map.panel.offersLabel': 'Offers for this shift',
+  'map.panel.borrow.requested': 'Borrow request sent to {name}. Its store manager decides.',
+  'map.panel.borrow.failed': 'The borrow request wasn’t sent. Try again.',
 
   // Auto-match
   'map.autoMatch.button': 'Auto-match all gaps',
@@ -153,8 +157,9 @@ export const networkMapEn: Bundle = {
   'map.autoMatch.removed': 'Removed',
   'map.autoMatch.unfilled': 'No cover found: {stores}',
   'map.autoMatch.send': 'Send {offers} offers and {moves} borrow requests',
-  'map.autoMatch.notSent':
-    'Nothing was sent. Sending offers and borrow requests isn’t available yet; your reviewed list stays here until you close it.',
+  'map.autoMatch.sent': 'Sent {offers} offers and {moves} borrow requests.',
+  'map.autoMatch.partial': 'Sent {sent} of {total}. {failed} could not be sent — the shift may have been filled or the cashier is no longer eligible.',
+  'map.autoMatch.sending': 'Sending…',
   'map.autoMatch.close': 'Close',
   'map.autoMatch.withoutConsent': '{count} cashiers who don’t share a home area were left out.',
 }
@@ -272,8 +277,12 @@ export const networkMapFil: Bundle = {
   'map.reason.TOO_FAR': 'Masyadong malayo',
   'map.panel.withoutConsent': 'Hindi ipinapakita ang {count} cashier dahil hindi sila nagbahagi ng home area.',
   'map.panel.offer': 'Ialok ang shift sa {count} napili',
-  'map.panel.offerNote':
-    'Napupunta ang mga alok sa telepono ng mga cashier; ang unang tumanggap ang makakakuha ng shift. Hindi pa available ang pagpapadala ng alok — walang ipinapadala mula sa screen na ito.',
+  'map.panel.offerNote': 'Ipinapadala ang mga alok sa telepono ng mga cashier at mag-e-expire sa loob ng 30 minuto; ang unang tumanggap ang makakakuha ng shift.',
+  'map.panel.offerSent': 'Naipadala ang alok sa {count} cashier.',
+  'map.panel.offerFailed': 'Hindi naipadala ang mga alok. I-refresh ang listahan at subukang muli.',
+  'map.panel.offersLabel': 'Mga alok para sa shift na ito',
+  'map.panel.borrow.requested': 'Naipadala ang kahilingang humiram sa {name}. Ang store manager nito ang magpapasya.',
+  'map.panel.borrow.failed': 'Hindi naipadala ang kahilingang humiram. Subukang muli.',
 
   'map.autoMatch.button': 'Auto-match lahat ng kakulangan',
   'map.autoMatch.title': 'Suriin ang mungkahing kapalit',
@@ -301,8 +310,9 @@ export const networkMapFil: Bundle = {
   'map.autoMatch.removed': 'Inalis',
   'map.autoMatch.unfilled': 'Walang nahanap na kapalit: {stores}',
   'map.autoMatch.send': 'Ipadala ang {offers} alok at {moves} kahilingang humiram',
-  'map.autoMatch.notSent':
-    'Walang naipadala. Hindi pa available ang pagpapadala ng alok at kahilingang humiram; mananatili rito ang nasuri mong listahan hanggang isara mo ito.',
+  'map.autoMatch.sent': 'Naipadala ang {offers} alok at {moves} kahilingang humiram.',
+  'map.autoMatch.partial': 'Naipadala ang {sent} sa {total}. Hindi naipadala ang {failed} — maaaring napunan na ang shift o hindi na kwalipikado ang cashier.',
+  'map.autoMatch.sending': 'Ipinapadala…',
   'map.autoMatch.close': 'Isara',
   'map.autoMatch.withoutConsent': 'Hindi isinama ang {count} cashier na hindi nagbahagi ng home area.',
 }

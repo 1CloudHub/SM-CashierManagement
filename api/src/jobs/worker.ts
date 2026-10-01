@@ -8,12 +8,19 @@
  * finished job). A failure is reported for the message so SQS retries it and,
  * after `maxReceiveCount` receives, moves it to the dead-letter queue.
  *
+ * The same function also runs the shift-offer expiry sweep (task 17.1,
+ * Req 13.2/13.5) when EventBridge invokes it on its schedule: due offers move
+ * to `expired` and their senders are notified. The API expires due offers
+ * lazily before every offer read and write too, so the schedule only makes
+ * the sender's notification timely.
+ *
  * Deployed by infra/lib/jobs-stack.ts from `dist/jobs-worker/index.mjs`.
  */
 import { PLANNING_JOB_TYPES, type PlanningJobMessage } from '@lanewise/shared';
-import type { SQSBatchResponse, SQSEvent } from 'aws-lambda';
+import type { ScheduledEvent, SQSBatchResponse, SQSEvent } from 'aws-lambda';
 import type pg from 'pg';
 import { createPool } from '../db/pool.js';
+import { expireDueOffers } from '../db/repositories/offers.js';
 import { processPlanningJob } from './planning-jobs.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -32,8 +39,19 @@ const defaultLog: Log = (level, msg, fields = {}) => {
   console.log(JSON.stringify({ level, msg, service: 'lanewise-jobs-worker', env: process.env.LANEWISE_ENV, ...fields }));
 };
 
-export function createWorkerHandler(db: () => pg.Pool, log: Log = defaultLog) {
-  return async (event: SQSEvent): Promise<SQSBatchResponse> => {
+/** An EventBridge scheduled invocation (the offer expiry sweep) rather than an SQS batch. */
+export function isScheduledEvent(event: unknown): event is ScheduledEvent {
+  const e = event as Partial<ScheduledEvent> | null;
+  return e !== null && typeof e === 'object' && e.source === 'aws.events' && e['detail-type'] === 'Scheduled Event';
+}
+
+export function createWorkerHandler(db: () => pg.Pool, log: Log = defaultLog, now: () => Date = () => new Date()) {
+  return async (event: SQSEvent | ScheduledEvent): Promise<SQSBatchResponse> => {
+    if (isScheduledEvent(event)) {
+      const expired = await expireDueOffers(db(), now());
+      log('info', 'offer expiry sweep', { expired });
+      return { batchItemFailures: [] };
+    }
     const batchItemFailures: SQSBatchResponse['batchItemFailures'] = [];
     for (const record of event.Records ?? []) {
       try {

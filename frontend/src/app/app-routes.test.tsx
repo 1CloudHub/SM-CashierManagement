@@ -25,13 +25,22 @@ describe('routing', () => {
   })
 
   it('renders a placeholder with title, breadcrumb and its spec task', async () => {
-    // SCR-025 My roster is still a placeholder (task 18.1); SCR-026 is built (task 16).
-    const { container } = renderApp({ path: '/my-roster', role: 'STF' })
-    expect(screen.getByRole('heading', { level: 1, name: 'My roster' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Coming in task 18.1' })).toBeInTheDocument()
+    const { container } = renderApp({ path: '/data/stores', role: 'PLN' })
+    expect(screen.getByRole('heading', { level: 1, name: 'Stores and lanes' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'This screen is not available yet' })).toBeInTheDocument()
+    // The spec task / screen id pill is a dev-only aid (vitest runs with DEV on).
+    expect(screen.getByText('Task 9.1 · SCR-052')).toBeInTheDocument()
     const crumbs = within(screen.getByRole('navigation', { name: 'Breadcrumb' }))
     expect(crumbs.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/')
-    expect(crumbs.getByText('My roster')).toHaveAttribute('aria-current', 'page')
+    expect(crumbs.getByText('Stores and lanes')).toHaveAttribute('aria-current', 'page')
+    expect(within(mainNav()).getByRole('link', { name: 'Stores and lanes' })).toHaveAttribute('aria-current', 'page')
+    expect(await axe(container)).toHaveNoViolations()
+  })
+
+  it('renders SCR-025 My roster with the Staff user’s shift offers (task 17)', async () => {
+    const { container } = renderApp({ path: '/my-roster', role: 'STF' })
+    expect(screen.getByRole('heading', { level: 1, name: 'My roster' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Open shift offers near you' })).toBeInTheDocument()
     expect(within(mainNav()).getByRole('link', { name: 'My roster' })).toHaveAttribute('aria-current', 'page')
     expect(await axe(container)).toHaveNoViolations()
   })
@@ -40,16 +49,20 @@ describe('routing', () => {
     for (const s of SCREENS) {
       if (s.id === 'SCR-010' || s.id === 'SCR-080') continue // Home loads async; Profile needs auth (covered in root.test)
       const r = ROLE_CODES.find((code) => canAccess(code, s))!
+      // SCR-090 renders the 403 status page, whose h1 is the error title.
       const { unmount } = renderApp({ path: s.path.replace(/:\w+/g, '403'), role: r })
       expect(screen.getAllByRole('heading', { level: 1 }).length, s.id).toBeGreaterThan(0)
-      expect(screen.queryByRole('heading', { level: 1, name: 'No access' }), s.id).toBeNull()
+      if (s.id !== 'SCR-090') {
+        expect(screen.queryByRole('heading', { level: 1, name: /You do not have access/ }), s.id).toBeNull()
+      }
+      expect(screen.getAllByRole('heading', { level: 1 }), s.id).toHaveLength(1)
       unmount()
     }
   })
 
   it('shows Page not found for unknown paths, inside the shell', () => {
     renderApp({ path: '/nope', role: 'PLN' })
-    expect(screen.getByRole('heading', { level: 1, name: 'Page not found' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: /could not find that page/ })).toBeInTheDocument()
     expect(mainNav()).toBeInTheDocument()
   })
 
@@ -93,7 +106,7 @@ describe('nav filtering in the shell (requirement 2.3)', () => {
 describe('no access (requirement 2.4)', () => {
   it('an out-of-scope deep link shows No access, reveals nothing and fetches nothing', async () => {
     const { container, log } = renderApp({ path: '/scenarios/scn-secret-42/settings', role: 'STF' })
-    expect(screen.getByRole('heading', { level: 1, name: 'No access' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: /You do not have access/ })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Go to Home' })).toHaveAttribute('href', '/')
     expect(container).not.toHaveTextContent('scn-secret-42')
     expect(container).not.toHaveTextContent('Scenario settings')
@@ -106,7 +119,7 @@ describe('no access (requirement 2.4)', () => {
   it('admin screens are No access for every non-admin role', () => {
     for (const r of ROLE_CODES.filter((c) => c !== 'ADM')) {
       const { unmount } = renderApp({ path: '/admin/users', role: r })
-      expect(screen.getByRole('heading', { level: 1, name: 'No access' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { level: 1, name: /You do not have access/ })).toBeInTheDocument()
       expect(within(mainNav()).queryByRole('link', { name: 'Users' })).toBeNull()
       unmount()
     }
@@ -170,5 +183,76 @@ describe('route focus (UX-004)', () => {
     renderApp({ path: '/help', role: 'PLN' })
     await user.click(within(mainNav()).getByRole('link', { name: 'All scenarios' }))
     await waitFor(() => expect(document.activeElement).toBe(document.getElementById('main')))
+  })
+})
+
+describe('SCR-090 status pages', () => {
+  it('redirects /status (no kind) to /status/404', async () => {
+    renderApp({ path: '/status', role: 'PLN' })
+    await waitFor(() => expect(window.location.pathname).toBe('/status/404'))
+    expect(screen.getByRole('heading', { level: 1, name: /could not find that page/ })).toBeInTheDocument()
+  })
+
+  it('renders exactly one h1 inside the shell and wires Retry to a reload', async () => {
+    const user = userEvent.setup()
+    renderApp({ path: '/status/500', role: 'PLN' })
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+    expect(mainNav()).toBeInTheDocument()
+    const retry = screen.getByRole('button', { name: 'Try again' })
+    // jsdom can't reload; stub location only for the click (the router reads it while rendering).
+    const reload = vi.fn()
+    vi.stubGlobal('location', { reload })
+    await user.click(retry)
+    expect(reload).toHaveBeenCalledOnce()
+  })
+
+  it('wires Back to the browser history', async () => {
+    const back = vi.spyOn(window.history, 'back').mockImplementation(() => {})
+    const user = userEvent.setup()
+    renderApp({ path: '/status/400', role: 'PLN' })
+    await user.click(screen.getByRole('button', { name: 'Go back' }))
+    expect(back).toHaveBeenCalledOnce()
+    back.mockRestore()
+  })
+
+  it('renders 401 bare, without the shell', async () => {
+    const { container } = renderApp({ path: '/status/401', role: 'PLN' })
+    expect(screen.getByRole('heading', { level: 1, name: /Please sign in/ })).toBeInTheDocument()
+    expect(screen.queryByRole('banner')).toBeNull()
+    expect(screen.queryByRole('navigation', { name: 'Main' })).toBeNull()
+    expect(await axe(container)).toHaveNoViolations()
+  })
+})
+
+describe('SCR-091 Help', () => {
+  it('has the wireframe sections, each a reachable anchor, with no axe violations', async () => {
+    const { container } = renderApp({ path: '/help', role: 'HR' })
+    for (const [id, name] of [
+      ['quick-start', 'Quick start for your role'],
+      ['methodology', 'How the numbers are calculated'],
+      ['matching', 'How cross-store matching ranks people'],
+      ['approvals', 'Approval sequence: headcount, budget, plan'],
+      ['shortcuts', 'Keyboard shortcuts'],
+      ['support', 'Contact support'],
+    ] as const) {
+      const heading = screen.getByRole('heading', { level: 2, name })
+      expect(document.getElementById(id), id).toContainElement(heading)
+    }
+    const topics = within(screen.getByRole('navigation', { name: 'Help topics' }))
+    expect(topics.getByRole('link', { name: 'How the numbers are calculated' })).toHaveAttribute('href', '#methodology')
+    expect(screen.getByText(/Review headcount requests in Approvals/)).toBeInTheDocument()
+    expect(await axe(container)).toHaveNoViolations()
+  })
+
+  it('links the ? dialog to the methodology and support sections', async () => {
+    const user = userEvent.setup()
+    renderApp({ path: '/help', role: 'PLN' })
+    await user.keyboard('?')
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByRole('link', { name: /How the numbers are calculated/ })).toHaveAttribute(
+      'href',
+      '/help#methodology',
+    )
+    expect(within(dialog).getByRole('link', { name: /Contact support/ })).toHaveAttribute('href', '/help#support')
   })
 })

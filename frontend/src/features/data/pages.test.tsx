@@ -38,7 +38,7 @@ describe('SCR-050 / SCR-051 in the app router (task 8.2)', () => {
 
   it('SCR-051 is Rules Steward only (No access for a Planner)', () => {
     renderApp({ path: '/data/upload', role: 'PLN', adapter: dataAdapter([]) })
-    expect(screen.getByRole('heading', { level: 1, name: 'No access' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: /You do not have access/ })).toBeInTheDocument()
   })
 })
 
