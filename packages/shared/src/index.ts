@@ -3,6 +3,7 @@
  * No runtime dependencies; safe to import from the API and the SPA.
  */
 export * from './api.js';
+export * from './approvals.js';
 export * from './audit.js';
 export * from './auth.js';
 export * from './cost.js';
