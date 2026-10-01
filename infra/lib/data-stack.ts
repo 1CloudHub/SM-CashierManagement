@@ -184,8 +184,13 @@ export class DataStack extends Stack {
       username: 'lanewise_admin',
     });
     masterSecret.applyRemovalPolicy(removalPolicy);
+    // 16.4 is no longer offered for new clusters in us-east-1; pin a current
+    // minor explicitly (the CDK enum lags RDS's supported-version list).
+    const engine = rds.DatabaseClusterEngine.auroraPostgres({
+      version: rds.AuroraPostgresEngineVersion.of('16.8', '16'),
+    });
     this.cluster = new rds.DatabaseCluster(this, 'Database', {
-      engine: rds.DatabaseClusterEngine.auroraPostgres({ version: rds.AuroraPostgresEngineVersion.VER_16_4 }),
+      engine,
       credentials: rds.Credentials.fromSecret(masterSecret),
       defaultDatabaseName: data.databaseName,
       writer: rds.ClusterInstance.serverlessV2('Writer', { publiclyAccessible: false }),
@@ -202,7 +207,7 @@ export class DataStack extends Stack {
       cloudwatchLogsExports: ['postgresql'],
       cloudwatchLogsRetention: logs.RetentionDays.THREE_MONTHS,
       parameterGroup: new rds.ParameterGroup(this, 'DatabaseParameters', {
-        engine: rds.DatabaseClusterEngine.auroraPostgres({ version: rds.AuroraPostgresEngineVersion.VER_16_4 }),
+        engine,
         description: 'LaneWise Aurora PostgreSQL: TLS required.',
         parameters: { 'rds.force_ssl': '1' },
       }),

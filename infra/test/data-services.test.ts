@@ -106,7 +106,7 @@ describe('Data stack — Aurora PostgreSQL', () => {
   it('runs Aurora PostgreSQL 16 Serverless v2 at the configured capacity', () => {
     data.hasResourceProperties('AWS::RDS::DBCluster', {
       Engine: 'aurora-postgresql',
-      EngineVersion: '16.4',
+      EngineVersion: '16.8',
       DatabaseName: 'lanewise',
       StorageEncrypted: true,
       DeletionProtection: true,
