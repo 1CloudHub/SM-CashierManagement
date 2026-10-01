@@ -46,14 +46,15 @@ export function useShellSlots(): ShellSlots {
 
 /**
  * The account menu for the top bar: name / email, Profile, Help and
- * shortcuts, Sign out. `roleSwitcher` is shown inside it on narrow screens,
- * where the top bar has no room for the "Viewing as" control.
+ * shortcuts, Sign out. `narrowControls` are shown inside it on narrow
+ * screens, where the top bar has no room for the "Viewing as" switcher and
+ * the theme toggle.
  */
-export function AppUserMenu({ roleSwitcher }: { roleSwitcher?: ReactNode }) {
+export function AppUserMenu({ narrowControls }: { narrowControls?: ReactNode }) {
   const { account } = useShellSlots()
   return (
     <UserMenu name={account?.name} email={account?.email} onSignOut={account?.onSignOut}>
-      {roleSwitcher}
+      {narrowControls}
     </UserMenu>
   )
 }
@@ -127,13 +128,23 @@ export function AppLayout({
         contextBar={contextBar}
         trailing={
           // Below tablet the bar holds only icon-sized controls; "Viewing as"
-          // moves into the account menu so nothing overflows at ~400px.
+          // and the theme toggle move into the account menu so nothing
+          // overflows at ~400px.
           <>
             <LanguageSwitcher />
             {isTabletUp && <RoleSwitcher />}
-            <ThemeToggle />
-            <NotificationBell />
-            <AppUserMenu roleSwitcher={isTabletUp ? undefined : <RoleSwitcher variant="menu" />} />
+            {isTabletUp && <ThemeToggle />}
+            {canAccess(role, 'SCR-040') && <NotificationBell />}
+            <AppUserMenu
+              narrowControls={
+                isTabletUp ? undefined : (
+                  <div className="flex items-end gap-2">
+                    <RoleSwitcher variant="menu" />
+                    <ThemeToggle />
+                  </div>
+                )
+              }
+            />
           </>
         }
         sampleDataBanner={

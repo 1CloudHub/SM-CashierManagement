@@ -25,16 +25,15 @@ describe('routing', () => {
   })
 
   it('renders a placeholder with title, breadcrumb and its spec task', async () => {
-    // SCR-025 My roster is still a placeholder (task 18.1); SCR-026 is built (task 16).
-    const { container } = renderApp({ path: '/my-roster', role: 'STF' })
-    expect(screen.getByRole('heading', { level: 1, name: 'My roster' })).toBeInTheDocument()
+    const { container } = renderApp({ path: '/data/stores', role: 'PLN' })
+    expect(screen.getByRole('heading', { level: 1, name: 'Stores and lanes' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'This screen is not available yet' })).toBeInTheDocument()
     // The spec task / screen id pill is a dev-only aid (vitest runs with DEV on).
-    expect(screen.getByText('Task 18.1 · SCR-025')).toBeInTheDocument()
+    expect(screen.getByText('Task 9.1 · SCR-052')).toBeInTheDocument()
     const crumbs = within(screen.getByRole('navigation', { name: 'Breadcrumb' }))
     expect(crumbs.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/')
-    expect(crumbs.getByText('My roster')).toHaveAttribute('aria-current', 'page')
-    expect(within(mainNav()).getByRole('link', { name: 'My roster' })).toHaveAttribute('aria-current', 'page')
+    expect(crumbs.getByText('Stores and lanes')).toHaveAttribute('aria-current', 'page')
+    expect(within(mainNav()).getByRole('link', { name: 'Stores and lanes' })).toHaveAttribute('aria-current', 'page')
     expect(await axe(container)).toHaveNoViolations()
   })
 
