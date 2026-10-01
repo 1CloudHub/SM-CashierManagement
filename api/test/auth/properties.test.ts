@@ -245,7 +245,12 @@ describe('P12 active-role enforcement', () => {
           // Past the guard, a handler may still answer 404 for an unknown object on a
           // route whose path parameter is not a scope target (e.g. a rule version id),
           // or 409 when removing a home area the Staff user never shared (task 15).
-          const unscopedParam = request.targetId !== null && request.guard.kind === 'authorize' && !request.guard.scopeTarget;
+          // Likewise a route with a second, non-scope path parameter under an in-scope
+          // store (e.g. /stores/:storeId/shifts/:shiftId/…) answers 404 for an unknown
+          // child id (task 25: this was the source of an intermittent failure).
+          const childParam = (request.pattern.match(/:\w+|\{\w+\}/g) ?? []).length > 1;
+          const unscopedParam =
+            (request.targetId !== null && request.guard.kind === 'authorize' && !request.guard.scopeTarget) || childParam;
           const lenient =
             request.guard.kind === 'authorize' && LENIENT_RESOURCES.has(request.guard.resource);
           const featureOutcome = lenient

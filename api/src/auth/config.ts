@@ -5,7 +5,7 @@
  * unless set to `false`/`0`/`off`/`no`. With it on, every signed-in user may
  * make any of the 8 roles active; roles they don't hold use the demo scopes
  * from design.md › Role switcher (Store Manager = the demo QC store, Staff =
- * the demo cashier PT-02, everyone else global).
+ * the demo QC Main-lanes cashier, everyone else global).
  */
 export interface RbacConfig {
   readonly demoRoleSwitcher: boolean;
@@ -15,10 +15,16 @@ export interface RbacConfig {
   readonly demoStaffEmployeeNo: string;
 }
 
+/**
+ * The defaults name the seeded demo network (src/db/demo/dataset.ts): the
+ * Quezon City store is seeded with code `DEMO-SMSM-QC`, and the demo Staff
+ * persona (the cashier linked to demo.cashier@smretail.com, QC Main lanes)
+ * with employee number `DEMO-MAIN-FT-001`.
+ */
 export const DEFAULT_RBAC_CONFIG: RbacConfig = {
   demoRoleSwitcher: true,
-  demoStoreCode: 'smsm-qc',
-  demoStaffEmployeeNo: 'PT-02',
+  demoStoreCode: 'DEMO-SMSM-QC',
+  demoStaffEmployeeNo: 'DEMO-MAIN-FT-001',
 };
 
 /** Parses a boolean flag; anything unrecognised falls back to `fallback`. */

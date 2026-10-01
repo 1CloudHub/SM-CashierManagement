@@ -165,7 +165,7 @@ function NetworkBody({
           <Cluster gap={2}>
             <StatusPill tone={view.dayType === 'regular' ? 'neutral' : 'info'}>{t(`planning.dayType.${view.dayType}`)}</StatusPill>
             <span className="text-body-sm text-text-muted">
-              {t('planning.network.scopeLine', { stores: formatNumber(k.stores), departments: formatNumber(k.departments) })}
+              {t(k.stores === 1 ? 'planning.network.scopeLine.oneStore' : 'planning.network.scopeLine', { stores: formatNumber(k.stores), departments: formatNumber(k.departments) })}
             </span>
           </Cluster>
         </Stack>
@@ -210,7 +210,11 @@ function NetworkBody({
           <ul className="m-0 list-disc pl-5">
             {over.map((d) => (
               <li key={d.departmentId}>
-                <AppLink href={departmentPath(state, d.storeId, d.departmentId, view.date)} className="underline focus-visible:outline-focus-ring">
+                <AppLink
+                  href={departmentPath(state, d.storeId, d.departmentId, view.date)}
+                  // inline-block + vertical padding keeps each stacked link a 24px target (WCAG 2.5.8).
+                  className="inline-block py-1 underline focus-visible:outline-focus-ring"
+                >
                   {t('planning.network.overItem', {
                     store: d.storeName,
                     department: d.departmentName,

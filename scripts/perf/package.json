@@ -1,0 +1,11 @@
+{
+  "name": "@lanewise/perf",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reproducible NFR-PERF benchmark for LaneWise (domain, matching and in-process API against an embedded PostgreSQL).",
+  "type": "module",
+  "scripts": {
+    "perf": "node run.mjs",
+    "perf:quick": "node run.mjs --quick"
+  }
+}

@@ -11,6 +11,7 @@ import {
   type CostViewer,
   type HealthResponse,
   type RoleCode,
+  type ScenarioListItem,
 } from '@lanewise/shared'
 import { ACTIVE_ROLE_HEADER, type ApiAdapter, type ApiRequest, type ApiResponse } from './client'
 import { createMasterDataStore } from './mock-master-data'
@@ -327,6 +328,16 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
     if (pathname.startsWith('/admin/') || pathname === '/audit-events' || pathname.startsWith('/audit-events/')) {
       // Users and roles, audit log (SCR-070..073), see ./mock-admin.
       return admin.handle({ method: request.method, pathname, query: new URLSearchParams(search), body: request.body, role })
+    }
+    if (request.method === 'GET' && pathname === '/context-options') {
+      // The context bar's scenario picker lists the scenario store's rows, so a
+      // scenario created, duplicated or published in this session can be opened
+      // on SCR-020..024 (the static directory list would reset it to the default).
+      const options = mockContextOptions(role)
+      const listed = scenarios.handle({ method: 'GET', pathname: '/scenarios', query: new URLSearchParams(), body: undefined, role, viewer: mockViewer(role) })
+      const rows = listed.status === 200 ? (listed.body as { scenarios: ScenarioListItem[] }).scenarios : []
+      const live = options.scenarios.length === 0 ? [] : rows.filter((s) => s.status !== 'archived').map(({ id, name, status, stale }) => ({ id, name, status, stale }))
+      return ok({ ...options, scenarios: live })
     }
     const { key, id } = routeOf(request.method, pathname)
     const handler = ROUTES[key]

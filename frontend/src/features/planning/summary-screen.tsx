@@ -205,7 +205,7 @@ function SummaryBody({ summary, client, role, onPrint }: { summary: LeadershipSu
           </p>
         )}
 
-        <details className="border-2 border-outline p-3">
+        <details className="border border-outline p-3">
           <summary className="cursor-pointer text-body text-text font-weight-semibold">{t('planning.summary.howToRead')}</summary>
           <p className="mt-2 text-body-sm text-text">{t('planning.summary.howToReadText')}</p>
           {summary.sampleData && <p className="mt-2 text-body-sm text-text">{t('planning.summary.sampleNote')}</p>}

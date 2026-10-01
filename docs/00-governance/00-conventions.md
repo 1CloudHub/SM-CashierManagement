@@ -1,10 +1,10 @@
 ---
 id: GOV-000
 title: Documentation conventions
-version: 0.1.0
+version: 0.2.0
 status: Draft
 owner: TBD
-last_updated: 2026-09-30
+last_updated: 2026-10-01
 related: []
 ---
 
@@ -43,6 +43,7 @@ related: []
 | SEC | Security and compliance |
 | PLN | Planning and execution |
 | ADR | Architecture decision records |
+| VER | Verification reports |
 
 ## Requirement IDs
 
@@ -82,3 +83,4 @@ Semantic versioning per document:
 | Version | Date | Author | Change |
 |---|---|---|---|
 | 0.1.0 | 2026-09-30 | TBD | Initial scaffold |
+| 0.2.0 | 2026-10-01 | Claude | `VER` prefix for verification reports (`docs/09-verification/`, task 25) |

@@ -191,7 +191,7 @@ function HiringBody({ view, client, role, onReload }: { view: HiringPlanView; cl
           <Section title={t('planning.hiring.timeline')} description={t('planning.hiring.timelineHelp')}>
             <ol className="m-0 flex list-none flex-col gap-2 p-0">
               {plan.timeline.map((m) => (
-                <li key={`${m.waveId}-${m.name}`} className="flex flex-wrap items-center gap-3 border-b-2 border-outline pb-2">
+                <li key={`${m.waveId}-${m.name}`} className="flex flex-wrap items-center gap-3 border-b border-outline pb-2">
                   <span className="lw-numeric w-28 text-body text-text">{date(m.date)}</span>
                   <StatusPill tone={MILESTONE_TONE[m.status]}>{t(`planning.milestone.${m.status}`)}</StatusPill>
                   <span className="text-body text-text">

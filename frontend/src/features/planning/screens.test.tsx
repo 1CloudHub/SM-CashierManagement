@@ -50,7 +50,7 @@ describe('SCR-020 network view (Req 5.1, 5.3, 5.4)', () => {
 
   it('a Store Manager sees only their store, no network ₱ and no export (P1, Req 25.1)', async () => {
     renderApp({ path: '/plan/network', role: 'STM' })
-    expect(await screen.findByText('1 stores · 3 departments')).toBeInTheDocument()
+    expect(await screen.findByText('1 store · 3 departments')).toBeInTheDocument()
     const table = screen.getByRole('table', { name: 'Staffing plan by store and department' })
     expect(within(table).queryByText(/Cebu/)).toBeNull()
     expect(within(table).getAllByText(/₱/).length).toBeGreaterThan(0) // own store cost

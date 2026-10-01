@@ -36,7 +36,7 @@ export function SchematicMap({ stores, staff, layers, rings, mode, selectedId, o
   const centre = selected?.site ? project(selected.site.lat, selected.site.lon) : null
   return (
     <div
-      className="relative w-full overflow-hidden border-2 border-outline bg-surface-2"
+      className="relative w-full overflow-hidden border border-outline bg-surface-2"
       style={{ aspectRatio: String(SCHEMATIC_ASPECT) }}
       data-testid="schematic-map"
     >
@@ -74,7 +74,7 @@ export function SchematicMap({ stores, staff, layers, rings, mode, selectedId, o
               key={c.city}
               role="img"
               aria-label={t('map.staff.label', { city: c.city, count: c.count })}
-              className="absolute -translate-x-1/2 -translate-y-1/2 border-2 border-outline bg-surface px-1 text-caption text-text"
+              className="absolute -translate-x-1/2 -translate-y-1/2 border border-outline bg-surface px-1 text-caption text-text"
               style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%` }}
             >
               <span aria-hidden="true">◆ {c.count}</span>
@@ -95,7 +95,7 @@ export function SchematicMap({ stores, staff, layers, rings, mode, selectedId, o
               aria-label={t('map.pin.label', { name: s.name, status: statusLabel(t, s), needed: s.required, rostered: s.rostered })}
               onClick={() => onSelect(s.storeId)}
               className={cn(
-                'absolute flex min-h-6 min-w-6 -translate-x-1/2 -translate-y-1/2 items-center gap-1 whitespace-nowrap border-2 px-1 text-caption motion-interactive focus-visible:outline-focus-ring',
+                'absolute flex min-h-6 min-w-6 -translate-x-1/2 -translate-y-1/2 items-center gap-1 whitespace-nowrap border px-1 text-caption motion-interactive focus-visible:outline-focus-ring',
                 look.pin,
                 isSelected && 'z-10 border-text font-weight-semibold',
               )}

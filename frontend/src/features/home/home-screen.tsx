@@ -160,7 +160,7 @@ function RoleCards({ data, now }: { data: HomeSummary; now: number }) {
                       <StatusPill tone="warning">
                         {t('home.pln.overCapacity', { count: item.count, date: date(item.date) })}
                       </StatusPill>{' '}
-                      <TextLink href="/plan/network">{t('nav.network')}</TextLink>
+                      <TextLink href={`/plan/network?date=${encodeURIComponent(item.date)}`}>{t('nav.network')}</TextLink>
                     </>
                   )}
                   {item.kind === 'runComplete' && (

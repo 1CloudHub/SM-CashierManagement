@@ -92,7 +92,7 @@ function BellMenu({ client }: { client: NotificationsClient }) {
         role="region"
         aria-label={t('notifications.bell.menu')}
         hidden={!open}
-        className="absolute right-0 top-full z-40 mt-1 w-80 max-w-[90vw] border-2 border-outline bg-surface motion-safe:animate-fade-in"
+        className="absolute right-0 top-full z-40 mt-1 w-80 max-w-[90vw] border border-outline bg-surface motion-safe:animate-fade-in"
       >
         {error && !data ? (
           <p className="px-3 py-2 text-body-sm text-text-muted">{t('notifications.bell.error')}</p>
@@ -104,7 +104,7 @@ function BellMenu({ client }: { client: NotificationsClient }) {
               const Icon = STATUS_META[SEVERITY_TONE[item.severity]].icon
               const unreadItem = item.readAt === null
               return (
-                <li key={item.id} className="border-b-2 border-outline last:border-b-0">
+                <li key={item.id} className="border-b border-outline last:border-b-0">
                   <AppLink
                     href={item.link}
                     onClick={() => openItem(item.id, !unreadItem)}
@@ -124,7 +124,7 @@ function BellMenu({ client }: { client: NotificationsClient }) {
             })}
           </ul>
         )}
-        <p className="border-t-2 border-outline px-3 py-2">
+        <p className="border-t border-outline px-3 py-2">
           <AppLink
             href="/notifications"
             onClick={() => setOpen(false)}
