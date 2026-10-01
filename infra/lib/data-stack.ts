@@ -177,10 +177,11 @@ export class DataStack extends Stack {
       allowAllOutbound: false,
     });
     // Generated credentials (never in the template); kept with the retained
-    // snapshot in prod so the snapshot stays usable.
+    // snapshot in prod so the snapshot stays usable. No fixed secretName: a
+    // retained secret from a failed or deleted stack would otherwise block the
+    // next create ("already exists"). Consumers use the secret ARN.
     const masterSecret = new rds.DatabaseSecret(this, 'DatabaseSecret', {
       username: 'lanewise_admin',
-      secretName: `lanewise/${config.envName}/db-master`,
     });
     masterSecret.applyRemovalPolicy(removalPolicy);
     this.cluster = new rds.DatabaseCluster(this, 'Database', {

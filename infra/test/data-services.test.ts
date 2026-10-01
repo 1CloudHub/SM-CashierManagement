@@ -129,9 +129,10 @@ describe('Data stack — Aurora PostgreSQL', () => {
 
   it('generates the credentials into Secrets Manager (no plaintext password)', () => {
     data.hasResourceProperties('AWS::SecretsManager::Secret', {
-      Name: 'lanewise/prod/db-master',
       GenerateSecretString: Match.objectLike({ GenerateStringKey: 'password' }),
     });
+    // No fixed name, so a retained secret from an earlier stack can't block a create.
+    data.hasResourceProperties('AWS::SecretsManager::Secret', { Name: Match.absent() });
     const cluster = Object.values(data.findResources('AWS::RDS::DBCluster'))[0] as {
       Properties: { MasterUserPassword: unknown };
     };
