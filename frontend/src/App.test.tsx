@@ -94,7 +94,8 @@ describe('App (component gallery)', () => {
     ).toBe(true)
   })
 
-  it('has no axe violations', async () => {
+  // The gallery renders every component and state: one axe pass takes ~5 s on its own.
+  it('has no axe violations', { timeout: 20_000 }, async () => {
     const { container } = render(<App />)
     expect(await axe(container)).toHaveNoViolations()
   })
