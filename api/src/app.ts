@@ -11,7 +11,6 @@ import { dispatchPendingEmails } from './notifications/dispatch.js';
 import { createSesSender, type EmailSender } from './notifications/email.js';
 import { createInProcessQueue, createSqsQueue, type JobQueue } from './jobs/queue.js';
 import { registerApprovalRoutes } from './routes/approvals.js';
-import { createInProcessQueue, createSqsQueue, type JobQueue } from './jobs/queue.js';
 import { healthHandler } from './routes/health.js';
 import { registerIngestionRoutes } from './routes/ingestion.js';
 import { registerLocationPrivacyRoutes } from './routes/location-privacy.js';
@@ -129,8 +128,6 @@ export function createApp(deps: AppDeps = depsFromEnv()): Router {
   registerNotificationRoutes(router, deps);
   registerApprovalRoutes(router, deps);
   registerRosterRoutes(router, deps);
-  const inProcess = createInProcessQueue(deps.db);
-  registerPlanningRoutes(router, { db: deps.db, jobs: deps.jobs ?? (() => inProcess) });
   const inProcess = createInProcessQueue(deps.db);
   registerPlanningRoutes(router, { db: deps.db, jobs: deps.jobs ?? (() => inProcess) });
   registerNetworkMapRoutes(router, deps);
