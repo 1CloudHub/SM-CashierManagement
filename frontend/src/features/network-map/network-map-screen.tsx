@@ -15,7 +15,7 @@ import {
 } from '@lanewise/shared'
 import { useAnnouncer } from '@/components/a11y'
 import { Cluster, Section, Sidebar, Stack } from '@/components/layout'
-import { Alert, Button, Field, Input, Select, Skeleton, StateBlock } from '@/components/ui'
+import { Alert, Button, Checkbox, Field, Input, Select, Skeleton, StateBlock } from '@/components/ui'
 import { BarangayCountTable } from '@/features/location-privacy/barangay-count-table'
 import { useI18n } from '@/i18n'
 import type { OffersClient } from '@/features/offers'
@@ -208,19 +208,17 @@ export function NetworkMapScreen({ api, role, mapConfig, initialDate, offers }: 
           <legend className="text-label text-text">{t('map.filters.formats')}</legend>
           <Cluster gap={3}>
             {STORE_FORMATS.map((f) => (
-              <label key={f} className="flex min-h-tap items-center gap-2 text-body-sm text-text">
-                <input
-                  type="checkbox"
-                  className="size-5 accent-primary"
-                  checked={formats.length === 0 || formats.includes(f)}
-                  onChange={(e) => {
-                    const current = formats.length === 0 ? [...STORE_FORMATS] : [...formats]
-                    const next = e.target.checked ? [...new Set([...current, f])] : current.filter((x) => x !== f)
-                    setFormats(next.length === STORE_FORMATS.length ? [] : next)
-                  }}
-                />
-                {t(`map.format.${f}`)}
-              </label>
+              <Checkbox
+                key={f}
+                className="text-body-sm"
+                label={t(`map.format.${f}`)}
+                checked={formats.length === 0 || formats.includes(f)}
+                onChange={(e) => {
+                  const current = formats.length === 0 ? [...STORE_FORMATS] : [...formats]
+                  const next = e.target.checked ? [...new Set([...current, f])] : current.filter((x) => x !== f)
+                  setFormats(next.length === STORE_FORMATS.length ? [] : next)
+                }}
+              />
             ))}
           </Cluster>
         </fieldset>
@@ -233,10 +231,13 @@ export function NetworkMapScreen({ api, role, mapConfig, initialDate, offers }: 
       <legend className="text-label text-text">{t('map.layers.title')}</legend>
       <Cluster gap={3}>
         {(['stores', 'staff', 'rings'] as const).map((k) => (
-          <label key={k} className="flex min-h-tap items-center gap-2 text-body-sm text-text">
-            <input type="checkbox" className="size-5 accent-primary" checked={layers[k]} onChange={(e) => setLayers({ ...layers, [k]: e.target.checked })} />
-            {t(`map.layers.${k}`)}
-          </label>
+          <Checkbox
+            key={k}
+            className="text-body-sm"
+            label={t(`map.layers.${k}`)}
+            checked={layers[k]}
+            onChange={(e) => setLayers({ ...layers, [k]: e.target.checked })}
+          />
         ))}
       </Cluster>
     </fieldset>

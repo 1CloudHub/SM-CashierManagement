@@ -1,4 +1,6 @@
+import { CircleAlert } from 'lucide-react'
 import { useId } from 'react'
+import { useUiT } from '@/i18n/context'
 import { cn } from '@/lib/utils'
 
 /**
@@ -11,13 +13,14 @@ export function Label({
   children,
   ...props
 }: React.LabelHTMLAttributes<HTMLLabelElement> & { required?: boolean }) {
+  const t = useUiT()
   return (
     <label className={cn('text-label text-text', className)} {...props}>
       {children}
       {required && (
         <span className="text-danger">
           {' '}
-          *<span className="sr-only"> (required)</span>
+          *<span className="sr-only"> {t('ui.field.required')}</span>
         </span>
       )}
     </label>
@@ -83,9 +86,11 @@ export function Field({
       {error && (
         <p
           id={errorId}
-          className="flex items-center gap-1 text-body-sm text-on-danger-soft"
+          className="flex items-start gap-1 text-body-sm text-on-danger-soft"
         >
-          {error}
+          {/* Icon + text + colour: the message never relies on colour alone. */}
+          <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+          <span>{error}</span>
         </p>
       )}
     </div>

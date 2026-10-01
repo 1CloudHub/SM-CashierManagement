@@ -1,4 +1,5 @@
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { useUiT } from '@/i18n/context'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 
@@ -38,11 +39,11 @@ export function SideNav({
   sections,
   className,
   id = 'sidenav',
-  label = 'Main',
+  label,
   collapsed = false,
   onToggleCollapsed,
-  collapseLabel = 'Collapse navigation',
-  expandLabel = 'Expand navigation',
+  collapseLabel,
+  expandLabel,
 }: {
   sections: NavSection[]
   className?: string
@@ -56,10 +57,14 @@ export function SideNav({
   collapseLabel?: string
   expandLabel?: string
 }) {
+  const t = useUiT()
+  const toggleLabel = collapsed
+    ? (expandLabel ?? t('shell.navExpand'))
+    : (collapseLabel ?? t('shell.navCollapse'))
   return (
     <nav
       id={id}
-      aria-label={label}
+      aria-label={label ?? t('shell.navLabel')}
       data-collapsed={collapsed || undefined}
       className={cn(
         'flex flex-col gap-4 border-r border-outline bg-surface py-3 motion-base',
@@ -72,8 +77,8 @@ export function SideNav({
           <Button
             variant="ghost"
             size="icon"
-            aria-label={collapsed ? expandLabel : collapseLabel}
-            title={collapsed ? expandLabel : collapseLabel}
+            aria-label={toggleLabel}
+            title={toggleLabel}
             aria-expanded={!collapsed}
             aria-controls={id}
             onClick={onToggleCollapsed}

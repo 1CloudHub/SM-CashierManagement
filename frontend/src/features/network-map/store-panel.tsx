@@ -5,6 +5,7 @@ import { Cluster, Section, Stack } from '@/components/layout'
 import {
   Alert,
   Button,
+  Checkbox,
   Skeleton,
   StatusPill,
   Table,
@@ -195,15 +196,14 @@ export function StorePanel({
                 <TableBody>
                   {ranked.length === 0 && <TableEmpty colSpan={4}>{t('map.panel.none.eligible')}</TableEmpty>}
                   {ranked.map((c) => (
-                    <TableRow key={c.staffId}>
+                    <TableRow key={c.staffId} data-selected={picked.has(c.staffId) || undefined}>
                       <TableCell>
-                        <input
-                          type="checkbox"
-                          className="size-5 accent-primary"
+                        <Checkbox
+                          hideLabel
                           checked={picked.has(c.staffId) || offered.has(c.staffId)}
                           disabled={offered.has(c.staffId)}
                           onChange={() => toggle(c.staffId)}
-                          aria-label={t('map.panel.selectCandidate', { id: c.displayId })}
+                          label={t('map.panel.selectCandidate', { id: c.displayId })}
                         />
                       </TableCell>
                       <TableRowHeader>

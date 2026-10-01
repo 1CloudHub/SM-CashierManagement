@@ -1,6 +1,7 @@
 import { type VariantProps } from 'class-variance-authority'
 import { Loader2 } from 'lucide-react'
 import { forwardRef } from 'react'
+import { useUiT } from '@/i18n/context'
 import { cn } from '@/lib/utils'
 import { buttonVariants } from './button-variants'
 
@@ -29,7 +30,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       variant,
       size,
       loading = false,
-      loadingLabel = 'Working…',
+      loadingLabel,
       disabled,
       children,
       type = 'button',
@@ -37,6 +38,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref,
   ) {
+    const t = useUiT()
     if (import.meta.env?.DEV && size === 'icon' && !props['aria-label']) {
       // Icon-only buttons must carry an accessible name (UX-004).
       console.warn(
@@ -59,7 +61,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
               aria-hidden="true"
               className="size-4 motion-safe:animate-spin"
             />
-            <span className="sr-only">{loadingLabel}</span>
+            <span className="sr-only">{loadingLabel ?? t('ui.button.working')}</span>
           </>
         )}
         {children}

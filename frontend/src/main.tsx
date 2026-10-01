@@ -5,6 +5,10 @@ import { DevApp } from './app/dev-app'
 import { AuthNotConfigured, Root } from './app/root'
 import { createAmplifyAuthClient } from './features/auth/amplify-auth-client'
 import { loadRuntimeConfig } from './features/auth/runtime-config'
+import { initTheme } from './lib/theme'
+
+// Apply the persisted light/dark choice before the first render (SG-009).
+initTheme()
 
 const root = createRoot(document.getElementById('root')!)
 

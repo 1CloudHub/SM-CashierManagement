@@ -5,6 +5,7 @@ import { Cluster, Stack } from '@/components/layout'
 import {
   Alert,
   Button,
+  Checkbox,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -13,7 +14,6 @@ import {
   DialogTitle,
   Field,
   Input,
-  Label,
   Select,
   StateBlock,
   StatusPill,
@@ -142,16 +142,12 @@ export function ScenarioListScreen({ client, role, filters, onFiltersChange, onO
             </Select>
           )}
         </Field>
-        <Cluster gap={2} align="center" className="min-h-tap">
-          <input
-            id="scenarios-stale-only"
-            type="checkbox"
-            className="size-5 accent-primary"
-            checked={stale}
-            onChange={(e) => set({ stale: e.target.checked })}
-          />
-          <Label htmlFor="scenarios-stale-only">{t('scenarios.list.staleOnly')}</Label>
-        </Cluster>
+        <Checkbox
+          id="scenarios-stale-only"
+          label={t('scenarios.list.staleOnly')}
+          checked={stale}
+          onChange={(e) => set({ stale: e.target.checked })}
+        />
       </Cluster>
 
       {notice && <Alert tone={notice.tone} title={notice.text} />}

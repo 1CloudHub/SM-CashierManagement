@@ -186,6 +186,8 @@ describe('AppShell (mobile < tablet)', () => {
 
     await userEvent.keyboard('{Escape}')
 
+    // Below tablet the search form is not mounted inline, only in the dialog.
+    expect(screen.queryByRole('search')).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Search' }))
     expect(
       await screen.findByRole('dialog', { name: 'Search' }),
@@ -230,6 +232,9 @@ describe('AppShell (laptop and up)', () => {
     )
     // Exactly one "Main" navigation landmark (the docked nav) — unique.
     expect(screen.getByRole('navigation', { name: 'Main' })).toBeInTheDocument()
+    // Search is mounted once (inline), with no mobile search dialog/toggle.
+    expect(screen.getAllByRole('search')).toHaveLength(1)
+    expect(screen.queryByRole('button', { name: 'Search' })).not.toBeInTheDocument()
     expect(
       screen.getByRole('link', { name: 'Network view' }),
     ).toBeInTheDocument()
