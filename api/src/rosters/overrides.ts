@@ -183,3 +183,35 @@ export function checkOverride(plan: PlannedOverride, inputs: CheckInputs): Overr
   const result = evaluateRosterChange(before, after, inputs.rules, inputs.staff);
   return overrideCheckOf(result.newViolations.map(toBreach), result.blocking.map(toBreach));
 }
+
+/** One shift's change within a multi-shift change (a swap moves two shifts at once). */
+export interface ShiftChange {
+  readonly before: StoredShift;
+  /** The shift after the change (`null` = removed). */
+  readonly after: ShiftAfter | null;
+}
+
+/**
+ * P14 for several shifts changed together (task 18: an approved swap). Like
+ * `checkOverride`, only the cashiers on the changed shifts are compared, with
+ * all their other scheduled shifts around the change.
+ */
+export function checkChanges(changes: readonly ShiftChange[], inputs: CheckInputs): OverrideCheck {
+  const who = new Set(
+    changes.flatMap((c) => [c.before.staffId, c.after?.staffId ?? null]).filter((id): id is string => id !== null),
+  );
+  const contractOf = new Map(inputs.staff.map((s) => [s.id, s.contractType]));
+  const assigned = (s: { id: string; staffId: string | null } & Omit<StoredShift, 'id' | 'staffId' | 'rosterId' | 'status'>) =>
+    s.staffId !== null && who.has(s.staffId)
+      ? [toAssignedShift({ ...s, staffId: s.staffId }, contractOf.get(s.staffId) ?? 'FT')]
+      : [];
+  const changed = new Set(changes.map((c) => c.before.id));
+  const others = inputs.shifts.filter((s) => s.status === 'scheduled' && !changed.has(s.id));
+  const before = [...others, ...changes.map((c) => c.before).filter((s) => s.status === 'scheduled')].flatMap(assigned);
+  const after = [
+    ...others.flatMap(assigned),
+    ...changes.flatMap((c) => (c.after ? assigned({ id: c.before.id, ...c.after }) : [])),
+  ];
+  const result = evaluateRosterChange(before, after, inputs.rules, inputs.staff);
+  return overrideCheckOf(result.newViolations.map(toBreach), result.blocking.map(toBreach));
+}

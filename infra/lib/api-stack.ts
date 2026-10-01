@@ -179,6 +179,14 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'PUT', path: '/staff/{staffId}/availability' },
   { method: 'POST', path: '/staff/{staffId}/unavailable-dates' },
   { method: 'DELETE', path: '/staff/{staffId}/unavailable-dates/{entryId}' },
+  // Task 18: staff self-service — My roster (own shifts only) and time-off / swap requests (SCR-025, SCR-022).
+  { method: 'GET', path: '/me/roster' },
+  { method: 'GET', path: '/me/requests' },
+  { method: 'POST', path: '/me/requests' },
+  { method: 'GET', path: '/me/requests/swap-options' },
+  { method: 'POST', path: '/me/requests/{requestId}/cancel' },
+  { method: 'GET', path: '/stores/{storeId}/staff-requests' },
+  { method: 'POST', path: '/stores/{storeId}/staff-requests/{requestId}/decision' },
 ];
 
 /**

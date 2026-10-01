@@ -87,7 +87,7 @@ export function MyRoster({
                   const meal = s?.activities.find((a) => a.kind === 'meal')
                   return (
                     <li
-                      key={day.date}
+                      key={`${day.date}-${s?.id ?? day.absence ?? ''}`}
                       className={cn(
                         'border border-outline bg-surface p-3',
                         s?.edited && 'lw-edited',
@@ -100,6 +100,7 @@ export function MyRoster({
                         </h3>
                         <span className="flex flex-wrap gap-1">
                           {day.payday && <Pill>{f.t('roster.my.payday')}</Pill>}
+                          {day.pending && <Pill tone="info" fill="soft">{f.t('roster.my.pending')}</Pill>}
                           {s?.edited && (
                             <Pill tone="warning" fill="soft">
                               <span aria-hidden="true">✎</span> {f.t('roster.my.changed')}

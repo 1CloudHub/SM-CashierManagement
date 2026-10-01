@@ -201,6 +201,8 @@ export interface MyRosterDay {
   readonly payday?: boolean
   /** Previous times when a manager changed this shift. */
   readonly previous?: { readonly startMin: number; readonly endMin: number }
+  /** A time-off or swap request of theirs is pending on this shift (roster unchanged until approved). */
+  readonly pending?: boolean
 }
 
 export interface MyRosterWeek {
