@@ -52,6 +52,10 @@ export async function go(page: Page, path: string): Promise<void> {
     window.dispatchEvent(new PopStateEvent('popstate'))
   }, path)
   await expect(page).toHaveURL(new RegExp(`${escapeRe(path.split('?')[0] ?? path)}`))
+  // The route guard renders synchronously on the popstate; two animation
+  // frames later the new screen (or its "No access" page) is committed, so the
+  // previous screen's heading is never read by mistake.
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
   await expect(page.locator('h1').first()).toBeVisible()
 }
 
