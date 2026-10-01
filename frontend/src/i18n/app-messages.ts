@@ -87,14 +87,28 @@ export const appEn: Bundle = {
   'screen.notFound': 'Page not found',
 
   // ── Placeholder screens ─────────────────────────────────────────────────
-  'placeholder.title': 'Coming in task {task}',
-  'placeholder.description':
-    'This screen is part of the app map but isn’t built yet. It arrives with spec task {task}.',
+  'placeholder.title': 'This screen is not available yet',
+  'placeholder.description': 'It’s part of LaneWise but hasn’t been built yet. Use the menu to go to another screen.',
+  'placeholder.devTask': 'Task {task} · {screen}',
 
   // ── SCR-010 Home ────────────────────────────────────────────────────────
   'home.greeting.morning': 'Good morning, {name}',
   'home.greeting.afternoon': 'Good afternoon, {name}',
   'home.greeting.evening': 'Good evening, {name}',
+  'home.subtitle.ADM': 'Pending invitations and recent audit events.',
+  'home.subtitle.EXE': 'Plans waiting for your approval and the season’s headline numbers.',
+  'home.subtitle.PLN': 'What needs attention, upcoming deadlines and your recent scenarios.',
+  'home.subtitle.STM': 'This week’s roster, open shifts and labor-rule checks for your store.',
+  'home.subtitle.HR': 'Headcount approvals and the recruiting timeline.',
+  'home.subtitle.FIN': 'Budget approvals and season cost.',
+  'home.subtitle.RST': 'Data freshness and draft rule versions.',
+  'home.subtitle.STF': 'Your next shifts and any changes to them.',
+  'home.empty.title': 'Nothing needs your attention',
+  'home.empty.deadlines': 'No upcoming deadlines',
+  'home.empty.published': 'No published plan for this season yet',
+  'home.empty.draftRules': 'No draft rule versions',
+  'home.empty.shifts': 'No upcoming shifts',
+  'home.empty.scenarios': 'No scenarios yet',
   'home.error.title': 'We couldn’t load your home page',
   'home.link.review': 'Review',
   'home.link.open': 'Open',
@@ -179,6 +193,58 @@ export const appEn: Bundle = {
 
   // ── Cost visibility (task 21, requirement 25) ─────────────────────────
   'cost.hidden': 'Hidden for your role',
+
+  // ── SCR-091 Help (design.md › Cross-store matching, approval lifecycle; DOM-001) ──
+  'help.topics.label': 'Help topics',
+  'help.quickStart.title': 'Quick start for your role',
+  'help.quickStart.ADM':
+    'Invite people and give them roles in Users, check what each role can do in Roles and permissions, and review changes in the Audit log.',
+  'help.quickStart.EXE':
+    'Home shows plans waiting for you. Open Approvals to review a plan once HR has approved the headcount and Finance the budget, then approve it or ask for changes. The Leadership summary is the one-page view.',
+  'help.quickStart.PLN':
+    'Start on Home to see what needs attention. In Scenarios, create or duplicate a draft, run it, compare it with others, then submit it for approval. Use the Network view and Department day plan to find capacity gaps.',
+  'help.quickStart.STM':
+    'Open the Weekly roster for your store to fill open shifts, handle emergency time off and fix labor-rule checks. Use the Network map to find cover from nearby stores. Keep availability current in Staff and availability.',
+  'help.quickStart.HR':
+    'Review headcount requests in Approvals and follow the recruiting timeline and hiring waves in the Hiring plan.',
+  'help.quickStart.FIN':
+    'Review budget requests in Approvals and compare scenario costs. Rule versions that change wages or premiums need your approval before they go live.',
+  'help.quickStart.RST':
+    'Keep data fresh in Data sources and maintain the rule sets. A rule version that changes cost needs Finance approval before it is published.',
+  'help.quickStart.STF':
+    'My roster shows your next shifts and any changes. In Profile you can choose to share your home area to get open-shift offers from nearby stores.',
+  'help.methodology.intro':
+    'LaneWise turns sales history into a staffing plan in a fixed order of steps. Every result records the rules version and data snapshot it used, so you can see where a number came from.',
+  'help.methodology.forecast':
+    'Forecast: expected transactions for each department and time slot, from past sales on the same weekday and hour, scaled for the season.',
+  'help.methodology.lanes':
+    'Lanes: a queueing model (Erlang C) finds the fewest open lanes that meet the service target — for example, 90% of customers served within 60 seconds — up to the lanes installed.',
+  'help.methodology.shrinkage':
+    'Shrinkage: an uplift for breaks, meals, training and absence turns open lanes into the number of cashiers to roster.',
+  'help.methodology.roster':
+    'Shifts and roster: shifts cover the need with the fewest paid hours, then named cashiers are assigned within Philippine labor rules, such as at most 6 days in a row and at least 10 hours of rest between shifts.',
+  'help.methodology.hiring':
+    'Hiring plan and cost: the season’s need becomes headcount by store and role, phased by recruiting lead times. Cost is paid hours × wage rate × premiums (night, holiday, overtime).',
+  'help.matching.title': 'How cross-store matching ranks people',
+  'help.matching.intro':
+    'To cover an open shift, LaneWise lists only cashiers who are trained on the department, free in that time window, and would stay within every labor rule with their hours at all stores counted. It ranks them by:',
+  'help.matching.travel': 'Travel time from their home area to the store',
+  'help.matching.headroom': 'Labor-rule headroom — how far they are from a limit',
+  'help.matching.fairness': 'Fairness — fewest extra shifts this period',
+  'help.matching.cost': 'Cost — overtime or premium-day pay',
+  'help.matching.privacy':
+    'Sharing a home area is optional. It is stored at barangay level only, never an exact address, and you can stop sharing at any time.',
+  'help.approvals.title': 'Approval sequence: headcount, budget, plan',
+  'help.approvals.intro': 'When a planner submits a scenario, it needs three approvals before it is published:',
+  'help.approvals.headcount': 'Headcount — approved by HR.',
+  'help.approvals.budget': 'Budget — approved by Finance.',
+  'help.approvals.plan': 'Plan — approved by the Executive, once headcount and budget are both secured.',
+  'help.approvals.order':
+    'HR and Finance can decide in either order, or at the same time. Only the Executive can record headcount or budget as secured outside the system, with a reference and a note.',
+  'help.approvals.changes':
+    'If anyone asks for changes, the scenario goes back to Draft and every step starts again when it is resubmitted. Approving the plan publishes it and replaces the previous published plan.',
+  'help.support.body':
+    'For access, sign-in or data questions, contact your LaneWise System Admin. If an error page shows a reference ID, include it so the team can find what happened.',
 }
 
 export const appFil: Bundle = {
@@ -257,13 +323,28 @@ export const appFil: Bundle = {
   'screen.noAccess': 'Walang access',
   'screen.notFound': 'Hindi nahanap ang pahina',
 
-  'placeholder.title': 'Darating sa task {task}',
+  'placeholder.title': 'Hindi pa available ang screen na ito',
   'placeholder.description':
-    'Bahagi ng mapa ng app ang screen na ito pero hindi pa ito nagagawa. Darating ito kasama ng spec task {task}.',
+    'Bahagi ito ng LaneWise pero hindi pa nagagawa. Gamitin ang menu para pumunta sa ibang screen.',
+  'placeholder.devTask': 'Task {task} · {screen}',
 
   'home.greeting.morning': 'Magandang umaga, {name}',
   'home.greeting.afternoon': 'Magandang hapon, {name}',
   'home.greeting.evening': 'Magandang gabi, {name}',
+  'home.subtitle.ADM': 'Mga nakabinbing imbitasyon at mga kamakailang audit event.',
+  'home.subtitle.EXE': 'Mga planong naghihintay ng iyong pag-apruba at ang mga pangunahing numero ng season.',
+  'home.subtitle.PLN': 'Mga kailangang asikasuhin, paparating na deadline at ang iyong mga kamakailang scenario.',
+  'home.subtitle.STM': 'Ang roster ngayong linggo, mga bakanteng shift at labor-rule check ng iyong tindahan.',
+  'home.subtitle.HR': 'Mga pag-apruba ng headcount at ang timeline ng recruitment.',
+  'home.subtitle.FIN': 'Mga pag-apruba ng badyet at gastos sa season.',
+  'home.subtitle.RST': 'Kasariwaan ng datos at mga draft na bersyon ng panuntunan.',
+  'home.subtitle.STF': 'Ang iyong mga susunod na shift at anumang pagbabago sa mga ito.',
+  'home.empty.title': 'Walang kailangang asikasuhin',
+  'home.empty.deadlines': 'Walang paparating na deadline',
+  'home.empty.published': 'Wala pang na-publish na plano para sa season na ito',
+  'home.empty.draftRules': 'Walang draft na bersyon ng panuntunan',
+  'home.empty.shifts': 'Wala kang paparating na shift',
+  'home.empty.scenarios': 'Wala pang scenario',
   'home.error.title': 'Hindi namin ma-load ang iyong home page',
   'home.link.review': 'Suriin',
   'home.link.open': 'Buksan',
@@ -348,4 +429,55 @@ export const appFil: Bundle = {
 
   // ── Cost visibility (task 21, requirement 25) ─────────────────────────
   'cost.hidden': 'Nakatago para sa iyong tungkulin',
+
+  'help.topics.label': 'Mga paksa ng tulong',
+  'help.quickStart.title': 'Mabilis na simula para sa iyong tungkulin',
+  'help.quickStart.ADM':
+    'Mag-imbita ng mga tao at bigyan sila ng tungkulin sa Mga user, tingnan ang kaya ng bawat tungkulin sa Mga tungkulin at pahintulot, at suriin ang mga pagbabago sa Audit log.',
+  'help.quickStart.EXE':
+    'Ipinapakita ng Home ang mga planong naghihintay sa iyo. Buksan ang Mga pag-apruba para suriin ang plano kapag naaprubahan na ng HR ang headcount at ng Finance ang badyet, saka ito aprubahan o humingi ng pagbabago. Ang Buod para sa pamunuan ang isang-pahinang view.',
+  'help.quickStart.PLN':
+    'Magsimula sa Home para makita ang kailangang asikasuhin. Sa Mga scenario, gumawa o mag-duplicate ng draft, patakbuhin ito, ihambing sa iba, saka isumite para sa pag-apruba. Gamitin ang Network view at Plano ng departamento sa araw para makita ang kakulangan sa kapasidad.',
+  'help.quickStart.STM':
+    'Buksan ang Lingguhang roster ng iyong tindahan para punan ang mga bakanteng shift, asikasuhin ang biglaang pagliban at ayusin ang mga labor-rule check. Gamitin ang Mapa ng network para makahanap ng kapalit mula sa malapit na tindahan. Panatilihing updated ang availability sa Staff at availability.',
+  'help.quickStart.HR':
+    'Suriin ang mga hiling sa headcount sa Mga pag-apruba at sundan ang timeline ng recruitment at mga wave ng pag-hire sa Plano sa pag-hire.',
+  'help.quickStart.FIN':
+    'Suriin ang mga hiling sa badyet sa Mga pag-apruba at ihambing ang gastos ng mga scenario. Kailangan ng iyong pag-apruba ang mga bersyon ng panuntunan na nagbabago ng sahod o premium bago ito gamitin.',
+  'help.quickStart.RST':
+    'Panatilihing sariwa ang datos sa Mga pinagmulan ng datos at alagaan ang mga hanay ng panuntunan. Kailangan ng pag-apruba ng Finance ang bersyon ng panuntunan na nagbabago ng gastos bago ito i-publish.',
+  'help.quickStart.STF':
+    'Ipinapakita ng Aking roster ang iyong mga susunod na shift at anumang pagbabago. Sa Profile, puwede mong piliing ibahagi ang iyong home area para makatanggap ng alok na shift mula sa malapit na tindahan.',
+  'help.methodology.intro':
+    'Ginagawang staffing plan ng LaneWise ang kasaysayan ng benta sa nakatakdang pagkakasunod-sunod ng hakbang. Itinatala ng bawat resulta ang bersyon ng panuntunan at snapshot ng datos na ginamit, para makita mo kung saan nanggaling ang numero.',
+  'help.methodology.forecast':
+    'Forecast: inaasahang transaksyon sa bawat departamento at oras, mula sa nakaraang benta sa parehong araw ng linggo at oras, inayon sa season.',
+  'help.methodology.lanes':
+    'Mga lane: hinahanap ng isang queueing model (Erlang C) ang pinakakaunting bukas na lane na aabot sa target na serbisyo — halimbawa, 90% ng customer ang naseserbisyuhan sa loob ng 60 segundo — hanggang sa bilang ng nakakabit na lane.',
+  'help.methodology.shrinkage':
+    'Shrinkage: dagdag para sa break, pagkain, training at pagliban para maging bilang ng cashier na ilalagay sa roster ang mga bukas na lane.',
+  'help.methodology.roster':
+    'Mga shift at roster: tinutugunan ng mga shift ang pangangailangan sa pinakakaunting bayad na oras, saka itinatalaga ang mga cashier ayon sa mga batas sa paggawa ng Pilipinas, gaya ng hanggang 6 na sunod-sunod na araw at hindi bababa sa 10 oras na pahinga sa pagitan ng shift.',
+  'help.methodology.hiring':
+    'Plano sa pag-hire at gastos: nagiging headcount ayon sa tindahan at tungkulin ang pangangailangan sa season, hinati ayon sa lead time ng recruitment. Ang gastos ay bayad na oras × rate ng sahod × mga premium (gabi, holiday, overtime).',
+  'help.matching.title': 'Paano niraranggo ng cross-store matching ang mga tao',
+  'help.matching.intro':
+    'Para punan ang bakanteng shift, inililista lang ng LaneWise ang mga cashier na trained sa departamento, bakante sa oras na iyon, at mananatili sa loob ng bawat batas sa paggawa kapag binilang ang oras nila sa lahat ng tindahan. Niraranggo sila ayon sa:',
+  'help.matching.travel': 'Oras ng biyahe mula sa kanilang home area papunta sa tindahan',
+  'help.matching.headroom': 'Puwang sa labor rule — gaano pa sila kalayo sa limitasyon',
+  'help.matching.fairness': 'Pagiging patas — pinakakaunting dagdag na shift ngayong panahon',
+  'help.matching.cost': 'Gastos — bayad sa overtime o premium na araw',
+  'help.matching.privacy':
+    'Opsyonal ang pagbabahagi ng home area. Barangay lang ang itinatabi, hindi kailanman eksaktong address, at puwede kang huminto sa pagbabahagi anumang oras.',
+  'help.approvals.title': 'Pagkakasunod-sunod ng pag-apruba: headcount, badyet, plano',
+  'help.approvals.intro': 'Kapag nagsumite ang planner ng scenario, kailangan nito ng tatlong pag-apruba bago ma-publish:',
+  'help.approvals.headcount': 'Headcount — inaaprubahan ng HR.',
+  'help.approvals.budget': 'Badyet — inaaprubahan ng Finance.',
+  'help.approvals.plan': 'Plano — inaaprubahan ng Executive, kapag secured na ang headcount at badyet.',
+  'help.approvals.order':
+    'Puwedeng magpasya ang HR at Finance sa anumang pagkakasunod-sunod, o sabay. Ang Executive lang ang puwedeng magtala na secured ang headcount o badyet sa labas ng system, may reference at tala.',
+  'help.approvals.changes':
+    'Kapag may humingi ng pagbabago, babalik sa Draft ang scenario at uulit ang bawat hakbang kapag muling isinumite. Kapag inaprubahan ang plano, mapa-publish ito at papalitan ang dating na-publish na plano.',
+  'help.support.body':
+    'Para sa tanong tungkol sa access, pag-sign in o datos, makipag-ugnayan sa iyong LaneWise System Admin. Kung may reference ID sa pahina ng error, isama ito para makita ng team kung ano ang nangyari.',
 }

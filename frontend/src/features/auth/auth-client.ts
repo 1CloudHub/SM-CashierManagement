@@ -11,6 +11,8 @@
 export interface AuthUser {
   readonly userId: string
   readonly email: string
+  /** Display name (Cognito `name` attribute), when the directory has one. */
+  readonly name?: string
 }
 
 /** A registered passkey (WebAuthn credential). */

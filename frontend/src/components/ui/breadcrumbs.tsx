@@ -1,5 +1,6 @@
 import { ChevronRight } from 'lucide-react'
 import { Fragment } from 'react'
+import { useUiT } from '@/i18n/context'
 import { cn } from '@/lib/utils'
 
 export interface Crumb {
@@ -19,8 +20,9 @@ export function Breadcrumbs({
   items: Crumb[]
   className?: string
 }) {
+  const t = useUiT()
   return (
-    <nav aria-label="Breadcrumb" className={cn('text-body-sm', className)}>
+    <nav aria-label={t('ui.breadcrumb')} className={cn('text-body-sm', className)}>
       <ol className="flex flex-wrap items-center gap-1 text-text-muted">
         {items.map((item, i) => {
           const last = i === items.length - 1

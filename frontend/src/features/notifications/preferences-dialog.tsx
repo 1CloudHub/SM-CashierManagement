@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Stack } from '@/components/layout'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { CardSkeleton } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow, TableRowHeader } from '@/components/ui/table'
@@ -139,11 +140,10 @@ function PreferencesForm({
                                 {t('notifications.prefs.alwaysOn')}
                               </span>
                             ) : (
-                              <input
-                                type="checkbox"
-                                className="size-5 accent-primary focus-visible:outline-focus-ring"
+                              <Checkbox
+                                hideLabel
                                 checked={p[channel]}
-                                aria-label={t('notifications.prefs.toggle', {
+                                label={t('notifications.prefs.toggle', {
                                   category: label,
                                   channel: t(channel === 'inApp' ? 'notifications.prefs.inApp' : 'notifications.prefs.email'),
                                 })}

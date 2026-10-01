@@ -24,6 +24,7 @@
   --color-on-primary: var(--lw-on-primary);
   --color-primary-soft: var(--lw-primary-soft);
   --color-on-primary-soft: var(--lw-on-primary-soft);
+  --color-primary-hover: var(--lw-primary-hover);
 
   --color-accent: var(--lw-accent);
   --color-on-accent: var(--lw-on-accent);
@@ -42,6 +43,7 @@
   --color-on-danger: var(--lw-on-danger);
   --color-danger-soft: var(--lw-danger-soft);
   --color-on-danger-soft: var(--lw-on-danger-soft);
+  --color-danger-hover: var(--lw-danger-hover);
 
   --color-info: var(--lw-info);
   --color-on-info: var(--lw-on-info);

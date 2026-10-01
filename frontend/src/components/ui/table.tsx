@@ -80,7 +80,14 @@ export function TableRow({
 }: React.HTMLAttributes<HTMLTableRowElement>) {
   return (
     <tr
-      className={cn('border-b border-outline-subtle last:border-b-0', className)}
+      className={cn(
+        // Hover steps the surface; a selected row (`data-selected`, set
+        // alongside aria-selected or a checked row checkbox, which carry the
+        // state for AT) takes the primary-soft selection fill.
+        'border-b border-outline-subtle last:border-b-0 motion-interactive hover:bg-surface-2',
+        'data-[selected]:bg-primary-soft data-[selected]:hover:bg-primary-soft',
+        className,
+      )}
       {...props}
     />
   )

@@ -1,6 +1,7 @@
 import { useId, useState, type ReactNode } from 'react'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Radio } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -381,38 +382,37 @@ export function ShiftEditor({
                   {f.t('roster.editor.replacement')}
                 </legend>
                 {replacements.map((r) => (
-                  <label key={r.cashierId} className="flex min-h-tap items-center gap-2 text-body-sm">
-                    <input
-                      type="radio"
-                      name={`${uid}-replacement`}
-                      value={r.cashierId}
-                      checked={replacement === r.cashierId}
-                      disabled={r.blocked}
-                      onChange={() => setReplacement(r.cashierId)}
-                    />
-                    <span className={cn(r.blocked && 'text-text-muted')}>
-                      {r.label}{' '}
-                      <span aria-hidden="true">{r.blocked ? '⛔' : r.eligible ? '✓' : '⚠'}</span>
-                      <span className="sr-only">
-                        {r.blocked
-                          ? f.t('roster.editor.blockedRule')
-                          : r.eligible
-                            ? f.t('roster.editor.eligible')
-                            : f.t('roster.editor.breaksRule')}
-                      </span>
-                    </span>
-                  </label>
-                ))}
-                <label className="flex min-h-tap items-center gap-2 text-body-sm">
-                  <input
-                    type="radio"
+                  <Radio
+                    key={r.cashierId}
+                    className="text-body-sm"
+                    label={
+                      <>
+                        {r.label}{' '}
+                        <span aria-hidden="true">{r.blocked ? '⛔' : r.eligible ? '✓' : '⚠'}</span>
+                        <span className="sr-only">
+                          {r.blocked
+                            ? f.t('roster.editor.blockedRule')
+                            : r.eligible
+                              ? f.t('roster.editor.eligible')
+                              : f.t('roster.editor.breaksRule')}
+                        </span>
+                      </>
+                    }
+                    disabled={r.blocked}
                     name={`${uid}-replacement`}
-                    value={NEARBY}
-                    checked={replacement === NEARBY}
-                    onChange={() => setReplacement(NEARBY)}
+                    value={r.cashierId}
+                    checked={replacement === r.cashierId}
+                    onChange={() => setReplacement(r.cashierId)}
                   />
-                  {f.t('roster.editor.findNearby')}
-                </label>
+                ))}
+                <Radio
+                  className="text-body-sm"
+                  label={f.t('roster.editor.findNearby')}
+                  name={`${uid}-replacement`}
+                  value={NEARBY}
+                  checked={replacement === NEARBY}
+                  onChange={() => setReplacement(NEARBY)}
+                />
               </fieldset>
               <Field label={f.t('roster.editor.reason')}>
                 {(aria) => (

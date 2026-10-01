@@ -17,6 +17,7 @@ import {
   Button,
   Card,
   CardTitle,
+  Checkbox,
   Field,
   Input,
   Select,
@@ -395,16 +396,12 @@ export function UploadScreen({ api, onDone, initialType = 'pos', role }: UploadS
               </Grid>
               <fieldset className="flex flex-col gap-2">
                 <legend className="text-label text-text">{t('data.upload.flags')}</legend>
-                <Cluster gap={2} as="label" htmlFor={`${ids}-synthetic`} className="min-h-tap text-body text-text">
-                  <input
-                    id={`${ids}-synthetic`}
-                    type="checkbox"
-                    className="size-5 accent-primary"
-                    checked={synthetic}
-                    onChange={(e) => setSynthetic(e.target.checked)}
-                  />
-                  {t('data.upload.synthetic')}
-                </Cluster>
+                <Checkbox
+                  id={`${ids}-synthetic`}
+                  label={t('data.upload.synthetic')}
+                  checked={synthetic}
+                  onChange={(e) => setSynthetic(e.target.checked)}
+                />
                 <p className="text-body-sm text-text-muted">{t('data.upload.synthetic.hint')}</p>
               </fieldset>
               <Cluster gap={3}>
@@ -631,23 +628,14 @@ export function UploadScreen({ api, onDone, initialType = 'pos', role }: UploadS
             </dl>
             <ImpactNotice detail={detail} dataset={typeLabel(datasetType)} />
             {hasWarnings && (
-              <Cluster
-                gap={2}
-                as="label"
-                htmlFor={`${ids}-confirm`}
-                wrap={false}
-                align="start"
-                className="min-h-tap text-body text-text"
-              >
-                <input
-                  id={`${ids}-confirm`}
-                  type="checkbox"
-                  className="mt-0.5 size-5 shrink-0 accent-primary"
-                  checked={confirmWarnings}
-                  onChange={(e) => setConfirmWarnings(e.target.checked)}
-                />
-                {plural(t, 'data.upload.confirmWarnings', run.warningCount, { n: formatNumber(run.warningCount) })}
-              </Cluster>
+              <Checkbox
+                id={`${ids}-confirm`}
+                className="items-start"
+                inputClassName="mt-1"
+                label={plural(t, 'data.upload.confirmWarnings', run.warningCount, { n: formatNumber(run.warningCount) })}
+                checked={confirmWarnings}
+                onChange={(e) => setConfirmWarnings(e.target.checked)}
+              />
             )}
             {loadError && <ErrorAlert error={loadError} />}
             <Cluster gap={3}>

@@ -8,6 +8,7 @@ import {
   useState,
 } from 'react'
 import { X } from 'lucide-react'
+import { useUiT } from '@/i18n/context'
 import { cn } from '@/lib/utils'
 import { Button } from './button'
 import { STATUS_META, type StatusTone } from './status'
@@ -21,6 +22,10 @@ import { STATUS_META, type StatusTone } from './status'
  * and are announced politely; error toasts are announced assertively and do
  * NOT auto-dismiss (the user must see and act). Every toast pairs icon + text +
  * colour. The rise-in / fade-out motion drops to a fade under reduced motion.
+ *
+ * Timing (WCAG 2.2.1): the auto-dismiss countdown pauses while the pointer is
+ * over a toast or focus is inside it, and resumes with the time that was left.
+ * The viewport sits inside the device safe area (notches, home indicator).
  *
  * Usage: wrap the app in <ToastProvider>; call const { toast } = useToast().
  */
@@ -91,14 +96,15 @@ function ToastViewport({
   toasts: ToastItem[]
   onDismiss: (id: number) => void
 }) {
+  const t = useUiT()
   return (
     <div
       // A labelled region wrapping the toasts; each toast is its own live area
       // (status/alert) and sets its own politeness. role="region" makes the
       // aria-label valid (a bare div may not carry an accessible name).
       role="region"
-      aria-label="Notifications"
-      className="pointer-events-none fixed bottom-4 right-4 z-[60] flex w-full max-w-sm flex-col gap-2"
+      aria-label={t('ui.toast.region')}
+      className="pointer-events-none fixed bottom-[max(var(--lw-space-4),env(safe-area-inset-bottom))] right-[max(var(--lw-space-4),env(safe-area-inset-right))] z-[60] flex w-[calc(100%-2*var(--lw-space-4))] max-w-sm flex-col gap-2"
     >
       {toasts.map((t) => (
         <ToastCard key={t.id} toast={t} onDismiss={onDismiss} />
@@ -114,20 +120,36 @@ function ToastCard({
   toast: ToastItem
   onDismiss: (id: number) => void
 }) {
+  const t = useUiT()
   const meta = STATUS_META[toast.tone]
   const Icon = meta.icon
   const assertive = toast.tone === 'danger'
+  const [hovered, setHovered] = useState(false)
+  const [focusWithin, setFocusWithin] = useState(false)
+  const paused = hovered || focusWithin
+  // Time left on the countdown; kept across pauses so resuming continues it.
+  const remaining = useRef(toast.durationMs)
 
   useEffect(() => {
-    if (toast.durationMs <= 0) return
-    const timer = window.setTimeout(() => onDismiss(toast.id), toast.durationMs)
-    return () => window.clearTimeout(timer)
-  }, [toast.durationMs, toast.id, onDismiss])
+    if (toast.durationMs <= 0 || paused) return
+    const started = Date.now()
+    const timer = window.setTimeout(() => onDismiss(toast.id), remaining.current)
+    return () => {
+      window.clearTimeout(timer)
+      remaining.current = Math.max(0, remaining.current - (Date.now() - started))
+    }
+  }, [paused, toast.durationMs, toast.id, onDismiss])
 
   return (
     <div
       role={assertive ? 'alert' : 'status'}
       aria-live={assertive ? 'assertive' : 'polite'}
+      onPointerEnter={() => setHovered(true)}
+      onPointerLeave={() => setHovered(false)}
+      onFocus={() => setFocusWithin(true)}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) setFocusWithin(false)
+      }}
       className={cn(
         'pointer-events-auto flex items-start gap-3 border p-3 motion-safe:animate-toast-in',
         meta.soft,
@@ -144,9 +166,9 @@ function ToastCard({
       <Button
         size="icon"
         variant="ghost"
-        aria-label="Dismiss notification"
+        aria-label={t('ui.toast.dismiss')}
         onClick={() => onDismiss(toast.id)}
-        className="-mr-1 -mt-1 size-8 min-h-0 min-w-0 shrink-0"
+        className="-my-2 -mr-2 shrink-0"
       >
         <X aria-hidden="true" className="size-4" />
       </Button>

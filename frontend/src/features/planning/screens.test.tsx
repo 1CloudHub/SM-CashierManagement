@@ -204,7 +204,7 @@ describe('SCR-024 leadership summary (Req 10.3, 18.3)', () => {
 
   it('is not available to Store Managers (matrix)', () => {
     renderApp({ path: '/plan/summary', role: 'STM' })
-    expect(screen.getByRole('heading', { level: 1, name: 'No access' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: /You do not have access/ })).toBeInTheDocument()
   })
 })
 

@@ -5,6 +5,7 @@ import { AppLink, useRouter } from '@/app/router'
 import { useAnnouncer } from '@/components/a11y'
 import { Cluster, Stack } from '@/components/layout'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -126,16 +127,12 @@ export function SavedViewsDialog({
                 />
               )}
             </Field>
-            <Cluster gap={2} as="label" htmlFor={defaultId} className="min-h-tap text-body text-text">
-              <input
-                id={defaultId}
-                type="checkbox"
-                className="size-5 accent-primary"
-                checked={makeDefault}
-                onChange={(e) => setMakeDefault(e.target.checked)}
-              />
-              {t('savedViews.defaultLabel')}
-            </Cluster>
+            <Checkbox
+              id={defaultId}
+              label={t('savedViews.defaultLabel')}
+              checked={makeDefault}
+              onChange={(e) => setMakeDefault(e.target.checked)}
+            />
             <DialogFooter>
               <DialogClose asChild>
                 <Button type="button">{t('action.cancel')}</Button>
