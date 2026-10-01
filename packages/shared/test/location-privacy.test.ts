@@ -48,8 +48,10 @@ describe('findFineLocation (P15 guard)', () => {
         fc.double({ min: 4, max: 21, noNaN: true }),
         fc.double({ min: 116, max: 127, noNaN: true }),
         (lat, lon) => {
-          const a = Math.round(lat * 1e5) / 1e5 + 0.00001;
-          const b = Math.round(lon * 1e5) / 1e5 + 0.00001;
+          // Always five decimals ending in 1, never an integer (5.99999 + 0.00001 would be 6).
+          const fine = (x: number) => Number((Math.floor(x) + 0.10001 + Math.floor((x - Math.floor(x)) * 800) / 1000).toFixed(5));
+          const a = fine(lat);
+          const b = fine(lon);
           expect(findFineLocation({ where: a })).not.toEqual([]);
           expect(findFineLocation({ note: `${a.toFixed(5)}, ${b.toFixed(5)}` })).not.toEqual([]);
         },
