@@ -38,6 +38,7 @@ import {
   type WageRuleVersion,
 } from '@lanewise/domain';
 import {
+  DEFAULT_SCENARIO_SETTINGS,
   ENGINE_SETTING_DEFAULTS,
   type FtShiftPattern,
   type ScenarioDepartmentBaseline,
@@ -326,6 +327,28 @@ function overrideModel(
     };
   }
   return next;
+}
+
+/**
+ * The engine context for pinned inputs (task 14 reuses it for the network
+ * view, department plan and background jobs). Only growth and part-time are
+ * taken from `settings` — callers memoise on those two — so the SCR-031 rule
+ * and department overrides apply to scenario runs (`runScenarioEngine`) only.
+ * Throws `EngineInputError` for uploaded data, which the engine cannot read yet.
+ */
+export function planningContextFor(input: {
+  readonly settings: Pick<ScenarioSettingsValues, 'growth' | 'allowPartTime'>;
+  readonly snapshots: readonly PinnedSnapshot[];
+  readonly ruleVersions: readonly PinnedRuleVersion[];
+}): PlanningContext {
+  const pos = input.snapshots.find((s) => s.datasetType === 'pos');
+  if (!pos) throw new EngineInputError('The scenario has no POS snapshot pinned.');
+  const settings: ScenarioSettingsValues = {
+    ...DEFAULT_SCENARIO_SETTINGS,
+    growth: input.settings.growth,
+    allowPartTime: input.settings.allowPartTime,
+  };
+  return contextFor(pos, ruleSetFromPins(input.ruleVersions), settings);
 }
 
 function contextFor(snapshot: PinnedSnapshot, rules: RuleSet, settings: ScenarioSettingsValues): PlanningContext {

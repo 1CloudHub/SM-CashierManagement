@@ -157,8 +157,11 @@ export interface OpenShift {
 
 export interface RosterTotals {
   readonly shifts: number
-  /** Total labour cost in pesos. */
-  readonly cost: number
+  /**
+   * Total labour cost in pesos. Omitted when the source carries no ₱ figures
+   * (the published-roster API, task 13.4) — the row is then not shown.
+   */
+  readonly cost?: number
   readonly paidHours: number
   readonly openShifts: number
   readonly borrowed: number

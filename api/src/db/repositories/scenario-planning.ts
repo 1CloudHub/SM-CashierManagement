@@ -109,7 +109,7 @@ const SELECT_LIST = `
            WHERE p.scenario_id = s.id AND p.dataset_type = 'pos') AS data_as_of,
          (SELECT max(v.published_at) FROM scenario_rule_version p JOIN rule_version v ON v.id = p.rule_version_id
            WHERE p.scenario_id = s.id) AS rules_as_of,
-         EXISTS (SELECT 1 FROM scenario_run r WHERE r.scenario_id = s.id AND r.status = 'succeeded') AS has_succeeded_run,
+         EXISTS (SELECT 1 FROM scenario_run r WHERE r.scenario_id = s.id AND r.run_type = 'network' AND r.status = 'succeeded') AS has_succeeded_run,
          coalesce((SELECT json_agg(json_build_object('dataset_type', p.dataset_type, 'snapshot_id', p.snapshot_id))
                      FROM scenario_snapshot p WHERE p.scenario_id = s.id), '[]') AS snapshots,
          coalesce((SELECT json_agg(json_build_object('rule_set_id', r.rule_set_id, 'rule_version_id', r.rule_version_id))
@@ -316,6 +316,7 @@ export interface StoredRun {
   readonly results: StoredRunResults | null;
 }
 
+/** The latest scenario run (network runs only; hiring and roster jobs are task 14 background jobs). */
 export async function getLatestRun(db: Queryable, scenarioId: string): Promise<StoredRun | null> {
   const row = await queryMaybe<{
     id: string;
@@ -334,7 +335,7 @@ export async function getLatestRun(db: Queryable, scenarioId: string): Promise<S
             coalesce((SELECT array_agg(x.rule_version_id ORDER BY x.rule_version_id)
                         FROM scenario_run_rule_version x WHERE x.run_id = r.id), '{}') AS rule_version_ids,
             (SELECT res.results FROM scenario_run_result res WHERE res.run_id = r.id) AS results
-       FROM scenario_run r WHERE r.scenario_id = $1
+       FROM scenario_run r WHERE r.scenario_id = $1 AND r.run_type = 'network'
       ORDER BY r.created_at DESC, r.id DESC LIMIT 1`,
     [scenarioId],
   );

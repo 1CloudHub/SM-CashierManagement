@@ -19,7 +19,6 @@ import {
   APPROVER_ROLE_BY_STEP,
   DECISION_STATUS,
   decisionBlocker,
-  isPlanReady,
   outsideRecordBlocker,
   type ApprovalBlocker,
   type ApprovalDecision,
@@ -36,7 +35,6 @@ import type pg from 'pg';
 import type { AuditedTx } from '../audit.js';
 import type { Queryable } from '../pool.js';
 import { isoOrNull, queryMaybe } from '../rows.js';
-import { notifyApproval } from './approval-notifications.js';
 import { syncStaleFlag } from './scenario-planning.js';
 import { approvePlanAndPublish, decideApprovalStep, recordSecuredOutside, ScenarioStateError } from './scenarios.js';
 
@@ -239,34 +237,6 @@ export async function refreshPause(db: pg.Pool, scenarioId: string): Promise<voi
   }
 }
 
-async function afterSecured(
-  tx: AuditedTx,
-  ctx: Awaited<ReturnType<typeof lockedState>>,
-  step: OutsideStep,
-  how: 'approved' | 'secured_outside',
-): Promise<void> {
-  const { header, name } = ctx;
-  await notifyApproval(tx, {
-    event: 'approval.step_secured',
-    scenarioId: header.id,
-    severity: 'info',
-    params: { name, step, how },
-    synthetic: header.synthetic,
-    roles: ['EXE', 'HR', 'FIN'],
-    userIds: [header.submittedBy?.id ?? header.ownerId],
-  });
-  const after = { ...ctx.state, steps: ctx.state.steps.map((s) => (s.submissionNo === header.submissionNo && s.step === step ? { ...s, status: how } : s)) };
-  if (isPlanReady(after)) {
-    await notifyApproval(tx, {
-      event: 'approval.plan_ready',
-      scenarioId: header.id,
-      severity: 'warning',
-      params: { name },
-      synthetic: header.synthetic,
-      roles: ['EXE'],
-    });
-  }
-}
 
 export interface DecideInput {
   readonly scenarioId: string;
@@ -285,21 +255,12 @@ export async function decide(tx: AuditedTx, input: DecideInput): Promise<{ publi
   const ctx = await lockedState(tx, input.scenarioId, input.submissionNo);
   const blocker = decisionBlocker(tx.actor.activeRole, ctx.state, input.step);
   if (blocker) throw new ApprovalBlockedError(blocker);
-  const { header, name } = ctx;
+  const { header } = ctx;
   const comment = input.comment?.trim() || undefined;
 
   if (input.step === 'plan' && input.decision === 'approve') {
-    const peer = await publishedPeer(tx, header.season, header.synthetic, header.id);
+    // Notifications (scenario.published) come from approvePlanAndPublish (task 19 events).
     await approvePlanAndPublish(tx, header.id, comment);
-    await notifyApproval(tx, {
-      event: 'scenario.published',
-      scenarioId: header.id,
-      severity: 'info',
-      params: { name, supersededScenarioId: peer?.id ?? null, supersededName: peer?.name ?? null },
-      synthetic: header.synthetic,
-      roles: ['EXE', 'PLN', 'STM', 'HR', 'FIN', 'STF'],
-      userIds: [header.submittedBy?.id ?? header.ownerId],
-    });
     return { published: true };
   }
 
@@ -310,19 +271,7 @@ export async function decide(tx: AuditedTx, input: DecideInput): Promise<{ publi
     decision: status as 'approved' | 'changes_requested' | 'rejected',
     ...(comment ? { comment } : {}),
   });
-  if (input.decision === 'approve') {
-    await afterSecured(tx, ctx, input.step as OutsideStep, 'approved');
-  } else {
-    await notifyApproval(tx, {
-      event: input.decision === 'reject' ? 'approval.rejected' : 'approval.changes_requested',
-      scenarioId: header.id,
-      severity: 'warning',
-      params: { name, step: input.step, comment: comment ?? '' },
-      synthetic: header.synthetic,
-      roles: ['EXE', 'HR', 'FIN', 'PLN'],
-      userIds: [header.submittedBy?.id ?? header.ownerId],
-    });
-  }
+  // Secured / decided / plan-ready notifications come from decideApprovalStep (task 19 events).
   return { published: false };
 }
 
@@ -340,5 +289,5 @@ export async function recordOutside(tx: AuditedTx, input: OutsideInput): Promise
   const blocker = outsideRecordBlocker(tx.actor.activeRole, ctx.state, input.step);
   if (blocker) throw new ApprovalBlockedError(blocker);
   await recordSecuredOutside(tx, { scenarioId: input.scenarioId, step: input.step, reference: input.reference.trim(), note: input.note.trim() });
-  await afterSecured(tx, ctx, input.step, 'secured_outside');
+  // The secured notification comes from recordSecuredOutside (task 19 events).
 }
