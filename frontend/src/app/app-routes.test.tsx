@@ -98,7 +98,8 @@ describe('no access (requirement 2.4)', () => {
     expect(container).not.toHaveTextContent('scn-secret-42')
     expect(container).not.toHaveTextContent('Scenario settings')
     expect(document.title).toBe('No access — LaneWise')
-    expect(log).toHaveLength(0)
+    // Only the shell's own bell (the caller's notifications, task 19) may load; nothing for the denied screen.
+    expect(log.filter((r) => !r.path.startsWith('/notifications'))).toHaveLength(0)
     expect(await axe(container)).toHaveNoViolations()
   })
 

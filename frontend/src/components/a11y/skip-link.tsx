@@ -36,7 +36,7 @@ export function SkipLink({
         // display:none (which would remove it), then revealed on focus.
         'sr-only',
         'focus-visible:not-sr-only focus-visible:fixed focus-visible:left-2 focus-visible:top-2 focus-visible:z-[70]',
-        'focus-visible:border-2 focus-visible:border-outline focus-visible:bg-surface',
+        'focus-visible:border focus-visible:border-outline focus-visible:bg-surface',
         'focus-visible:px-3 focus-visible:py-2 focus-visible:text-body focus-visible:text-text focus-visible:no-underline',
         'focus-visible:outline-focus-ring',
         className,

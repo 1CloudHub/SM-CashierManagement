@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useCallback, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import {
   Dialog,
@@ -27,6 +27,9 @@ import { useMediaQuery } from './use-media-query'
  *   - Laptop (≥1024) / Desktop (≥1440): expanded left nav beside the content.
  *   - Tablet (600–1023): the nav collapses to an icon-only rail (SideNav
  *     `collapsed`).
+ *   - Tablet and up, the user can collapse/expand the docked nav with the
+ *     icon toggle at its top; the choice overrides the breakpoint default and
+ *     persists per browser (localStorage `lw.nav.collapsed`).
  *   - Mobile (<600): the nav moves into a ≡ drawer (TopBar menu toggle opens a
  *     left Drawer), and global search becomes an icon that opens a full-screen
  *     search dialog.
@@ -63,6 +66,9 @@ export interface AppShellProps {
   mainLabel?: string
   /** Label for the skip link (from the i18n bundle; sensible default). */
   skipLinkLabel?: string
+  /** Accessible names for the nav collapse/expand toggle (i18n). */
+  navCollapseLabel?: string
+  navExpandLabel?: string
   children?: ReactNode
 }
 
@@ -74,18 +80,27 @@ export function AppShell({
   breadcrumbs,
   sampleDataBanner,
   contextBar,
-  width = 'laptop',
+  width = 'fluid',
   navLabel = 'Main',
   mainLabel = 'Main content',
   skipLinkLabel,
+  navCollapseLabel,
+  navExpandLabel,
   children,
 }: AppShellProps) {
   const [navOpen, setNavOpen] = useState(false)
+  const [navCollapsedPref, setNavCollapsedPref] = useState<boolean | null>(readNavPref)
   const [searchOpen, setSearchOpen] = useState(false)
 
   // Design breakpoints (tokens): tablet 600, laptop 1024.
   const isTabletUp = useMediaQuery('(min-width: 37.5rem)')
   const isLaptopUp = useMediaQuery('(min-width: 64rem)')
+  const navCollapsed = navCollapsedPref ?? !isLaptopUp
+  const toggleNav = useCallback(() => {
+    const next = !navCollapsed
+    setNavCollapsedPref(next)
+    writeNavPref(next)
+  }, [navCollapsed])
 
   return (
     <div className="min-h-screen bg-bg text-text">
@@ -99,26 +114,35 @@ export function AppShell({
         search={search}
         onSearchToggle={search ? () => setSearchOpen(true) : undefined}
         trailing={trailing}
+        onNavToggle={isTabletUp ? toggleNav : undefined}
+        navCollapsed={navCollapsed}
+        navCollapseLabel={navCollapseLabel}
+        navExpandLabel={navExpandLabel}
       />
 
       {/* Tablet and up: a single docked nav beside content — an icon rail at
           tablet, expanded from laptop up (breakpoints table). Rendering one
           nav keeps the navigation landmark unique. */}
-      <div className={cn(isTabletUp && 'grid grid-cols-[auto_1fr]')}>
+      <div
+        className={cn(
+          'min-h-[calc(100dvh-var(--lw-topbar-h))]',
+          isTabletUp && 'grid grid-cols-[auto_1fr]',
+        )}
+      >
         {isTabletUp && (
-          <SideNav
-            sections={nav}
-            label={navLabel}
-            collapsed={!isLaptopUp}
-          />
+          // Full-height docked nav: sticks under the app bar and scrolls on
+          // its own, so it never ends part-way down a long page.
+          <div className="sticky top-[var(--lw-topbar-h)] h-[calc(100dvh-var(--lw-topbar-h))] self-start overflow-y-auto bg-surface">
+            <SideNav
+              sections={nav}
+              label={navLabel}
+              collapsed={navCollapsed}
+              className="min-h-full"
+            />
+          </div>
         )}
 
         <div className="min-w-0">
-          {sampleDataBanner && (
-            <div className="pt-3">
-              <Page width={width}>{sampleDataBanner}</Page>
-            </div>
-          )}
 
           {/* The <main> landmark + skip-link / route-focus target. tabIndex -1
               makes it programmatically focusable without adding it to the tab
@@ -129,12 +153,14 @@ export function AppShell({
             tabIndex={-1}
             aria-label={mainLabel}
             width={width}
-            className="py-4 focus-visible:outline-focus-ring"
+            flush
+            className="mx-0 px-4 pt-4 pb-16 tablet:px-5 tablet:pt-5 laptop:px-8 laptop:pt-6 outline-none"
           >
             <Stack gap={4}>
               {breadcrumbs && breadcrumbs.length > 0 && (
                 <Breadcrumbs items={breadcrumbs} />
               )}
+              {sampleDataBanner}
               {contextBar}
               {children}
             </Stack>
@@ -175,4 +201,24 @@ export function AppShell({
       )}
     </div>
   )
+}
+
+const NAV_PREF_KEY = 'lw.nav.collapsed'
+
+/** The user's persisted collapse choice, or null to follow the breakpoint. */
+function readNavPref(): boolean | null {
+  try {
+    const v = window.localStorage.getItem(NAV_PREF_KEY)
+    return v === 'true' ? true : v === 'false' ? false : null
+  } catch {
+    return null
+  }
+}
+
+function writeNavPref(collapsed: boolean): void {
+  try {
+    window.localStorage.setItem(NAV_PREF_KEY, String(collapsed))
+  } catch {
+    // Storage unavailable (private mode): the choice lasts for this session only.
+  }
 }

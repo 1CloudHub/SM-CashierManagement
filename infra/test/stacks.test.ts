@@ -354,6 +354,18 @@ describe('API stack', () => {
     );
   });
 
+  it('protects every task 13.4 roster and override route with the Cognito authorizer', () => {
+    expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
+      expect.arrayContaining([
+        'GET /stores/{storeId}/rosters',
+        'GET /stores/{storeId}/rosters/{rosterId}',
+        'GET /stores/{storeId}/rosters/{rosterId}/shifts/{shiftId}/replacements',
+        'POST /stores/{storeId}/rosters/{rosterId}/overrides/check',
+        'POST /stores/{storeId}/rosters/{rosterId}/overrides',
+      ]),
+    );
+  });
+
   it('protects every task 11 scenario route with the Cognito authorizer', () => {
     expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
       expect.arrayContaining([
@@ -367,6 +379,18 @@ describe('API stack', () => {
         'POST /scenarios/{scenarioId}/run',
         'POST /scenarios/{scenarioId}/submit',
         'POST /scenarios/{scenarioId}/archive',
+      ]),
+    );
+  });
+
+  it('protects every task 19 notification route with the Cognito authorizer', () => {
+    expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
+      expect.arrayContaining([
+        'GET /notifications',
+        'POST /notifications/read-all',
+        'POST /notifications/{notificationId}/read',
+        'GET /notification-preferences',
+        'PUT /notification-preferences',
       ]),
     );
   });

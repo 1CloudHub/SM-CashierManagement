@@ -190,7 +190,9 @@ describe('decisions (Req 9.2–9.6, P7, P10, P12)', () => {
     const ready = await tracker(id);
     expect(ready.planReady).toBe(true);
     expect(ready.actions.decide.plan).toEqual(['approve', 'request_changes', 'reject']);
-    expect(await count(`notification WHERE event = 'approval.plan_ready' AND object_id = $1`, [id])).toBeGreaterThan(0);
+    // The Executive secured the last step, so they are not notified of their own
+    // action (task 19 excludes the actor); HR and Finance hear it was secured.
+    expect(await count(`notification WHERE event = 'approval.secured' AND object_id = $1`, [id])).toBeGreaterThan(0);
 
     // A second decision on a decided step is refused.
     expect((await call('HR', 'POST', `/approvals/${id}/headcount`, { decision: 'approve' })).status).toBe(409);
@@ -241,7 +243,7 @@ describe('decisions (Req 9.2–9.6, P7, P10, P12)', () => {
     const rejected = await call('EXE', 'POST', `/approvals/${id}/plan`, { decision: 'reject', comment: 'Not this season' });
     expect(rejected.status).toBe(200);
     expect((rejected.body.approval as ApprovalDetail).scenario.status).toBe('draft');
-    expect(await count(`notification WHERE event = 'approval.rejected' AND object_id = $1`, [id])).toBeGreaterThan(0);
+    expect(await count(`notification WHERE event = 'approval.decided' AND params->>'decision' = 'rejected' AND object_id = $1`, [id])).toBeGreaterThan(0);
   });
 
   it('keeps decided steps final and requires an approved plan in the database (P10 backstop)', async () => {

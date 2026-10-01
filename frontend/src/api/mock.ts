@@ -13,6 +13,8 @@ import {
   type RoleCode,
 } from '@lanewise/shared'
 import { ACTIVE_ROLE_HEADER, type ApiAdapter, type ApiRequest, type ApiResponse } from './client'
+import { createNotificationStore } from './mock-notifications'
+import { createRosterStore } from './mock-rosters'
 import { createPlanningStore } from './mock-planning'
 import { createScenarioStore } from './mock-scenarios'
 import { createSavedViewStore, mockContextOptions, mockSearch, type MockResult } from './mock-directory'
@@ -244,6 +246,8 @@ export interface MockAdapterOptions {
 export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {}): ApiAdapter {
   const savedViews = createSavedViewStore()
   const scenarios = createScenarioStore()
+  const notifications = createNotificationStore()
+  const rosters = createRosterStore()
   const planning = createPlanningStore()
   return async (request) => {
     log?.push(request)
@@ -274,6 +278,14 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
         role,
         viewer: mockViewer(role),
       })
+    }
+    if (pathname === '/notifications' || pathname.startsWith('/notifications/') || pathname === '/notification-preferences') {
+      // The role's own inbox only (P11); no ₱ figures in notifications.
+      return notifications.handle({ method: request.method, pathname, query: new URLSearchParams(search), body: request.body, role })
+    }
+    if (/^\/stores\/[^/]+\/rosters(\/|$)/.test(pathname)) {
+      // Published rosters carry no ₱ figures (task 13.4), see ./mock-rosters.
+      return rosters.handle({ method: request.method, pathname, body: request.body, role, userName: `Demo ${role}` })
     }
     if (pathname === '/approvals' || pathname.startsWith('/approvals/')) {
       // Shares the scenario rows; results are shaped for the role like /scenarios.

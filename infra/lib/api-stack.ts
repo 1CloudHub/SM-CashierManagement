@@ -113,6 +113,12 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'POST', path: '/approvals/{scenarioId}/budget' },
   { method: 'POST', path: '/approvals/{scenarioId}/plan' },
   { method: 'POST', path: '/approvals/{scenarioId}/secured-outside' },
+  // Task 13.4: published rosters and store-manager overrides (SCR-022).
+  { method: 'GET', path: '/stores/{storeId}/rosters' },
+  { method: 'GET', path: '/stores/{storeId}/rosters/{rosterId}' },
+  { method: 'GET', path: '/stores/{storeId}/rosters/{rosterId}/shifts/{shiftId}/replacements' },
+  { method: 'POST', path: '/stores/{storeId}/rosters/{rosterId}/overrides/check' },
+  { method: 'POST', path: '/stores/{storeId}/rosters/{rosterId}/overrides' },
   // Task 14: network view, department day plan, hiring plan and long-roster
   // background jobs, leadership summary (SCR-020/021/023/024).
   { method: 'GET', path: '/scenarios/{scenarioId}/network' },
@@ -127,6 +133,12 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'GET', path: '/scenarios/{scenarioId}/rosters/jobs/{jobId}' },
   { method: 'GET', path: '/scenarios/{scenarioId}/summary' },
   { method: 'GET', path: '/scenarios/{scenarioId}/summary/export' },
+  // Task 19: notifications — the bell, SCR-040 and per-user preferences (own records only).
+  { method: 'GET', path: '/notifications' },
+  { method: 'POST', path: '/notifications/read-all' },
+  { method: 'POST', path: '/notifications/{notificationId}/read' },
+  { method: 'GET', path: '/notification-preferences' },
+  { method: 'PUT', path: '/notification-preferences' },
   // Task 16: network map and auto-match (SCR-026).
   { method: 'GET', path: '/network-map' },
   { method: 'GET', path: '/network-map/stores/{storeId}/candidates' },

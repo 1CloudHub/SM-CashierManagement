@@ -57,7 +57,7 @@ export function StateBlock({
       role={isError ? 'alert' : 'status'}
       aria-live={isError ? 'assertive' : 'polite'}
       className={cn(
-        'flex flex-col items-center gap-3 border-2 border-outline bg-surface px-6 py-12 text-center',
+        'flex flex-col items-center gap-3 border border-outline bg-surface px-6 py-12 text-center',
         className,
       )}
     >

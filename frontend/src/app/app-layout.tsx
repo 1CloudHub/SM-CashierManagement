@@ -1,9 +1,11 @@
+import { BrandMark } from '@/components/brand'
 import { createContext, useContext, type MouseEvent, type ReactNode } from 'react'
 import { AppShell } from '@/components/layout'
 import type { NavSection } from '@/components/shell'
 import { Alert } from '@/components/ui/alert'
 import type { Crumb } from '@/components/ui/breadcrumbs'
 import { useDocumentTitle } from '@/features/auth/use-document-title'
+import { NotificationBell } from '@/features/notifications/notification-bell'
 import { GlobalSearch } from '@/features/search/global-search'
 import { LanguageSwitcher, useI18n } from '@/i18n'
 import { canAccess, navForRole, screenForPath } from './access'
@@ -16,8 +18,9 @@ import { useRouter } from './router'
 /**
  * The signed-in frame (design.md › App shell): AppShell wired to the active
  * role — nav filtered to what the role may open (requirement 2.3), "Viewing
- * as" switcher, language, account menu, global search, breadcrumb, sample-data
- * banner and page title. Screens render inside it.
+ * as" switcher, language, notifications bell (task 19), account menu, global
+ * search, breadcrumb, sample-data banner and page title. Screens render inside
+ * it.
  */
 
 export const GLOBAL_SEARCH_ID = 'global-search'
@@ -87,7 +90,15 @@ export function AppLayout({
     <div onClick={onClick}>
       <AppShell
         nav={nav}
+        brand={
+          <>
+            <BrandMark variant="reversed" className="hidden h-9 w-auto tablet:block" />
+            <BrandMark variant="reversed" lockup="mark" className="h-9 w-auto tablet:hidden" />
+          </>
+        }
         navLabel={t('shell.navLabel')}
+        navCollapseLabel={t('shell.navCollapse')}
+        navExpandLabel={t('shell.navExpand')}
         mainLabel={t('a11y.mainContent')}
         skipLinkLabel={t('a11y.skipToMain')}
         breadcrumbs={breadcrumbs}
@@ -97,6 +108,7 @@ export function AppLayout({
           <>
             <LanguageSwitcher />
             <RoleSwitcher />
+            <NotificationBell />
             {slots.account}
           </>
         }
