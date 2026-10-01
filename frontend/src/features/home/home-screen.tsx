@@ -388,9 +388,24 @@ function RoleCards({ data, now }: { data: HomeSummary; now: number }) {
             </p>
           </Section>
           <Section title={t('home.adm.auditTitle')}>
-            <p className="text-body">
-              <TextLink href="/admin/audit">{t('nav.audit')}</TextLink>
-            </p>
+            <Stack gap={2}>
+              {!data.recentAudit?.length && <EmptyNote>{t('home.empty.audit')}</EmptyNote>}
+              {!!data.recentAudit?.length && (
+                <ul className="m-0 flex list-none flex-col gap-1 p-0">
+                  {data.recentAudit.map((e) => (
+                    <li key={e.id} className="text-body-sm text-text">
+                      <span className="lw-numeric text-text-muted">{formatDate(e.at, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
+                      {' · '}
+                      {e.userName} · <span className="lw-numeric">{e.event}</span>
+                      {e.objectName && ` · ${e.objectName}`}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="text-body">
+                <TextLink href="/admin/audit">{t('nav.audit')}</TextLink>
+              </p>
+            </Stack>
           </Section>
         </Pair>
       )

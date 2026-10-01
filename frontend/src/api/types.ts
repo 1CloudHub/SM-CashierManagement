@@ -43,6 +43,8 @@ export interface HomeSummary {
   readonly nextShifts?: HomeNextShifts
   /** ADM: invitations not yet accepted. */
   readonly pendingInvitations?: number
+  /** ADM: the latest audit events, newest first. */
+  readonly recentAudit?: readonly HomeAuditItem[]
   /** EXE / PLN / HR / FIN: headline season KPIs. */
   readonly kpis?: HomeKpis
   /** EXE / PLN: most recently updated scenarios. */
@@ -95,6 +97,15 @@ export interface HomeCostWatch {
 export interface HomeDatasetFreshness {
   readonly dataset: 'pos' | 'staff' | 'master'
   readonly loadedAt: IsoDateTime | null
+}
+
+export interface HomeAuditItem {
+  readonly id: string
+  readonly at: IsoDateTime
+  readonly userName: string
+  /** Event name, e.g. `scenario.submitted` (shown as is, like the audit log). */
+  readonly event: string
+  readonly objectName: string | null
 }
 
 export interface HomeDraftRule {

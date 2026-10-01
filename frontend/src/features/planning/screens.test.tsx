@@ -78,9 +78,10 @@ describe('SCR-021 department day plan (Req 5.2)', () => {
     expect(await axe(container)).toHaveNoViolations()
   }, AXE_TIMEOUT)
 
-  it('asks for a department when none is chosen', async () => {
+  it('opens the first in-scope department when none is chosen', async () => {
     renderApp({ path: '/plan/department', role: 'STM' })
-    expect(await screen.findByText('Pick a store and department')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /Main checkout lanes.*SM Supermarket – Quezon City/ })).toBeInTheDocument()
+    expect(screen.queryByText('Pick a store and department')).toBeNull()
   })
 
   it('builds the season roster as a background job for planners', async () => {

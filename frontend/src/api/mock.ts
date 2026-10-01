@@ -14,13 +14,14 @@ import {
 } from '@lanewise/shared'
 import { ACTIVE_ROLE_HEADER, type ApiAdapter, type ApiRequest, type ApiResponse } from './client'
 import { createIngestionStore } from './mock-ingestion'
+import { createLocationPrivacyStore } from './mock-location-privacy'
 import { createMasterDataStore } from './mock-master-data'
 import { createPlanningStore } from './mock-planning'
 import { createOfferStore } from './mock-offers'
 import { createNotificationStore } from './mock-notifications'
 import { createSelfServiceStore } from './mock-self-service'
 import { createRosterStore } from './mock-rosters'
-import { MOCK_PENDING_INVITATIONS, createAdminStore } from './mock-admin'
+import { MOCK_PENDING_INVITATIONS, createAdminStore, mockRecentAudit } from './mock-admin'
 import { createRulesStore } from './mock-rules'
 import { createScenarioStore } from './mock-scenarios'
 import { STF_STAFF_ID, STM_STORE_ID } from './mock-world'
@@ -189,7 +190,7 @@ function mockHomeDraft(role: RoleCode): CostDraft<HomeSummary> {
         },
       }
     case 'ADM':
-      return { role, firstName, pendingInvitations: MOCK_PENDING_INVITATIONS }
+      return { role, firstName, pendingInvitations: MOCK_PENDING_INVITATIONS, recentAudit: mockRecentAudit() }
   }
 }
 
@@ -270,6 +271,7 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
   const selfService = createSelfServiceStore(rosters)
   const rules = createRulesStore()
   const ingestion = createIngestionStore()
+  const locationPrivacy = createLocationPrivacyStore()
   return async (request) => {
     log?.push(request)
     if (latencyMs > 0) await new Promise((resolve) => setTimeout(resolve, latencyMs))
@@ -299,6 +301,10 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
         role,
         viewer: mockViewer(role),
       })
+    }
+    if (locationPrivacy.owns(pathname)) {
+      // SCR-080 home area and consent (Staff, own record only; barangay level), see ./mock-location-privacy.
+      return locationPrivacy.handle({ method: request.method, pathname, query: new URLSearchParams(search), body: request.body, role })
     }
     if (pathname === '/notifications' || pathname.startsWith('/notifications/') || pathname === '/notification-preferences') {
       // The role's own inbox only (P11); no ₱ figures in notifications.

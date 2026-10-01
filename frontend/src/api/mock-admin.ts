@@ -141,6 +141,14 @@ function seedUsers(): Mutable<AdminUser>[] {
   ]
 }
 
+/** The latest seeded audit events (SCR-010 System Admin home). */
+export function mockRecentAudit(limit = 5): { id: string; at: string; userName: string; event: string; objectName: string | null }[] {
+  return seedAudit()
+    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
+    .slice(0, limit)
+    .map((e) => ({ id: e.id, at: e.at, userName: e.user.name, event: e.event, objectName: e.objectName }))
+}
+
 /** Invitations not yet accepted (SCR-010 System Admin home). */
 export const MOCK_PENDING_INVITATIONS = seedUsers().filter((u) => u.status === 'invited').length
 

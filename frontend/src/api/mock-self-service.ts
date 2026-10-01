@@ -131,7 +131,7 @@ export function createSelfServiceStore(rosters: MockRosterStore, now: () => Date
       decisionNote: null,
     },
     {
-      // Juan's earlier swap, declined (wireframe SCR-025 "need cover Sat").
+      // Juan's earlier swap with Guy Hapin's Wednesday shift, declined (wireframe SCR-025 "need cover Sat").
       id: 'req-seed-4',
       staffId: SELF,
       type: 'swap',
@@ -142,8 +142,8 @@ export function createSelfServiceStore(rosters: MockRosterStore, now: () => Date
       reason: null,
       note: null,
       offeredShiftId: 'st-qc-pt02-2026-12-19',
-      targetShiftId: 'open-qc-2026-12-15',
-      targetStaffId: null,
+      targetShiftId: 'st-qc-pt05-2026-12-16',
+      targetStaffId: 'st-qc-pt05',
       decidedAt: '2026-12-08T11:00:00.000Z',
       decidedBy: managerOf('st-qc')?.name ?? 'Store manager',
       decisionNote: 'Need cover on Saturday.',

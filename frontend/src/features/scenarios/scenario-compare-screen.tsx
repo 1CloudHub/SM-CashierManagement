@@ -85,7 +85,16 @@ export function ScenarioCompareScreen({ client, role, a, b, onChange }: Scenario
   }, [client, canView, optionsAttempt])
 
   // Only A given: compare it against the season's published scenario by default.
+  // Neither given: open on the latest submitted (else draft) scenario against the published one.
   const list = options.kind === 'ready' ? options.list : null
+  useEffect(() => {
+    if (!list || a || b) return
+    const published = list.find((o) => o.isPublished)
+    if (!published) return
+    const candidates = list.filter((o) => o.id !== published.id && o.season === published.season)
+    const first = candidates.find((o) => o.status === 'submitted') ?? candidates.find((o) => o.status === 'draft')
+    if (first) onChange(first.id, published.id)
+  }, [list, a, b, onChange])
   useEffect(() => {
     if (!list || !a || b) return
     const from = list.find((o) => o.id === a)

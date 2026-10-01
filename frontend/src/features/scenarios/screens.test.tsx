@@ -319,9 +319,11 @@ describe('SCR-031 Scenario settings', () => {
 })
 
 describe('SCR-032 Compare', () => {
-  it('shows an empty state until two scenarios are picked', async () => {
+  it('opens on the submitted scenario against the published one when none is picked', async () => {
     renderApp({ path: '/scenarios/compare', role: 'EXE' })
-    expect(await screen.findByText('Pick two scenarios')).toBeInTheDocument()
+    await waitFor(() => expect(window.location.search).toBe('?a=scn-xmas-2026-v4&b=scn-xmas-2026-v3'))
+    expect(await screen.findByRole('table', { name: 'Headline differences' })).toBeInTheDocument()
+    expect(screen.queryByText('Pick two scenarios')).toBeNull()
   })
 
   it('compares A and the published B: headline table, settings diff and grouped by-store, and passes axe', async () => {
