@@ -25,13 +25,13 @@ describe('routing', () => {
   })
 
   it('renders a placeholder with title, breadcrumb and its spec task', async () => {
-    const { container } = renderApp({ path: '/plan/network', role: 'PLN' })
-    expect(screen.getByRole('heading', { level: 1, name: 'Network view' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Coming in task 14.1' })).toBeInTheDocument()
+    const { container } = renderApp({ path: '/plan/map', role: 'PLN' })
+    expect(screen.getByRole('heading', { level: 1, name: 'Network map' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Coming in task 16.1' })).toBeInTheDocument()
     const crumbs = within(screen.getByRole('navigation', { name: 'Breadcrumb' }))
     expect(crumbs.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/')
-    expect(crumbs.getByText('Network view')).toHaveAttribute('aria-current', 'page')
-    expect(within(mainNav()).getByRole('link', { name: 'Network view' })).toHaveAttribute('aria-current', 'page')
+    expect(crumbs.getByText('Network map')).toHaveAttribute('aria-current', 'page')
+    expect(within(mainNav()).getByRole('link', { name: 'Network map' })).toHaveAttribute('aria-current', 'page')
     expect(await axe(container)).toHaveNoViolations()
   })
 
@@ -125,7 +125,7 @@ describe('"Viewing as" role switcher (requirement 3)', () => {
     renderApp({ path: '/plan/network', role: 'PLN' })
     await user.selectOptions(switcher(), 'FIN')
     expect(window.location.pathname).toBe('/plan/network')
-    expect(screen.getByRole('heading', { level: 1, name: 'Network view' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'All stores and departments' })).toBeInTheDocument()
     expect(within(mainNav()).queryByRole('link', { name: 'Network map' })).toBeNull()
   })
 

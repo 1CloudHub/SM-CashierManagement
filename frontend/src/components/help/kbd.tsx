@@ -26,7 +26,7 @@ export function Kbd({
   return (
     <kbd
       className={cn(
-        'inline-flex min-w-6 items-center justify-center border-2 border-outline bg-surface px-1.5 py-0.5 text-label font-num leading-none text-text',
+        'inline-flex min-w-6 items-center justify-center border border-outline bg-surface px-1.5 py-0.5 text-label font-num leading-none text-text',
         className,
       )}
     >

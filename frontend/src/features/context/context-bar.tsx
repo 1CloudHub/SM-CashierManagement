@@ -75,7 +75,7 @@ export function ContextBar({ screen }: { screen: SavedViewScreen }) {
   const hasFilters = fields.some((f) => state[f] !== undefined)
 
   return (
-    <div role="group" aria-label={t('context.label')} className="border-2 border-outline bg-surface p-3">
+    <div role="group" aria-label={t('context.label')} className="border border-outline bg-surface p-3">
       <Cluster gap={3} align="end">
         {options.loading ? (
           <>

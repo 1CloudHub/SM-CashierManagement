@@ -181,12 +181,17 @@ export async function editScenarioSettings(
   return after;
 }
 
-/** Submits a Draft and opens the three approval steps of a new submission (Req 9.1). */
+/**
+ * Submits a Draft, stamps the submitter and opens the three approval steps of
+ * a new submission; HR and Finance are asked for headcount and budget (Req 9.1).
+ */
 export async function submitScenario(tx: AuditedTx, id: string): Promise<Scenario> {
   const before = await loadScenario(tx, id);
   await tx.query(
-    `UPDATE scenario SET status = 'submitted', current_submission_no = current_submission_no + 1 WHERE id = $1`,
-    [id],
+    `UPDATE scenario
+        SET status = 'submitted', current_submission_no = current_submission_no + 1, submitted_by = $2, submitted_at = now()
+      WHERE id = $1`,
+    [id, tx.actor.userId],
   );
   const after = await loadScenario(tx, id);
   await tx.query(

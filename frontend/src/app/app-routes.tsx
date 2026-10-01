@@ -2,9 +2,12 @@ import { Outlet, Route, Routes } from 'react-router'
 import { App } from '@/App'
 import { useRouteFocus } from '@/components/a11y'
 import { HelpProvider } from '@/components/help'
+import { ApprovalsPage } from '@/features/approvals/pages'
 import { ProfileScreen } from '@/features/auth/profile-screen'
 import { DataSourcesPage, UploadPage } from '@/features/data/pages'
+import { DepartmentPage, HiringPage, NetworkPage, SummaryPage } from '@/features/planning/pages'
 import { HomeScreen } from '@/features/home/home-screen'
+import { RosterPage } from '@/features/roster/pages'
 import { NotificationsPage } from '@/features/notifications/pages'
 import { SearchResultsScreen } from '@/features/search/search-results-screen'
 import { RuleSetsPage, RuleVersionEditorPage } from '@/features/rules/pages'
@@ -23,9 +26,15 @@ import { Guarded, HelpScreen, NotFoundScreen, PlaceholderScreen, StatusScreen } 
  */
 const BUILT: Partial<Record<ScreenId, () => React.ReactNode>> = {
   'SCR-010': () => <HomeScreen />,
+  'SCR-022': () => <RosterPage />,
+  'SCR-020': () => <NetworkPage />,
+  'SCR-021': () => <DepartmentPage />,
+  'SCR-023': () => <HiringPage />,
+  'SCR-024': () => <SummaryPage />,
   'SCR-030': () => <ScenarioListPage />,
   'SCR-031': () => <ScenarioSettingsPage />,
   'SCR-032': () => <ScenarioComparePage />,
+  'SCR-033': () => <ApprovalsPage />,
   'SCR-040': () => <NotificationsPage />,
   'SCR-041': () => <SearchResultsScreen />,
   'SCR-060': () => <RuleSetsPage />,

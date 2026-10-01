@@ -65,11 +65,11 @@ export function RosterLegend({
         </span>
       </li>
       <li className="flex items-center gap-2">
-        <span className="border-2 border-danger bg-danger px-1 text-caption font-weight-bold text-on-danger">
+        <span className="border border-danger bg-danger px-1 text-caption font-weight-bold text-on-danger">
           {f.signed(-2)}
         </span>
         {f.t('roster.legend.short')}
-        <span className="border-2 border-warning px-1 text-caption font-weight-bold text-text">
+        <span className="border border-warning px-1 text-caption font-weight-bold text-text">
           {f.signed(1)}
         </span>
         {f.t('roster.legend.surplus')}

@@ -79,7 +79,7 @@ export function RosterGrid({
   const visibleOpen = openShifts.filter((o) => deptIds.includes(o.departmentId))
 
   const cellBase = cn(
-    'flex w-full min-h-tap overflow-hidden border-2 text-left text-caption',
+    'flex w-full min-h-tap overflow-hidden border text-left text-caption',
     compact ? 'min-w-12' : 'min-w-24',
   )
 
@@ -167,7 +167,7 @@ export function RosterGrid({
   return (
     <Grid>
       <Col as="aside" span={4} spanTablet={4} spanLaptop={2} aria-labelledby={`${uid}-totals`}>
-        <Stack gap={2} className="border-2 border-outline bg-surface p-4">
+        <Stack gap={2} className="border border-outline bg-surface p-4">
           <h3 id={`${uid}-totals`} className="text-h3 text-text">
             {f.t('roster.totals.title')}
           </h3>
@@ -175,7 +175,9 @@ export function RosterGrid({
             {(
               [
                 ['shifts', <Num key="v" value={totals.shifts} />],
-                ['cost', <Currency key="v" value={totals.cost} options={{ maximumFractionDigits: 0 }} />],
+                ...(totals.cost === undefined
+                  ? []
+                  : ([['cost', <Currency key="v" value={totals.cost} options={{ maximumFractionDigits: 0 }} />]] as const)),
                 ['paidHours', <Num key="v" value={totals.paidHours} />],
                 ['openShifts', <Num key="v" value={totals.openShifts} />],
                 ['borrowed', <Num key="v" value={totals.borrowed} />],
@@ -183,7 +185,7 @@ export function RosterGrid({
             ).map(([key, value], i) => (
               <div
                 key={key}
-                className={cn('flex flex-col-reverse py-2', i > 0 && 'border-t-2 border-outline-subtle')}
+                className={cn('flex flex-col-reverse py-2', i > 0 && 'border-t border-outline-subtle')}
               >
                 <dt className="text-body-sm text-text-muted">{f.t(`roster.totals.${key}`)}</dt>
                 <dd
@@ -313,7 +315,7 @@ export function RosterGrid({
       </Col>
 
       <Col as="aside" span={4} spanTablet={4} spanLaptop={2} aria-labelledby={`${uid}-filters`}>
-        <Stack gap={3} className="border-2 border-outline bg-surface p-4">
+        <Stack gap={3} className="border border-outline bg-surface p-4">
           <h3 id={`${uid}-filters`} className="text-h3 text-text">
             {f.t('roster.filters.title')}
           </h3>

@@ -14,6 +14,8 @@ import {
 } from '@lanewise/shared'
 import { ACTIVE_ROLE_HEADER, type ApiAdapter, type ApiRequest, type ApiResponse } from './client'
 import { createNotificationStore } from './mock-notifications'
+import { createRosterStore } from './mock-rosters'
+import { createPlanningStore } from './mock-planning'
 import { createScenarioStore } from './mock-scenarios'
 import { createSavedViewStore, mockContextOptions, mockSearch, type MockResult } from './mock-directory'
 import type { HomeKpis, HomeScenarioRow, HomeSummary } from './types'
@@ -229,6 +231,8 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
   const savedViews = createSavedViewStore()
   const scenarios = createScenarioStore()
   const notifications = createNotificationStore()
+  const rosters = createRosterStore()
+  const planning = createPlanningStore()
   return async (request) => {
     log?.push(request)
     if (latencyMs > 0) await new Promise((resolve) => setTimeout(resolve, latencyMs))
@@ -238,6 +242,16 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
     if (!isRoleCode(role)) return fail('bad_request', 'The active role is missing or not recognised.')
 
     const [pathname = '', search = ''] = request.path.split('?', 2)
+    // Task 14 planning endpoints under /scenarios/:id/… (already shaped, see ./mock-planning).
+    const planned = planning.handle({
+      method: request.method,
+      pathname,
+      query: new URLSearchParams(search),
+      body: request.body,
+      role,
+      viewer: mockViewer(role),
+    })
+    if (planned) return planned
     if (pathname === '/scenarios' || pathname.startsWith('/scenarios/')) {
       // Already shaped for the role (cost + published-only), see ./mock-scenarios.
       return scenarios.handle({
@@ -252,6 +266,21 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
     if (pathname === '/notifications' || pathname.startsWith('/notifications/') || pathname === '/notification-preferences') {
       // The role's own inbox only (P11); no ₱ figures in notifications.
       return notifications.handle({ method: request.method, pathname, query: new URLSearchParams(search), body: request.body, role })
+    }
+    if (/^\/stores\/[^/]+\/rosters(\/|$)/.test(pathname)) {
+      // Published rosters carry no ₱ figures (task 13.4), see ./mock-rosters.
+      return rosters.handle({ method: request.method, pathname, body: request.body, role, userName: `Demo ${role}` })
+    }
+    if (pathname === '/approvals' || pathname.startsWith('/approvals/')) {
+      // Shares the scenario rows; results are shaped for the role like /scenarios.
+      return scenarios.approvals.handle({
+        method: request.method,
+        pathname,
+        query: new URLSearchParams(search),
+        body: request.body,
+        role,
+        viewer: mockViewer(role),
+      })
     }
     const { key, id } = routeOf(request.method, pathname)
     const handler = ROUTES[key]

@@ -191,13 +191,12 @@ export const environments: Record<EnvName, EnvironmentConfig> = {
     envName: 'prod',
     account: process.env.CDK_DEFAULT_ACCOUNT,
     region: process.env.CDK_DEFAULT_REGION,
-    // SPA custom domain: PAUSED. The prototypes.1cloudhub.com zone in this
-    // account (Z10306162UR77DOLJD1L3) is not the one public DNS delegates to,
-    // so the ACM DNS validation never completed and blocked the deploy. Re-enable
-    // (domainName: 'lanewise.prototypes.1cloudhub.com', hostedZone: { id, name })
-    // once the domain's records live in the authoritative zone.
-    domainName: undefined,
-    hostedZone: undefined,
+    // SPA custom domain in its own hosted zone in this account, delegated by an
+    // NS record in the company 1cloudhub.com zone (account 272858488437).
+    // (prototypes.1cloudhub.com itself is a CNAME in that zone, not a delegated
+    // zone, so records written to the old copy here were never public.)
+    domainName: 'lanewise.prototypes.1cloudhub.com',
+    hostedZone: { id: 'Z02168532NL1LBQPBHSV0', name: 'lanewise.prototypes.1cloudhub.com' },
     retainData: true,
     github: {
       owner: '1CloudHub',
@@ -208,10 +207,9 @@ export const environments: Record<EnvName, EnvironmentConfig> = {
     auth: {
       // Demo deployment: self sign-up on for the allowlisted domains (Q15).
       selfSignUp: true,
-      // Passkeys bind to the SPA's CloudFront domain while the custom domain is
-      // paused. Switch to the custom domain BEFORE real users register passkeys;
-      // changing it later invalidates every registered passkey.
-      relyingPartyId: undefined,
+      // Passkeys are bound to the custom domain. Set before any passkey was
+      // registered; changing it later invalidates every registered passkey.
+      relyingPartyId: 'lanewise.prototypes.1cloudhub.com',
       // One-time codes via SES (us-east-1): the 1cloudhub.com domain identity is
       // verified (DKIM) and the account is out of the SES sandbox.
       email: {
@@ -256,7 +254,7 @@ export const environments: Record<EnvName, EnvironmentConfig> = {
   //   account: process.env.CDK_DEFAULT_ACCOUNT,
   //   region: process.env.CDK_DEFAULT_REGION,
   //   domainName: undefined, // e.g. 'lanewise-staging.prototypes.1cloudhub.com'
-  //   hostedZone: undefined, // { id: 'Z10306162UR77DOLJD1L3', name: 'prototypes.1cloudhub.com' }
+  //   hostedZone: undefined, // own zone delegated from 1cloudhub.com, like prod
   //   retainData: false,
   //   github: {
   //     owner: '1CloudHub',

@@ -193,7 +193,7 @@ function SavedViewRow({
   }
 
   return (
-    <li className="flex flex-col gap-2 border-2 border-outline p-3">
+    <li className="flex flex-col gap-2 border border-outline p-3">
       <Cluster gap={2}>
         <AppLink href={href} onClick={onOpen} className="text-body text-text underline focus-visible:outline-focus-ring">
           {view.name}

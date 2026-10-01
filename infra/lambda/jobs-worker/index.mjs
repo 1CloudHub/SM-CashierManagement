@@ -1,12 +1,13 @@
 // Background-job worker skeleton (task 24). Consumes the LaneWise jobs queue
 // with partial batch responses: each message is `{ "type": string, ... }`.
-// Task 14.2 replaces this with the bundled worker from /api (hiring plans and
-// long rosters: resumable, idempotent, cached per scenario version) by
-// pointing JobsStack's `workerBundleDir` at it.
+// The deployed app uses the task 14.2 worker bundled from /api instead
+// (bin/infra.ts passes `API_WORKER_BUNDLE_DIR`: hiring plans and long rosters,
+// resumable, idempotent, cached per scenario version); this skeleton remains
+// JobsStack's default so stack unit tests need no API build.
 //
-// Until then no job types are registered: every message is reported as a
-// failure, so it is retried and then lands in the dead-letter queue instead of
-// being silently dropped.
+// No job types are registered here: every message is reported as a failure,
+// so it is retried and then lands in the dead-letter queue instead of being
+// silently dropped.
 const HANDLERS = {};
 
 function log(level, msg, fields = {}) {

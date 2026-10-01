@@ -1,3 +1,4 @@
+import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { App } from 'aws-cdk-lib';
@@ -7,7 +8,7 @@ import { resolveEnvironment, type EnvironmentConfig } from '../config/environmen
 import { ApiStack } from '../lib/api-stack';
 import { AuthStack } from '../lib/auth-stack';
 import { DataStack } from '../lib/data-stack';
-import { JobsStack } from '../lib/jobs-stack';
+import { API_WORKER_BUNDLE_DIR, JobsStack, assertWorkerBundle } from '../lib/jobs-stack';
 import { LocationStack } from '../lib/location-stack';
 import { grantSesSend, sesEnvironment } from '../lib/notifications';
 
@@ -260,6 +261,13 @@ describe('Jobs stack', () => {
       FunctionResponseTypes: ['ReportBatchItemFailures'],
       ScalingConfig: { MaximumConcurrency: prod.jobs.maxConcurrency },
     });
+  });
+
+  it('deploys the task 14.2 worker bundled from /api, and refuses to synth without it', () => {
+    expect(assertWorkerBundle(API_WORKER_BUNDLE_DIR)).toBe(API_WORKER_BUNDLE_DIR);
+    expect(() => assertWorkerBundle('/nonexistent/jobs-worker')).toThrow(/Jobs worker bundle not found/);
+    const source = fs.readFileSync(path.join(__dirname, '..', 'bin', 'infra.ts'), 'utf8');
+    expect(source).toMatch(/workerBundleDir: assertWorkerBundle\(API_WORKER_BUNDLE_DIR\)/);
   });
 });
 

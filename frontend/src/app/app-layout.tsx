@@ -1,3 +1,4 @@
+import { BrandMark } from '@/components/brand'
 import { createContext, useContext, type MouseEvent, type ReactNode } from 'react'
 import { AppShell } from '@/components/layout'
 import type { NavSection } from '@/components/shell'
@@ -89,7 +90,15 @@ export function AppLayout({
     <div onClick={onClick}>
       <AppShell
         nav={nav}
+        brand={
+          <>
+            <BrandMark variant="reversed" className="hidden h-9 w-auto tablet:block" />
+            <BrandMark variant="reversed" lockup="mark" className="h-9 w-auto tablet:hidden" />
+          </>
+        }
         navLabel={t('shell.navLabel')}
+        navCollapseLabel={t('shell.navCollapse')}
+        navExpandLabel={t('shell.navExpand')}
         mainLabel={t('a11y.mainContent')}
         skipLinkLabel={t('a11y.skipToMain')}
         breadcrumbs={breadcrumbs}

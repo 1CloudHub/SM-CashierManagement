@@ -20,7 +20,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           ref={ref}
           aria-invalid={invalid || undefined}
           className={cn(
-            'w-full min-h-tap appearance-none border-2 border-outline bg-surface text-text text-body pl-3 pr-9 rounded-none motion-interactive focus-visible:outline-focus-ring disabled:opacity-50 aria-invalid:border-danger',
+            'w-full min-h-tap appearance-none border border-outline bg-surface text-text text-body pl-3 pr-9 rounded-none motion-interactive focus-visible:outline-focus-ring disabled:opacity-50 aria-invalid:border-danger',
             className,
           )}
           {...props}
