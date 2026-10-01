@@ -1,4 +1,4 @@
-import { Menu, Search } from 'lucide-react'
+import { Menu, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useUiT } from '@/i18n/context'
@@ -18,15 +18,18 @@ import { useUiT } from '@/i18n/context'
  * the nav is docked (rail, then expanded) and the inline search field shows,
  * so the toggles are hidden.
  *
- * The brand uses the app mark; a text lockup is shown until the SVG mark lands.
+ * Wireframe parity: a primary-blue app bar (`--lw-appbar`, `.lw-appbar`
+ * re-styles the controls inside it as outlined on-appbar controls) carrying the
+ * reversed BrandMark lockup. From tablet up a collapse/expand icon toggle for
+ * the docked side nav sits at the far left (`onNavToggle`).
  *
- * Narrow screens (~400px): the bar must not overflow. Below tablet the
- * "by SM Retail" byline is visually hidden (still read as part of the brand
- * link), the brand truncates rather than pushing controls off-screen
- * (`min-w-0`), and the trailing slot is expected to collapse secondary
- * controls (role switcher, sign out) into the user menu — AppLayout does.
- * Search: pass `search` to render the inline field (AppShell passes it only
- * from tablet up) and/or `onSearchToggle` for the mobile search button, so the
+ * Narrow screens (~400px): the bar must not overflow (no horizontal scroll,
+ * which would also clip the bell and account popovers). The brand shrinks
+ * (`min-w-0`), the default lockup's "by SM Retail" byline is visually hidden
+ * below tablet, and the trailing slot is expected to collapse secondary
+ * controls (role switcher, sign out) into the account menu — AppLayout does.
+ * Search: pass `search` for the inline field (AppShell passes it only from
+ * tablet up) and/or `onSearchToggle` for the mobile search button, so the
  * search form is mounted once per breakpoint.
  */
 export function TopBar({
@@ -36,8 +39,17 @@ export function TopBar({
   search,
   onSearchToggle,
   trailing,
+  onNavToggle,
+  navCollapsed = false,
+  navCollapseLabel,
+  navExpandLabel,
   className,
 }: {
+  /** Tablet and up: collapse/expand the docked side nav. */
+  onNavToggle?: () => void
+  navCollapsed?: boolean
+  navCollapseLabel?: string
+  navExpandLabel?: string
   onMenuToggle?: () => void
   menuExpanded?: boolean
   brand?: React.ReactNode
@@ -50,10 +62,13 @@ export function TopBar({
   className?: string
 }) {
   const t = useUiT()
+  const navToggleLabel = navCollapsed
+    ? (navExpandLabel ?? t('shell.navExpand'))
+    : (navCollapseLabel ?? t('shell.navCollapse'))
   return (
     <header
       className={cn(
-        'sticky top-0 z-30 flex min-w-0 items-center gap-2 border-b border-outline bg-surface px-2 py-2 tablet:gap-3 tablet:px-4',
+        'lw-appbar sticky top-0 z-30 flex h-[var(--lw-topbar-h)] min-w-0 items-center gap-1 bg-appbar px-2 text-on-appbar tablet:gap-4 tablet:pr-4',
         className,
       )}
     >
@@ -71,27 +86,44 @@ export function TopBar({
         </Button>
       )}
 
+      {onNavToggle && (
+        <Button
+          size="icon"
+          variant="ghost"
+          aria-label={navToggleLabel}
+          title={navToggleLabel}
+          aria-controls="sidenav"
+          aria-expanded={!navCollapsed}
+          onClick={onNavToggle}
+          className="hidden tablet:inline-flex"
+        >
+          {navCollapsed ? (
+            <PanelLeftOpen aria-hidden="true" className="size-5" />
+          ) : (
+            <PanelLeftClose aria-hidden="true" className="size-5" />
+          )}
+        </Button>
+      )}
+
       <a
         href="/"
-        className="flex min-w-0 items-baseline gap-2 truncate font-weight-bold text-text no-underline focus-visible:outline-focus-ring"
+        className="flex min-w-0 shrink items-center self-stretch overflow-hidden px-2 no-underline focus-visible:outline-focus-ring"
       >
         {brand ?? (
-          <>
-            LaneWise
-            <span className="sr-only text-label text-text-muted tablet:not-sr-only">
-              {t('shell.byline')}
-            </span>
-          </>
+          <span className="font-weight-bold">
+            LaneWise{' '}
+            <span className="sr-only text-caption tablet:not-sr-only">{t('shell.byline')}</span>
+          </span>
         )}
       </a>
 
       {search && (
-        <div className="hidden flex-1 justify-center px-2 tablet:flex">
+        <div className="hidden min-w-0 max-w-[35rem] flex-1 tablet:flex">
           {search}
         </div>
       )}
 
-      <div className="ml-auto flex min-w-0 shrink-0 items-center gap-1 tablet:gap-2">
+      <div className="ml-auto flex shrink-0 items-center gap-1 tablet:gap-2">
         {onSearchToggle && (
           <Button
             size="icon"

@@ -89,6 +89,7 @@ export default defineConfig([
             'useRouter',
             'useActiveRole',
             'useApi',
+            'useOptionalApi',
             'useShellSlots',
           ],
         },

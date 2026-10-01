@@ -96,7 +96,7 @@ export function SideNav({
         {sections.map((section, i) => (
           <div key={i}>
             {section.title && !collapsed && (
-              <h2 className="px-4 pb-1 text-label uppercase text-text-muted">
+              <h2 className="mx-4 mt-5 mb-2 text-label uppercase text-text-muted">
                 {section.title}
               </h2>
             )}
@@ -114,16 +114,20 @@ export function SideNav({
                     aria-label={collapsed ? item.label : undefined}
                     title={collapsed ? item.label : undefined}
                     className={cn(
-                      'motion-interactive flex min-h-tap items-center gap-2 border-l-2 border-transparent px-4 text-body text-text no-underline hover:bg-surface-2 focus-visible:outline-focus-ring',
+                      'group motion-interactive mx-2 flex min-h-tap items-center gap-3 border border-transparent px-2 text-body text-text no-underline hover:bg-surface-2 focus-visible:outline-focus-ring',
                       collapsed && 'justify-center px-0',
                       item.current &&
-                        'border-l-primary bg-surface-2 font-weight-semibold',
+                        'border-primary font-weight-semibold text-primary',
                     )}
                   >
                     {item.icon && (
                       <span
                         aria-hidden="true"
-                        className="grid size-5 shrink-0 place-items-center text-text-muted"
+                        className={cn(
+                          'grid size-6 shrink-0 place-items-center border border-current text-caption [&_svg]:size-4',
+                          item.current &&
+                            'border-primary bg-primary text-on-primary',
+                        )}
                       >
                         {item.icon}
                       </span>

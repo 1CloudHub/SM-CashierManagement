@@ -94,8 +94,10 @@ describe('App (component gallery)', () => {
     ).toBe(true)
   })
 
+  // axe walks the whole component gallery (several seconds on Node 20 CI under
+  // a full parallel run), so this test gets more than vitest's 5 s default.
   it('has no axe violations', async () => {
     const { container } = render(<App />)
     expect(await axe(container)).toHaveNoViolations()
-  })
+  }, 30_000)
 })

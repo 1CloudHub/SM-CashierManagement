@@ -40,7 +40,15 @@ let org: Awaited<ReturnType<typeof seedOrg>>;
 const MISSING_ID = '6f1c7a52-0b8e-4d5e-9a41-5e2b1c9d7f00';
 const RUNS = 60;
 /** Feature resources whose handlers may answer 201/404/409 to random ids and bodies. */
-const LENIENT_RESOURCES = new Set<string>(['data_ingestion', 'scenarios', 'scenario_settings', 'scenario_submit']);
+const LENIENT_RESOURCES = new Set<string>([
+  'data_ingestion',
+  'scenarios',
+  'scenario_settings',
+  'scenario_submit',
+  // Task 13.4: roster routes address a roster under the store, so a store id reused as the roster id is a 404.
+  'weekly_roster',
+  'shift_edit',
+]);
 
 beforeAll(async () => {
   db = await createTestDatabase();
@@ -86,8 +94,8 @@ function expectedScope(role: RoleCode, assignments: readonly { role: RoleCode; s
 
 function inScope(scope: Scope, guard: Extract<RouteGuard, { kind: 'authorize' }>, id: string): boolean {
   if (!guard.scopeTarget) return true;
-  // No saved view is seeded here, so every id addresses someone else's or a missing one.
-  if (guard.scopeTarget.kind === 'saved_view') return false;
+  // No saved view or notification is seeded here, so every id addresses someone else's or a missing one.
+  if (guard.scopeTarget.kind === 'saved_view' || guard.scopeTarget.kind === 'notification') return false;
   if (guard.scopeTarget.kind === 'store') {
     const store = storeOf(id);
     return store !== undefined && isStoreInScope(scope, store);

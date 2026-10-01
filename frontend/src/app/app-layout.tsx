@@ -1,9 +1,11 @@
+import { BrandMark } from '@/components/brand'
 import { createContext, useContext, type MouseEvent, type ReactNode } from 'react'
 import { AppShell, useMediaQuery } from '@/components/layout'
-import { NotificationBell, ThemeToggle, UserMenu, type NavSection } from '@/components/shell'
+import { ThemeToggle, UserMenu, type NavSection } from '@/components/shell'
 import { Alert } from '@/components/ui/alert'
 import type { Crumb } from '@/components/ui/breadcrumbs'
 import { useDocumentTitle } from '@/features/auth/use-document-title'
+import { NotificationBell } from '@/features/notifications/notification-bell'
 import { GlobalSearch } from '@/features/search/global-search'
 import { LanguageSwitcher, useI18n } from '@/i18n'
 import { canAccess, navForRole, screenForPath } from './access'
@@ -16,7 +18,7 @@ import { useRouter } from './router'
 /**
  * The signed-in frame (design.md › App shell): AppShell wired to the active
  * role — nav filtered to what the role may open (requirement 2.3), "Viewing
- * as" switcher, language, theme toggle, notifications bell, account menu,
+ * as" switcher, language, theme toggle, notifications bell (task 19), account menu,
  * global search, breadcrumb, sample-data banner and page title. Screens render
  * inside it.
  */
@@ -40,15 +42,6 @@ export const ShellSlotsProvider = ShellSlotsContext.Provider
 
 export function useShellSlots(): ShellSlots {
   return useContext(ShellSlotsContext)
-}
-
-/**
- * Unread notifications for the bell. The notifications API (task 19) is not
- * in the client yet, so this is 0 until it lands; the bell already announces
- * a count as text when there is one.
- */
-function useUnreadNotifications(): number {
-  return 0
 }
 
 /**
@@ -83,7 +76,6 @@ export function AppLayout({
   const { role } = useActiveRole()
   const { location, navigate } = useRouter()
   const isTabletUp = useMediaQuery('(min-width: 37.5rem)')
-  const unread = useUnreadNotifications()
   useDocumentTitle(t('shell.pageTitle', { title }))
 
   const current = screenForPath(location.pathname)
@@ -119,6 +111,12 @@ export function AppLayout({
     <div onClick={onClick}>
       <AppShell
         nav={nav}
+        brand={
+          <>
+            <BrandMark variant="reversed" className="hidden h-9 w-auto tablet:block" />
+            <BrandMark variant="reversed" lockup="mark" className="h-9 w-auto tablet:hidden" />
+          </>
+        }
         navLabel={t('shell.navLabel')}
         navCollapseLabel={t('shell.navCollapse')}
         navExpandLabel={t('shell.navExpand')}
@@ -134,7 +132,7 @@ export function AppLayout({
             <LanguageSwitcher />
             {isTabletUp && <RoleSwitcher />}
             <ThemeToggle />
-            {canAccess(role, 'SCR-040') && <NotificationBell unreadCount={unread} />}
+            <NotificationBell />
             <AppUserMenu roleSwitcher={isTabletUp ? undefined : <RoleSwitcher variant="menu" />} />
           </>
         }

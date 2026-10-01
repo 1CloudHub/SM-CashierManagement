@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'vitest-axe'
-import { NotificationBell } from './notification-bell'
 import { ThemeToggle } from './theme-toggle'
 import { TopBar } from './top-bar'
 import { UserMenu } from './user-menu'
@@ -10,15 +9,6 @@ import { UserMenu } from './user-menu'
 afterEach(() => {
   window.localStorage.removeItem('lw.theme')
   delete document.documentElement.dataset.theme
-})
-
-describe('NotificationBell', () => {
-  it('links to notifications and puts the unread count in its name as text', () => {
-    const { rerender } = render(<NotificationBell />)
-    expect(screen.getByRole('link', { name: 'Notifications' })).toHaveAttribute('href', '/notifications')
-    rerender(<NotificationBell unreadCount={3} />)
-    expect(screen.getByRole('link', { name: 'Notifications, 3 unread' })).toBeInTheDocument()
-  })
 })
 
 describe('ThemeToggle', () => {

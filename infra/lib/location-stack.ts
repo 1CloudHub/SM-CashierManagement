@@ -6,6 +6,13 @@ import type { EnvironmentConfig } from '../config/environments';
 
 export interface LocationStackProps extends StackProps {
   readonly config: EnvironmentConfig;
+  /**
+   * SPA origins (e.g. `https://lanewise.example.com`) allowed to load map
+   * tiles in the browser (task 16.1). When given, a referer-restricted API
+   * key for this map only is created; without it the SPA falls back to its
+   * schematic (non-network) map.
+   */
+  readonly mapReferers?: readonly string[];
 }
 
 /**
@@ -20,6 +27,8 @@ export class LocationStack extends Stack {
   public readonly mapArn: string;
   public readonly routeCalculatorName: string;
   public readonly routeCalculatorArn: string;
+  /** Browser map key name (read-only map access from the SPA origins), when created. */
+  public readonly mapApiKeyName?: string;
 
   constructor(scope: Construct, id: string, props: LocationStackProps) {
     super(scope, id, props);
@@ -41,6 +50,28 @@ export class LocationStack extends Stack {
     this.mapArn = map.attrArn;
     this.routeCalculatorName = calculator.calculatorName;
     this.routeCalculatorArn = calculator.attrArn;
+
+    if (props.mapReferers && props.mapReferers.length > 0) {
+      // The SPA's network map (SCR-026) renders Amazon Location tiles with
+      // MapLibre GL. The key is public by nature (it ships to browsers), so
+      // it can only read THIS map's tiles/style/glyphs/sprites and only from
+      // the SPA origins. Its value is written to runtime-config.json at deploy.
+      const key = new location.CfnAPIKey(this, 'MapApiKey', {
+        keyName: `lanewise-${config.envName}-map-key`,
+        description: 'LaneWise SPA network map: read-only map access from the SPA origins.',
+        noExpiry: true,
+        restrictions: {
+          allowActions: ['geo:GetMap*'],
+          allowResources: [this.mapArn],
+          allowReferers: props.mapReferers.map((origin) => `${origin}/*`),
+        },
+      });
+      this.mapApiKeyName = key.keyName;
+      new CfnOutput(this, 'MapApiKeyName', {
+        value: key.keyName,
+        description: 'Amazon Location API key for the SPA map (value read at deploy into runtime-config.json).',
+      });
+    }
 
     new CfnOutput(this, 'MapName', { value: this.mapName, description: 'Amazon Location map resource.' });
     new CfnOutput(this, 'RouteCalculatorName', {
