@@ -25,13 +25,14 @@ describe('routing', () => {
   })
 
   it('renders a placeholder with title, breadcrumb and its spec task', async () => {
-    const { container } = renderApp({ path: '/plan/map', role: 'PLN' })
-    expect(screen.getByRole('heading', { level: 1, name: 'Network map' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Coming in task 16.1' })).toBeInTheDocument()
+    // SCR-025 My roster is still a placeholder (task 18.1); SCR-026 is built (task 16).
+    const { container } = renderApp({ path: '/my-roster', role: 'STF' })
+    expect(screen.getByRole('heading', { level: 1, name: 'My roster' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Coming in task 18.1' })).toBeInTheDocument()
     const crumbs = within(screen.getByRole('navigation', { name: 'Breadcrumb' }))
     expect(crumbs.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/')
-    expect(crumbs.getByText('Network map')).toHaveAttribute('aria-current', 'page')
-    expect(within(mainNav()).getByRole('link', { name: 'Network map' })).toHaveAttribute('aria-current', 'page')
+    expect(crumbs.getByText('My roster')).toHaveAttribute('aria-current', 'page')
+    expect(within(mainNav()).getByRole('link', { name: 'My roster' })).toHaveAttribute('aria-current', 'page')
     expect(await axe(container)).toHaveNoViolations()
   })
 

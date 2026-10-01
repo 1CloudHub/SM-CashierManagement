@@ -72,7 +72,7 @@ describe('SCR-021 department day plan (Req 5.2)', () => {
     expect(screen.getByRole('link', { name: 'Open weekly roster' })).toHaveAttribute('href', '/plan/roster?store=st-cebu&dept=st-cebu-d1')
     expect(screen.getByRole('button', { name: 'Export CSV' })).toBeInTheDocument()
     expect(await axe(container)).toHaveNoViolations()
-  })
+  }, 20_000) // renders the full day plan and an axe pass: ~6 s on CI-sized runners
 
   it('asks for a department when none is chosen', async () => {
     renderApp({ path: '/plan/department', role: 'STM' })
