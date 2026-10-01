@@ -1,10 +1,10 @@
 ---
 id: SG-003
 title: Iconography, app mark and shape
-version: 0.3.0
+version: 0.4.0
 status: Draft
 owner: TBD
-last_updated: 2026-09-30
+last_updated: 2026-10-01
 related: [SG-000, SG-004, SG-005, SG-008, ADR-0003]
 ---
 
@@ -15,7 +15,7 @@ related: [SG-000, SG-004, SG-005, SG-008, ADR-0003]
 ## Shape
 
 - `--lw-radius: 0` (square corners), `--lw-shadow: none` (no shadows, no gradients).
-- `--lw-outline-w: 2px` — outlines are always 2px, never hairlines. Solid fills only for the single primary action, the key number, and the most urgent status; everything else outlined.
+- `--lw-outline-w: 1px` — component borders are thin 1px lines (contrast comes from the colour, ≥ 3:1); `--lw-focus-w: 2px` keeps focus indicators at 2px. Solid fills only for the single primary action, the key number, and the most urgent status; everything else outlined.
 
 ## UI icons
 
@@ -50,3 +50,4 @@ Source files: `lanewise_logo.svg`, `lanewise_logo_reversed.svg`, `lanewise_icon.
 | 0.1.0 | 2026-09-30 | TBD | Initial scaffold |
 | 0.2.0 | 2026-09-30 | Kiro | Placeholder mark + export matrix |
 | 0.3.0 | 2026-09-30 | Kiro | Adopted LaneWise mark (three lanes), square/no-shadow/2px-outline shape rules |
+| 0.4.0 | 2026-10-01 | Claude | Thinner, more modern borders: 1px component outlines, 2px focus (`--lw-focus-w`) |

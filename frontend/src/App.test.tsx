@@ -94,9 +94,10 @@ describe('App (component gallery)', () => {
     ).toBe(true)
   })
 
-  // The gallery renders every component and state: one axe pass takes ~5 s on its own.
-  it('has no axe violations', { timeout: 20_000 }, async () => {
+  // axe walks the whole component gallery (several seconds on Node 20 CI under
+  // a full parallel run), so this test gets more than vitest's 5 s default.
+  it('has no axe violations', async () => {
     const { container } = render(<App />)
     expect(await axe(container)).toHaveNoViolations()
-  })
+  }, 30_000)
 })

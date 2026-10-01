@@ -7,6 +7,7 @@ import { ApprovalsPage } from '@/features/approvals/pages'
 import { ProfileScreen } from '@/features/auth/profile-screen'
 import { DataSourcesPage, UploadPage } from '@/features/data/pages'
 import { HomeScreen } from '@/features/home/home-screen'
+import { RosterPage } from '@/features/roster/pages'
 import { SearchResultsScreen } from '@/features/search/search-results-screen'
 import { RuleSetsPage, RuleVersionEditorPage } from '@/features/rules/pages'
 import { ScenarioComparePage, ScenarioListPage, ScenarioSettingsPage } from '@/features/scenarios/pages'
@@ -24,6 +25,7 @@ import { Guarded, HelpScreen, NotFoundScreen, PlaceholderScreen, StatusScreen } 
  */
 const BUILT: Partial<Record<ScreenId, () => React.ReactNode>> = {
   'SCR-010': () => <HomeScreen />,
+  'SCR-022': () => <RosterPage />,
   'SCR-030': () => <ScenarioListPage />,
   'SCR-031': () => <ScenarioSettingsPage />,
   'SCR-032': () => <ScenarioComparePage />,

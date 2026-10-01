@@ -113,6 +113,12 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'POST', path: '/approvals/{scenarioId}/budget' },
   { method: 'POST', path: '/approvals/{scenarioId}/plan' },
   { method: 'POST', path: '/approvals/{scenarioId}/secured-outside' },
+  // Task 13.4: published rosters and store-manager overrides (SCR-022).
+  { method: 'GET', path: '/stores/{storeId}/rosters' },
+  { method: 'GET', path: '/stores/{storeId}/rosters/{rosterId}' },
+  { method: 'GET', path: '/stores/{storeId}/rosters/{rosterId}/shifts/{shiftId}/replacements' },
+  { method: 'POST', path: '/stores/{storeId}/rosters/{rosterId}/overrides/check' },
+  { method: 'POST', path: '/stores/{storeId}/rosters/{rosterId}/overrides' },
   // Users and roles, audit log (SCR-070..073).
   { method: 'GET', path: '/admin/scope-options' },
   { method: 'GET', path: '/admin/users' },

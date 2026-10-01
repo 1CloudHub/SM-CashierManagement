@@ -12,7 +12,7 @@ import { cva } from 'class-variance-authority'
  * keeps a ≥44px touch target (`min-h-tap`); `sm` only reduces padding/text.
  */
 export const buttonVariants = cva(
-  'lw-btn inline-flex items-center justify-center gap-2 border-2 whitespace-nowrap select-none font-weight-semibold rounded-none motion-interactive focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none aria-busy:pointer-events-none',
+  'lw-btn inline-flex items-center justify-center gap-2 border whitespace-nowrap select-none font-weight-semibold rounded-none motion-interactive focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none aria-busy:pointer-events-none',
   {
     variants: {
       variant: {
