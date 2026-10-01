@@ -176,7 +176,9 @@ export function RosterGrid({
             {(
               [
                 ['shifts', <Num key="v" value={totals.shifts} />],
-                ['cost', <Currency key="v" value={totals.cost} options={{ maximumFractionDigits: 0 }} />],
+                ...(totals.cost === undefined
+                  ? []
+                  : ([['cost', <Currency key="v" value={totals.cost} options={{ maximumFractionDigits: 0 }} />]] as const)),
                 ['paidHours', <Num key="v" value={totals.paidHours} />],
                 ['openShifts', <Num key="v" value={totals.openShifts} />],
                 ['borrowed', <Num key="v" value={totals.borrowed} />],

@@ -55,7 +55,9 @@ describe('SCR-010 Home', () => {
   it('offers a retry when the home request fails', async () => {
     const mock = createMockAdapter()
     let calls = 0
+    // Fail the first /home request only (the shell's bell also calls the API).
     const flaky: ApiAdapter = async (req) => {
+      if (req.path !== '/home') return mock(req)
       calls += 1
       return calls === 1 ? { status: 500, body: null } : mock(req)
     }

@@ -31,3 +31,8 @@ export function useApi(): ApiClient {
   if (!ctx) throw new Error('useApi must be used within an ApiProvider')
   return ctx
 }
+
+/** The API client, or `null` outside an ApiProvider (for optional shell widgets). */
+export function useOptionalApi(): ApiClient | null {
+  return useContext(ApiContext)
+}

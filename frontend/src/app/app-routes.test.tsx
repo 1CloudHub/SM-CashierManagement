@@ -25,15 +25,15 @@ describe('routing', () => {
   })
 
   it('renders a placeholder with title, breadcrumb and its spec task', async () => {
-    const { container } = renderApp({ path: '/plan/network', role: 'PLN' })
-    expect(screen.getByRole('heading', { level: 1, name: 'Network view' })).toBeInTheDocument()
+    const { container } = renderApp({ path: '/data/stores', role: 'PLN' })
+    expect(screen.getByRole('heading', { level: 1, name: 'Stores and lanes' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'This screen is not available yet' })).toBeInTheDocument()
     // The spec task / screen id pill is a dev-only aid (vitest runs with DEV on).
-    expect(screen.getByText('Task 14.1 · SCR-020')).toBeInTheDocument()
+    expect(screen.getByText('Task 9.1 · SCR-052')).toBeInTheDocument()
     const crumbs = within(screen.getByRole('navigation', { name: 'Breadcrumb' }))
     expect(crumbs.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/')
-    expect(crumbs.getByText('Network view')).toHaveAttribute('aria-current', 'page')
-    expect(within(mainNav()).getByRole('link', { name: 'Network view' })).toHaveAttribute('aria-current', 'page')
+    expect(crumbs.getByText('Stores and lanes')).toHaveAttribute('aria-current', 'page')
+    expect(within(mainNav()).getByRole('link', { name: 'Stores and lanes' })).toHaveAttribute('aria-current', 'page')
     expect(await axe(container)).toHaveNoViolations()
   })
 
@@ -103,7 +103,8 @@ describe('no access (requirement 2.4)', () => {
     expect(container).not.toHaveTextContent('scn-secret-42')
     expect(container).not.toHaveTextContent('Scenario settings')
     expect(document.title).toBe('No access — LaneWise')
-    expect(log).toHaveLength(0)
+    // Only the shell's own bell (the caller's notifications, task 19) may load; nothing for the denied screen.
+    expect(log.filter((r) => !r.path.startsWith('/notifications'))).toHaveLength(0)
     expect(await axe(container)).toHaveNoViolations()
   })
 
@@ -130,7 +131,7 @@ describe('"Viewing as" role switcher (requirement 3)', () => {
     renderApp({ path: '/plan/network', role: 'PLN' })
     await user.selectOptions(switcher(), 'FIN')
     expect(window.location.pathname).toBe('/plan/network')
-    expect(screen.getByRole('heading', { level: 1, name: 'Network view' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'All stores and departments' })).toBeInTheDocument()
     expect(within(mainNav()).queryByRole('link', { name: 'Network map' })).toBeNull()
   })
 

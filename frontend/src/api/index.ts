@@ -16,6 +16,6 @@ export {
   type HttpMethod,
   type RequestOptions,
 } from './client'
-export { ApiProvider, useApi } from './context'
+export { ApiProvider, useApi, useOptionalApi } from './context'
 export { createMockAdapter, mockHome, mockViewer, type MockAdapterOptions } from './mock'
 export type * from './types'

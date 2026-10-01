@@ -27,11 +27,11 @@ export function RoleSwitcher({ variant = 'bar' }: { variant?: 'bar' | 'menu' } =
   if (!demo) return null
 
   return (
-    <div className={cn(variant === 'menu' ? 'flex flex-col gap-1' : 'inline-flex items-center gap-2')}>
+    <div className={cn(variant === 'menu' ? 'flex flex-col gap-1' : 'inline-flex shrink-0 items-center gap-2')}>
       <label
         htmlFor={id}
         className={cn(
-          'whitespace-nowrap text-label text-text-muted',
+          'shrink-0 whitespace-nowrap text-label text-text-muted',
           variant === 'bar' && 'sr-only laptop:not-sr-only',
         )}
       >
