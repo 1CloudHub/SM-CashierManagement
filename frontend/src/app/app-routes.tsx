@@ -2,6 +2,7 @@ import { Outlet, Route, Routes } from 'react-router'
 import { App } from '@/App'
 import { useRouteFocus } from '@/components/a11y'
 import { HelpProvider } from '@/components/help'
+import { AuditPage, RolesPage, UserEditPage, UsersPage } from '@/features/admin/pages'
 import { ApprovalsPage } from '@/features/approvals/pages'
 import { ProfileScreen } from '@/features/auth/profile-screen'
 import { DataSourcesPage, UploadPage } from '@/features/data/pages'
@@ -44,6 +45,10 @@ const BUILT: Partial<Record<ScreenId, () => React.ReactNode>> = {
   'SCR-041': () => <SearchResultsScreen />,
   'SCR-060': () => <RuleSetsPage />,
   'SCR-061': () => <RuleVersionEditorPage />,
+  'SCR-070': () => <UsersPage />,
+  'SCR-071': () => <UserEditPage />,
+  'SCR-072': () => <RolesPage />,
+  'SCR-073': () => <AuditPage />,
   'SCR-050': () => <DataSourcesPage />,
   'SCR-051': () => <UploadPage />,
   'SCR-052': () => <StoresPage />,

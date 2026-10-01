@@ -177,6 +177,28 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'PUT', path: '/staff/{staffId}/availability' },
   { method: 'POST', path: '/staff/{staffId}/unavailable-dates' },
   { method: 'DELETE', path: '/staff/{staffId}/unavailable-dates/{entryId}' },
+  // Users and roles, audit log (SCR-070..073).
+  { method: 'GET', path: '/admin/scope-options' },
+  { method: 'GET', path: '/admin/users' },
+  { method: 'POST', path: '/admin/users' },
+  { method: 'GET', path: '/admin/users/{userId}' },
+  { method: 'PATCH', path: '/admin/users/{userId}' },
+  { method: 'POST', path: '/admin/users/{userId}/deactivate' },
+  { method: 'POST', path: '/admin/users/{userId}/resend' },
+  { method: 'GET', path: '/audit-events' },
+  { method: 'GET', path: '/audit-events/export' },
+];
+
+/**
+ * The Cognito admin actions the API needs for user administration
+ * (api/src/auth/user-directory.ts): invite / re-send, re-enable, disable and
+ * sign out. Granted on the LaneWise user pool only.
+ */
+export const API_COGNITO_ADMIN_ACTIONS: readonly string[] = [
+  'cognito-idp:AdminCreateUser',
+  'cognito-idp:AdminDisableUser',
+  'cognito-idp:AdminEnableUser',
+  'cognito-idp:AdminUserGlobalSignOut',
 ];
 
 /** Request headers the SPA sends: the defaults plus the demo role switcher's `X-Active-Role`. */
@@ -254,6 +276,8 @@ export class ApiStack extends Stack {
         // against the active role either way (P12).
         DEMO_ROLE_SWITCHER: config.demoRoleSwitcher ? 'true' : 'false',
         CORS_ALLOWED_ORIGINS: allowedOrigins ? Fn.join(',', allowedOrigins) : '*',
+        // User administration invites and deactivates users in this pool (SCR-070/071).
+        COGNITO_USER_POOL_ID: props.userPool.userPoolId,
         ...props.serviceEnvironment,
       },
       ...(props.network && {
@@ -263,6 +287,12 @@ export class ApiStack extends Stack {
       }),
     });
     this.apiFunction = apiFn;
+    apiFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: [...API_COGNITO_ADMIN_ACTIONS],
+        resources: [props.userPool.userPoolArn],
+      }),
+    );
 
     const api = new apigateway.RestApi(this, 'RestApi', {
       restApiName: `lanewise-${config.envName}-api`,
