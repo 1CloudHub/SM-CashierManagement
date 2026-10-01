@@ -96,6 +96,12 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'POST', path: '/scenarios/{scenarioId}/run' },
   { method: 'POST', path: '/scenarios/{scenarioId}/submit' },
   { method: 'POST', path: '/scenarios/{scenarioId}/archive' },
+  // Task 13.4: published rosters and store-manager overrides (SCR-022).
+  { method: 'GET', path: '/stores/{storeId}/rosters' },
+  { method: 'GET', path: '/stores/{storeId}/rosters/{rosterId}' },
+  { method: 'GET', path: '/stores/{storeId}/rosters/{rosterId}/shifts/{shiftId}/replacements' },
+  { method: 'POST', path: '/stores/{storeId}/rosters/{rosterId}/overrides/check' },
+  { method: 'POST', path: '/stores/{storeId}/rosters/{rosterId}/overrides' },
 ];
 
 /** Request headers the SPA sends: the defaults plus the demo role switcher's `X-Active-Role`. */
