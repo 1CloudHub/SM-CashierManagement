@@ -23,13 +23,13 @@ import { useUiT } from '@/i18n/context'
  * reversed BrandMark lockup. From tablet up a collapse/expand icon toggle for
  * the docked side nav sits at the far left (`onNavToggle`).
  *
- * Narrow screens (~400px): the bar must not overflow. Below tablet the
- * "by SM Retail" byline is visually hidden (still read as part of the brand
- * link), the brand truncates rather than pushing controls off-screen
- * (`min-w-0`), and the trailing slot is expected to collapse secondary
- * controls (role switcher, sign out) into the user menu — AppLayout does.
- * Search: pass `search` to render the inline field (AppShell passes it only
- * from tablet up) and/or `onSearchToggle` for the mobile search button, so the
+ * Narrow screens (~400px): the bar must not overflow (no horizontal scroll,
+ * which would also clip the bell and account popovers). The brand shrinks
+ * (`min-w-0`), the default lockup's "by SM Retail" byline is visually hidden
+ * below tablet, and the trailing slot is expected to collapse secondary
+ * controls (role switcher, sign out) into the account menu — AppLayout does.
+ * Search: pass `search` for the inline field (AppShell passes it only from
+ * tablet up) and/or `onSearchToggle` for the mobile search button, so the
  * search form is mounted once per breakpoint.
  */
 export function TopBar({
@@ -41,8 +41,8 @@ export function TopBar({
   trailing,
   onNavToggle,
   navCollapsed = false,
-  navCollapseLabel = 'Collapse navigation',
-  navExpandLabel = 'Expand navigation',
+  navCollapseLabel,
+  navExpandLabel,
   className,
 }: {
   /** Tablet and up: collapse/expand the docked side nav. */
@@ -62,10 +62,13 @@ export function TopBar({
   className?: string
 }) {
   const t = useUiT()
+  const navToggleLabel = navCollapsed
+    ? (navExpandLabel ?? t('shell.navExpand'))
+    : (navCollapseLabel ?? t('shell.navCollapse'))
   return (
     <header
       className={cn(
-        'lw-appbar sticky top-0 z-30 flex h-[var(--lw-topbar-h)] min-w-0 items-center gap-2 overflow-x-auto bg-appbar px-2 text-on-appbar tablet:gap-4 tablet:pr-4',
+        'lw-appbar sticky top-0 z-30 flex h-[var(--lw-topbar-h)] min-w-0 items-center gap-1 bg-appbar px-2 text-on-appbar tablet:gap-4 tablet:pr-4',
         className,
       )}
     >
@@ -87,8 +90,8 @@ export function TopBar({
         <Button
           size="icon"
           variant="ghost"
-          aria-label={navCollapsed ? navExpandLabel : navCollapseLabel}
-          title={navCollapsed ? navExpandLabel : navCollapseLabel}
+          aria-label={navToggleLabel}
+          title={navToggleLabel}
           aria-controls="sidenav"
           aria-expanded={!navCollapsed}
           onClick={onNavToggle}
@@ -104,7 +107,7 @@ export function TopBar({
 
       <a
         href="/"
-        className="flex shrink-0 items-center self-stretch px-2 no-underline focus-visible:outline-focus-ring"
+        className="flex min-w-0 shrink items-center self-stretch overflow-hidden px-2 no-underline focus-visible:outline-focus-ring"
       >
         {brand ?? (
           <span className="font-weight-bold">
@@ -120,7 +123,7 @@ export function TopBar({
         </div>
       )}
 
-      <div className="ml-auto flex min-w-0 shrink-0 items-center gap-1 tablet:gap-2">
+      <div className="ml-auto flex shrink-0 items-center gap-1 tablet:gap-2">
         {onSearchToggle && (
           <Button
             size="icon"
