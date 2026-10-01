@@ -93,6 +93,7 @@ async function wipeSyntheticData(tx: Tx): Promise<Record<string, number>> {
     ['dataset_snapshot', 'DELETE FROM dataset_snapshot WHERE synthetic'],
     ['rule_version', 'DELETE FROM rule_version WHERE synthetic'],
     ['staff_home_area', 'DELETE FROM staff_home_area WHERE synthetic'],
+    ['staff_consent', 'DELETE FROM staff_consent WHERE synthetic'],
     ['staff_training', 'DELETE FROM staff_training WHERE staff_id IN (SELECT id FROM staff WHERE synthetic)'],
     ['staff', 'DELETE FROM staff WHERE synthetic'],
     [
@@ -219,6 +220,15 @@ async function insertStaff(tx: Tx, data: DemoDataset): Promise<void> {
        FROM jsonb_to_recordset($1::jsonb) AS x(
          id uuid, "staffId" uuid, "startsAt" timestamptz, "endsAt" timestamptz, reason text)`,
     data.availability,
+  );
+  // Each seeded home area rests on a seeded grant to consent text v1: the
+  // database refuses a home area without an active consent (task 15, Req 12.2).
+  await insertJson(
+    tx,
+    `INSERT INTO staff_consent (id, staff_id, purpose, text_version, text_locale, granted_at, synthetic)
+     SELECT x.id, x."staffId", 'home_area', 1, 'en', '${DEMO_TIMES.consentAt}'::timestamptz, true
+       FROM jsonb_to_recordset($1::jsonb) AS x(id uuid, "staffId" uuid)`,
+    data.homeAreas.map((h) => ({ id: demoId('staff_consent', `${h.staffId}:home_area`), staffId: h.staffId })),
   );
   await insertJson(
     tx,
@@ -372,6 +382,7 @@ function seededCounts(data: DemoDataset): Record<string, number> {
     staff: data.staff.length,
     staffAvailability: data.availability.length,
     staffHomeAreas: data.homeAreas.length,
+    staffConsents: data.homeAreas.length,
     users: data.users.length,
     roleAssignments: data.users.length,
     ruleVersions: data.ruleVersions.length,
