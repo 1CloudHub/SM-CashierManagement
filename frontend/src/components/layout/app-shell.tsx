@@ -80,7 +80,7 @@ export function AppShell({
   breadcrumbs,
   sampleDataBanner,
   contextBar,
-  width = 'laptop',
+  width = 'fluid',
   navLabel = 'Main',
   mainLabel = 'Main content',
   skipLinkLabel,
@@ -114,29 +114,35 @@ export function AppShell({
         search={search}
         onSearchToggle={search ? () => setSearchOpen(true) : undefined}
         trailing={trailing}
+        onNavToggle={isTabletUp ? toggleNav : undefined}
+        navCollapsed={navCollapsed}
+        navCollapseLabel={navCollapseLabel}
+        navExpandLabel={navExpandLabel}
       />
 
       {/* Tablet and up: a single docked nav beside content — an icon rail at
           tablet, expanded from laptop up (breakpoints table). Rendering one
           nav keeps the navigation landmark unique. */}
-      <div className={cn(isTabletUp && 'grid grid-cols-[auto_1fr]')}>
+      <div
+        className={cn(
+          'min-h-[calc(100dvh-var(--lw-topbar-h))]',
+          isTabletUp && 'grid grid-cols-[auto_1fr]',
+        )}
+      >
         {isTabletUp && (
-          <SideNav
-            sections={nav}
-            label={navLabel}
-            collapsed={navCollapsed}
-            onToggleCollapsed={toggleNav}
-            collapseLabel={navCollapseLabel}
-            expandLabel={navExpandLabel}
-          />
+          // Full-height docked nav: sticks under the app bar and scrolls on
+          // its own, so it never ends part-way down a long page.
+          <div className="sticky top-[var(--lw-topbar-h)] h-[calc(100dvh-var(--lw-topbar-h))] self-start overflow-y-auto bg-surface">
+            <SideNav
+              sections={nav}
+              label={navLabel}
+              collapsed={navCollapsed}
+              className="min-h-full"
+            />
+          </div>
         )}
 
         <div className="min-w-0">
-          {sampleDataBanner && (
-            <div className="pt-3">
-              <Page width={width}>{sampleDataBanner}</Page>
-            </div>
-          )}
 
           {/* The <main> landmark + skip-link / route-focus target. tabIndex -1
               makes it programmatically focusable without adding it to the tab
@@ -147,12 +153,14 @@ export function AppShell({
             tabIndex={-1}
             aria-label={mainLabel}
             width={width}
-            className="py-4 focus-visible:outline-focus-ring"
+            flush
+            className="mx-0 px-4 pt-4 pb-16 tablet:px-5 tablet:pt-5 laptop:px-8 laptop:pt-6 outline-none"
           >
             <Stack gap={4}>
               {breadcrumbs && breadcrumbs.length > 0 && (
                 <Breadcrumbs items={breadcrumbs} />
               )}
+              {sampleDataBanner}
               {contextBar}
               {children}
             </Stack>
