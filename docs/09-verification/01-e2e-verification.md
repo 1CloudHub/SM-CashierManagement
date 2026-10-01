@@ -30,7 +30,7 @@ Verified on branch `feat/task-25-e2e-verification`: `main` through #50, which in
 
 | Area | Result |
 |---|---|
-| Unit + property tests | **1,638 passed, 0 failed.** shared 187, domain 82, matching 46, api 436 (including 52 journey tests), frontend 794, infra 93. Lint, build and `cdk synth` are also clean. |
+| Unit + property tests | **1,637 passed, 0 failed.** shared 187, domain 82, matching 46, api 436 (including 52 journey tests), frontend 793, infra 93. Lint, build and `cdk synth` are also clean. |
 | SPA journeys J1–J11 + access matrix | **49 passed, 8 `fixme`, 0 failed.** 3.2 min with 2 workers. axe WCAG 2.2 A/AA is clean on every step. |
 | API journeys J1–J11 | **52 passed** in 6 files, about 30 s. |
 | Properties P1–P19 | Every property has at least one fast-check suite, and all pass (see Traceability). |
