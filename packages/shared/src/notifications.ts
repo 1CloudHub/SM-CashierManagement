@@ -69,6 +69,8 @@ export const NOTIFICATION_EVENTS = {
   'offer.sent': { category: 'offers', severity: 'info', email: 'always' },
   'offer.resolved': { category: 'offers', severity: 'info', email: 'never' },
   'borrow.requested': { category: 'borrow', severity: 'info', email: 'always' },
+  'staff_request.submitted': { category: 'roster', severity: 'info', email: 'always' },
+  'staff_request.decided': { category: 'roster', severity: 'info', email: 'always' },
   'borrow.decided': { category: 'borrow', severity: 'info', email: 'never' },
   'ingestion.succeeded': { category: 'data', severity: 'info', email: 'never' },
   'ingestion.failed': { category: 'data', severity: 'critical', email: 'always' },
@@ -204,7 +206,9 @@ export function notificationLink(ref: NotificationRef): string {
       return ruleSetId ? `/rules/${encodeURIComponent(ruleSetId)}/edit?version=${id}` : '/rules';
     }
     case 'roster':
-      return ref.event === 'roster.published' || ref.event === 'shift.changed' ? '/my-roster' : '/plan/roster';
+      return ref.event === 'roster.published' || ref.event === 'shift.changed' || ref.event === 'staff_request.decided'
+        ? '/my-roster'
+        : '/plan/roster';
     case 'offers':
       return ref.event === 'offer.sent' ? '/my-roster' : '/plan/roster';
     case 'borrow':
