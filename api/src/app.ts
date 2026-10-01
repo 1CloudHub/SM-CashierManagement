@@ -11,6 +11,7 @@ import { registerIngestionRoutes } from './routes/ingestion.js';
 import { registerMeRoutes } from './routes/me.js';
 import { registerSavedViewRoutes } from './routes/saved-views.js';
 import { registerSearchRoutes } from './routes/search.js';
+import { registerRuleRoutes } from './routes/rules.js';
 import { registerStoreRoutes } from './routes/stores.js';
 
 export interface AppDeps {
@@ -63,5 +64,6 @@ export function createApp(deps: AppDeps = depsFromEnv()): Router {
   registerSearchRoutes(router, deps);
   registerSavedViewRoutes(router, deps);
   registerIngestionRoutes(router, deps);
+  registerRuleRoutes(router, deps);
   return router.assertGuarded();
 }

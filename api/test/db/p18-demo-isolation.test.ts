@@ -169,12 +169,16 @@ async function insertRealWorld(tx: Tx, w: RealWorld): Promise<void> {
 
   const versionIds: string[] = [];
   for (const type of w.ruleTypes) {
+    // Settled history (superseded), so worlds can accumulate versions without
+    // breaking the one-open-version rule (task 10, migration 0110).
     const v = await one<{ id: string }>(
       tx,
-      `INSERT INTO rule_version (rule_set_id, is_cost_rule, version, effective_from, payload, created_by)
+      `INSERT INTO rule_version (rule_set_id, is_cost_rule, version, effective_from, status, payload, created_by,
+                                 finance_approved_by, finance_approved_at, published_by, published_at)
        SELECT rs.id, rs.is_cost_rule,
               coalesce((SELECT max(version) FROM rule_version WHERE rule_set_id = rs.id AND NOT synthetic), 0) + 1,
-              '2026-01-01', '{"real":true}', $2
+              '2026-01-01', 'superseded', '{"real":true}', $2,
+              CASE WHEN rs.is_cost_rule THEN $2::uuid END, CASE WHEN rs.is_cost_rule THEN now() END, $2, now()
          FROM rule_set rs WHERE rs.rule_set_type = $1 RETURNING id`,
       [type, user.id],
     );
