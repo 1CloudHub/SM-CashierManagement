@@ -10,6 +10,7 @@ import {
   isRuleVersionEditable,
   ruleVersionTransition,
   type RoleCode,
+  type RuleVersionDiff,
   type RuleVersionStatus,
   type RuleVersionSummary,
 } from '@lanewise/shared'
@@ -68,6 +69,59 @@ export function parseLeafInput(previous: Leaf['value'], input: string): string |
 
 export const pathKey = (path: LeafPath): string => path.join('.')
 
+/** A validation error key (`hourlyRateByRegion.NCR`, `milestones.0.name`) back as a path. */
+export const keyPath = (key: string): LeafPath =>
+  key === '' ? [] : key.split('.').map((seg) => (/^\d+$/.test(seg) ? Number(seg) : seg))
+
+export type LeafGroup =
+  | { readonly kind: 'field'; readonly leaf: Leaf }
+  /** The entries of a keyed map (e.g. the base rate per region), shown as one table. */
+  | { readonly kind: 'table'; readonly path: LeafPath; readonly rows: readonly Leaf[] }
+
+/**
+ * Groups the leaves of keyed maps — whose keys are data (regions), not field
+ * names — into tables; every other leaf stays a field. Document order is kept.
+ */
+export function groupLeaves(leaves: readonly Leaf[], isDataKey: (key: string) => boolean): LeafGroup[] {
+  const out: LeafGroup[] = []
+  for (const leaf of leaves) {
+    const last = leaf.path[leaf.path.length - 1]
+    const parent = leaf.path.slice(0, -1)
+    if (parent.length === 0 || typeof last !== 'string' || !isDataKey(last)) {
+      out.push({ kind: 'field', leaf })
+      continue
+    }
+    const prev = out[out.length - 1]
+    if (prev?.kind === 'table' && pathKey(prev.path) === pathKey(parent)) {
+      out[out.length - 1] = { ...prev, rows: [...prev.rows, leaf] }
+    } else {
+      out.push({ kind: 'table', path: parent, rows: [leaf] })
+    }
+  }
+  return out
+}
+
+export type PreviousValue = { readonly present: false } | { readonly present: true; readonly value: unknown }
+
+/**
+ * A leaf's value in the previous version ("Was"): the diff's `before` when it
+ * changed, absent when it was added, else the saved value (unchanged since the
+ * previous version). Nothing for the first version of a rule set.
+ */
+export function previousValue(diff: RuleVersionDiff, saved: ReadonlyMap<string, unknown>, path: LeafPath): PreviousValue {
+  if (diff.fromVersionId === null) return { present: false }
+  const key = pathKey(path)
+  const change = diff.changes.find((c) => {
+    const k = pathKey(c.path)
+    return k === key || key.startsWith(`${k}.`)
+  })
+  if (change) {
+    if (change.kind === 'added' || pathKey(change.path) !== key) return { present: false }
+    return { present: true, value: change.before }
+  }
+  return saved.has(key) ? { present: true, value: saved.get(key) } : { present: false }
+}
+
 export interface VersionActions {
   /** Edit content, save the draft. */
   readonly edit: boolean
@@ -108,3 +162,9 @@ export function editorPath(ruleSetId: string, versionId: string): string {
 export function defaultVersion(versions: readonly RuleVersionSummary[]): RuleVersionSummary | null {
   return versions.find((v) => (OPEN_RULE_VERSION_STATUSES as readonly string[]).includes(v.status)) ?? versions[0] ?? null
 }
+
+const pad = (n: number): string => String(n).padStart(2, '0')
+
+/** Today in the user's own time zone (not UTC: just after midnight in Manila is still "yesterday" in UTC). */
+export const localTodayIso = (now: Date = new Date()): string =>
+  `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`

@@ -32,7 +32,7 @@ let handler: LambdaHandler;
 const users = {} as Record<RoleCode, string>;
 const emails = {} as Record<RoleCode, string>;
 let unassignedEmail: string;
-const sets = {} as Record<'wages' | 'lead_times', string>;
+const sets = {} as Record<'wages' | 'lead_times' | 'transport_allowance', string>;
 
 interface Result {
   readonly statusCode: number;
@@ -111,7 +111,7 @@ beforeAll(async () => {
   unassignedEmail = `nobody.${uniq()}@smretail.com`;
   await insertAppUser(db.pool, unassignedEmail);
   const actor = { userId: users.RST, activeRole: 'RST' as const, requestId: null };
-  for (const type of ['wages', 'lead_times'] as const) {
+  for (const type of ['wages', 'lead_times', 'transport_allowance'] as const) {
     const set = await withAuditedTransaction(db.pool, actor, (tx) => rulesRepo.createRuleSet(tx, { type, name: type }));
     sets[type] = set.id;
   }
@@ -259,6 +259,43 @@ describe('cost-rule journey (Req 16.1, 16.3, 16.5, 16.6)', () => {
     ]);
     // P6: the superseded version is unchanged.
     expect((await rulesRepo.getRuleVersion(db.pool, v1.id))?.payload).toEqual((published.body as { version: RuleVersionDetail }).version.payload);
+  });
+});
+
+describe("Finance's approve and publish (Req 16.3, Q6)", () => {
+  const bands = (amount: number) => ({ bands: [{ upToMinutes: 30, amount }, { upToMinutes: 60, amount: amount * 2 }] });
+  const submitted = async (effectiveFrom: string, amount: number): Promise<string> => {
+    const created = await call('RST', 'POST', `/rule-sets/${sets.transport_allowance}/versions`, {
+      body: { effectiveFrom, payload: bands(amount), changeNote: `Allowance ${amount}` },
+    });
+    const id = (created.body as { version: RuleVersionDetail }).version.id;
+    expect((await call('RST', 'POST', `/rule-versions/${id}/submit`)).statusCode).toBe(200);
+    return id;
+  };
+
+  it('approves and publishes in one step with one audit event', async () => {
+    const id = await submitted('2026-05-01', 50);
+    expect((await call('RST', 'POST', `/rule-versions/${id}/approve-and-publish`, { body: {} })).statusCode).toBe(403);
+    const before = await auditCount();
+    const res = await call('FIN', 'POST', `/rule-versions/${id}/approve-and-publish`, { body: { comment: 'OK' } });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchObject({
+      version: { status: 'published', submittedBy: users.RST, financeApprovedBy: users.FIN, publishedBy: users.FIN },
+    });
+    expect(await auditCount()).toBe(before + 1);
+  });
+
+  it('never leaves a version approved but unpublished when publishing fails', async () => {
+    // Takes effect before the in-force version, so the publish step is refused.
+    const id = await submitted('2026-03-01', 55);
+    const before = await auditCount();
+    const res = await call('FIN', 'POST', `/rule-versions/${id}/approve-and-publish`, { body: {} });
+    expect(res.statusCode).toBe(409);
+    expect(await rulesRepo.getRuleVersion(db.pool, id)).toMatchObject({ status: 'submitted', financeApprovedAt: null });
+    expect(await auditCount()).toBe(before);
+    // Only a submitted cost rule can take this path.
+    expect((await call('FIN', 'POST', `/rule-versions/${id}/request-changes`, { body: { comment: 'Fix the date' } })).statusCode).toBe(200);
+    expect((await call('FIN', 'POST', `/rule-versions/${id}/approve-and-publish`, { body: {} })).statusCode).toBe(409);
   });
 });
 

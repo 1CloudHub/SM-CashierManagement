@@ -52,6 +52,8 @@ function detail(status: RuleVersionStatus, overrides: Partial<RuleVersionDetail>
     createdBy: 'u-rst',
     createdByName: 'R. Santos',
     submittedAt: null,
+    submittedBy: null,
+    submittedByName: null,
     financeApprovedBy: null,
     financeApprovedByName: null,
     financeApprovedAt: null,
@@ -87,6 +89,11 @@ function fakeClient(version: RuleVersionDetail = detail('draft'), overrides: Par
     approve: vi.fn(async () => update({ status: 'approved', financeApprovedAt: '2026-10-01T00:00:00Z' })),
     requestChanges: vi.fn(async (_id, comment) => update({ status: 'changes_requested', reviewComment: comment })),
     publish: vi.fn(async () => ({ version: update({ status: 'published' }), supersededVersionId: 'v1', staleScenarioIds: ['s1', 's2'] })),
+    approveAndPublish: vi.fn(async () => ({
+      version: update({ status: 'published', financeApprovedAt: '2026-10-01T00:00:00Z' }),
+      supersededVersionId: 'v1',
+      staleScenarioIds: ['s1', 's2'],
+    })),
     ...overrides,
   }
 }
@@ -155,7 +162,10 @@ describe('SCR-061 Rule version editor', () => {
     expect(screen.getByText('Cost rule')).toBeInTheDocument()
     expect(screen.getByText(/2 scenarios use an earlier version/)).toBeInTheDocument()
     expect(screen.getByRole('rowheader', { name: 'Base rate by region (₱/h) › NCR' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Default base rate (₱/h)')).toHaveAttribute('readonly')
+    // Read-only values are text, not inputs, and carry no required marks.
+    expect(screen.getByText('Default base rate (₱/h)').tagName).toBe('DT')
+    expect(screen.queryByRole('textbox')).toBeNull()
+    expect(screen.queryByText('(required)')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Save draft' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Publish' })).toBeNull()
     expect(await axe(container)).toHaveNoViolations()
@@ -215,9 +225,13 @@ describe('SCR-061 Rule version editor', () => {
     await user.click(await screen.findByRole('button', { name: 'Approve and publish' }))
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByText(/Effective Oct 1, 2026; 2 scenarios will be marked stale/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/Planners, Finance, HR and the owners of those scenarios will be notified/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/can’t be undone/)).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: 'Approve and publish' }))
-    await waitFor(() => expect(client.publish).toHaveBeenCalledWith('v2'))
-    expect(client.approve).toHaveBeenCalledWith('v2')
+    // One atomic server operation, never approve then publish.
+    await waitFor(() => expect(client.approveAndPublish).toHaveBeenCalledWith('v2'))
+    expect(client.approve).not.toHaveBeenCalled()
+    expect(client.publish).not.toHaveBeenCalled()
     expect(await screen.findByText('Published. 2 scenarios were marked stale.')).toBeInTheDocument()
   })
 
@@ -289,5 +303,190 @@ describe('SCR-061 approved cost rule (RBAC matrix)', () => {
     unmount()
     editor('FIN', fakeClient(detail('approved', { financeApprovedAt: '2026-10-01T00:00:00Z' })))
     expect(await screen.findByRole('button', { name: 'Publish' })).toBeInTheDocument()
+  })
+})
+
+describe('SCR-061 review fixes', () => {
+  it('shows region rates as a table with the previous value', async () => {
+    editor('RST', fakeClient())
+    const table = await screen.findByRole('table', { name: 'Base rate by region (₱/h)' })
+    expect(within(table).getByRole('columnheader', { name: 'Region' })).toBeInTheDocument()
+    expect(within(table).getByRole('columnheader', { name: 'Was' })).toBeInTheDocument()
+    const row = within(table).getByRole('rowheader', { name: 'NCR' }).closest('tr')!
+    expect(within(row).getByRole('textbox', { name: 'Base rate by region (₱/h) › NCR' })).toHaveValue('86.875')
+    expect(within(row).getByText('80')).toBeInTheDocument()
+  })
+
+  it('reports an atomic approve-and-publish failure as nothing changed', async () => {
+    const user = userEvent.setup()
+    const approveAndPublish = vi.fn(async () => {
+      throw new RulesApiError(409, { error: { code: 'conflict', message: 'x', requestId: 'r' } })
+    })
+    editor('FIN', fakeClient(detail('submitted'), { approveAndPublish }))
+    await user.click(await screen.findByRole('button', { name: 'Approve and publish' }))
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Approve and publish' }))
+    expect(await screen.findByText(/Nothing was approved or published/)).toBeInTheDocument()
+  })
+
+  it('maps a 403 on load to the no-access state', async () => {
+    const getVersion = vi.fn(async () => {
+      throw new RulesApiError(403, { error: { code: 'forbidden', message: 'x', requestId: 'r' } })
+    })
+    editor('PLN', fakeClient(undefined, { getVersion }))
+    expect(await screen.findByText('Your role doesn’t include business rules.')).toBeInTheDocument()
+  })
+
+  it('invalid advanced JSON disables Save and Submit and is announced', async () => {
+    const user = userEvent.setup()
+    editor('RST', fakeClient())
+    await user.click(await screen.findByRole('button', { name: /Edit as JSON/ }))
+    const area = screen.getByLabelText('Rule values as JSON')
+    await user.type(area, '{{')
+    expect(await screen.findByRole('alert')).toHaveTextContent('The JSON isn’t valid')
+    expect(screen.getByRole('button', { name: 'Save draft' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Submit to Finance' })).toBeDisabled()
+  })
+
+  it('names who submitted and approved, with dates', async () => {
+    editor(
+      'PLN',
+      fakeClient(
+        detail('approved', {
+          submittedAt: '2026-10-03T02:00:00Z',
+          submittedByName: 'R. Santos',
+          financeApprovedAt: '2026-10-04T02:00:00Z',
+          financeApprovedByName: 'F. Reyes',
+        }),
+      ),
+    )
+    expect(await screen.findByText(/Done · R\. Santos · Oct 3, 2026/)).toBeInTheDocument()
+    expect(screen.getByText(/Done · F\. Reyes · Oct 4, 2026/)).toBeInTheDocument()
+  })
+
+  it('asks before discarding edits, and clears a success notice on the next edit', async () => {
+    const user = userEvent.setup()
+    const client = fakeClient()
+    editor('RST', client)
+    const input = await screen.findByLabelText('Employer on-cost loading')
+    await user.clear(input)
+    await user.type(input, '0.2')
+    await user.click(screen.getByRole('button', { name: 'Save draft' }))
+    expect(await screen.findByText('Draft saved.')).toBeInTheDocument()
+    await user.type(screen.getByLabelText('Employer on-cost loading'), '5')
+    expect(screen.queryByText('Draft saved.')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Discard changes' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Discard your changes?' })
+    await user.click(within(dialog).getByRole('button', { name: 'Keep editing' }))
+    expect(screen.getByLabelText('Employer on-cost loading')).toHaveValue('0.25')
+    await user.click(screen.getByRole('button', { name: 'Discard changes' }))
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Discard changes' }))
+    await waitFor(() => expect(screen.getByLabelText('Employer on-cost loading')).toHaveValue('0.2'))
+  })
+
+  it('lists errors without a field of their own in a danger alert with readable labels', async () => {
+    const user = userEvent.setup()
+    const saveDraft = vi.fn(async () => {
+      throw new RulesApiError(422, {
+        error: {
+          code: 'validation_failed',
+          message: 'x',
+          requestId: 'r',
+          details: [{ path: 'body.payload.dayTypeMultiplier.special', message: 'Required.' }],
+        },
+      })
+    })
+    editor('RST', fakeClient(undefined, { saveDraft }))
+    const input = await screen.findByLabelText('Employer on-cost loading')
+    await user.type(input, '1')
+    await user.click(screen.getByRole('button', { name: 'Save draft' }))
+    expect(await screen.findByText('Fix these values')).toBeInTheDocument()
+    expect(screen.getByText('Day-type multiplier › Special day: Required.')).toBeInTheDocument()
+  })
+
+  it('Finance cannot publish a version without a change note', async () => {
+    editor('FIN', fakeClient(detail('submitted', { changeNote: '' })))
+    expect(await screen.findByRole('button', { name: 'Approve and publish' })).toBeDisabled()
+    expect(screen.getByText(/has no change note, so it can’t be published/)).toBeInTheDocument()
+  })
+
+  it('formats diff values (numbers and yes/no)', async () => {
+    const getDiff = vi.fn(async () => ({
+      fromVersionId: 'v1',
+      toVersionId: 'v2',
+      changes: [
+        { path: ['defaultHourlyRate'], kind: 'changed' as const, before: 1234.5, after: 1300 },
+        { path: ['employerLoading'], kind: 'changed' as const, before: true, after: false },
+      ],
+    }))
+    editor('PLN', fakeClient(undefined, { getDiff }))
+    const table = await screen.findByRole('table', { name: 'Changed rule values' })
+    expect(within(table).getByText('1,234.5')).toBeInTheDocument()
+    expect(within(table).getByText('1,300')).toBeInTheDocument()
+    expect(within(table).getByText('Yes')).toBeInTheDocument()
+    expect(within(table).getByText('No')).toBeInTheDocument()
+  })
+
+  it('is read-only on a phone', async () => {
+    const original = window.matchMedia
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query.includes('max-width'),
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }))
+    try {
+      editor('RST', fakeClient())
+      expect(await screen.findByText('Read-only on a phone. Open on a tablet or computer to edit.')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Save draft' })).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Submit to Finance' })).toBeNull()
+      expect(screen.queryByRole('textbox')).toBeNull()
+    } finally {
+      window.matchMedia = original
+    }
+  })
+})
+
+describe('SCR-060 review fixes', () => {
+  it('defaults the effective date to the local date, not UTC', async () => {
+    const { localTodayIso } = await import('./logic')
+    expect(localTodayIso(new Date(2026, 9, 1, 0, 30))).toBe('2026-10-01')
+  })
+
+  it('maps a 403 to the no-access state', async () => {
+    const listRuleSets = vi.fn(async () => {
+      throw new RulesApiError(403, { error: { code: 'forbidden', message: 'x', requestId: 'r' } })
+    })
+    renderUi(<RuleSetsScreen client={fakeClient(undefined, { listRuleSets })} role="PLN" onOpenVersion={() => undefined} />)
+    expect(await screen.findByText('Your role doesn’t include business rules.')).toBeInTheDocument()
+  })
+
+  it('new draft dialog clears its error on edit and cannot close while creating', async () => {
+    const user = userEvent.setup()
+    let resolve: (v: RuleVersionDetail) => void = () => undefined
+    const createDraft = vi
+      .fn()
+      .mockRejectedValueOnce(new RulesApiError(409, { error: { code: 'conflict', message: 'x', requestId: 'r' } }))
+      .mockImplementationOnce(() => new Promise<RuleVersionDetail>((r) => (resolve = r)))
+    const onOpen = vi.fn()
+    renderUi(<RuleSetsScreen client={fakeClient(undefined, { createDraft })} role="RST" onOpenVersion={onOpen} today="2026-10-01" />)
+    await user.click(await screen.findByRole('button', { name: 'New draft: Wage rates' }))
+    const dialog = await screen.findByRole('dialog')
+    await user.click(within(dialog).getByRole('button', { name: 'Create draft' }))
+    expect(await within(dialog).findByText('Someone changed this version. Reload it and try again.')).toBeInTheDocument()
+    const date = within(dialog).getByLabelText(/Effective from/)
+    await user.clear(date)
+    await user.type(date, '2026-11-01')
+    expect(within(dialog).queryByText('Someone changed this version. Reload it and try again.')).toBeNull()
+    await user.click(within(dialog).getByRole('button', { name: /Create draft/ }))
+    expect(within(dialog).getByRole('button', { name: /Create draft/ })).toHaveAttribute('aria-busy', 'true')
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeDisabled()
+    await user.keyboard('{Escape}')
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    resolve(detail('draft'))
+    await waitFor(() => expect(onOpen).toHaveBeenCalledWith('v2', 'set-wages'))
   })
 })
