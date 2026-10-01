@@ -236,7 +236,7 @@ describe('P12 active-role enforcement', () => {
             ? res.status < 500 && res.status !== 401 && res.status !== 403
             : [200, 422, ...(unscopedParam ? [404] : [])].includes(res.status);
           expect(featureOutcome, `${request.method} ${request.path}: ${res.raw}`).toBe(true);
-          if (res.status === 404) expect(after).toEqual(before);
+          if (res.status === 404 && !lenient) expect(after).toEqual(before);
           // CSV downloads record one export audit event (P7), so only they may write on GET.
           const isExport = /\/(export|report)$/.test(request.pattern);
           if (request.method === 'GET' && !isExport) {

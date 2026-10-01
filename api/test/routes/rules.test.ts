@@ -24,8 +24,8 @@ import { createLambdaHandler, type LambdaHandler } from '../../src/lambda.js';
 import { RULE_ROUTES } from '../../src/routes/rules.js';
 import { createTestDatabase, type TestDatabase } from '../support/db.js';
 import { insertScenario } from '../support/fixtures.js';
-import { MemoryStorage } from '../support/memory-storage.js';
 import { insertAppUser, seedOrg, setAssignments, uniq } from '../support/rbac.js';
+import { MemoryStorage } from '../support/memory-storage.js';
 
 let db: TestDatabase;
 let handler: LambdaHandler;
