@@ -36,7 +36,6 @@ import { rosterEn, rosterFil } from './roster-messages'
 import { rulesEn, rulesFil } from './rules-messages'
 import { scenariosEn, scenariosFil } from './scenarios-messages'
 import { searchEn, searchFil } from './search-messages'
-import { rulesEn, rulesFil } from './rules-messages'
 import type { Bundle, Locale } from './types'
 
 const en: Bundle = {
