@@ -263,6 +263,9 @@
   --lw-margin-tablet: 1.5rem; /* 24px */
   --lw-margin-desktop: 2rem; /* 32px */
   --lw-container-laptop: 80rem; /* 1280px */
+  --lw-topbar-h: 3.5rem; /* 56px app bar (wireframe) */
+  --lw-sidenav-w: 14.5rem; /* 232px expanded side nav */
+  --lw-sidenav-rail-w: 4.5rem; /* 72px icon rail */
   --lw-container-desktop: 100rem; /* 1600px */
 
   /* ---------------------------------------------------------------------
