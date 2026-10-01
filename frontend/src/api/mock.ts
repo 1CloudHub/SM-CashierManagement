@@ -13,6 +13,7 @@ import {
   type RoleCode,
 } from '@lanewise/shared'
 import { ACTIVE_ROLE_HEADER, type ApiAdapter, type ApiRequest, type ApiResponse } from './client'
+import { createMasterDataStore } from './mock-master-data'
 import { createScenarioStore } from './mock-scenarios'
 import { createSavedViewStore, mockContextOptions, mockSearch, type MockResult } from './mock-directory'
 import type { HomeKpis, HomeScenarioRow, HomeSummary } from './types'
@@ -227,6 +228,7 @@ export interface MockAdapterOptions {
 export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {}): ApiAdapter {
   const savedViews = createSavedViewStore()
   const scenarios = createScenarioStore()
+  const masterData = createMasterDataStore()
   return async (request) => {
     log?.push(request)
     if (latencyMs > 0) await new Promise((resolve) => setTimeout(resolve, latencyMs))
@@ -257,6 +259,10 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
         role,
         viewer: mockViewer(role),
       })
+    }
+    if (masterData.owns(pathname)) {
+      // SCR-052/053 stores, departments, staff and availability (scoped like the API; no ₱).
+      return masterData.handle({ method: request.method, pathname, query: new URLSearchParams(search), body: request.body, role })
     }
     const { key, id } = routeOf(request.method, pathname)
     const handler = ROUTES[key]

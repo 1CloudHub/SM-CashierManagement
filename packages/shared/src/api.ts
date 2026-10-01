@@ -3,6 +3,7 @@
  * model, the health-check response and the identity/RBAC contracts.
  */
 import type { IsoDateTime, StoreFormat } from './entities.js';
+import type { DepartmentSummary, RegionSummary } from './master-data.js';
 import type { CostLevel } from './cost.js';
 import type { NavKey, PermissionAction, RbacResource } from './rbac.js';
 import type { RoleCode, Scope } from './roles.js';
@@ -124,7 +125,14 @@ export interface StoreSummary {
   readonly synthetic: boolean;
 }
 
-/** `GET /stores` — only stores in the active role's scope (P1). */
+/** A store with its region name and departments (SCR-052, `GET /stores`). */
+export interface StoreWithDepartments extends StoreSummary {
+  readonly regionName: string;
+  readonly departments: readonly DepartmentSummary[];
+}
+
+/** `GET /stores` — only stores in the active role's scope (P1), with the regions they sit in. */
 export interface StoreListResponse {
-  readonly stores: readonly StoreSummary[];
+  readonly stores: readonly StoreWithDepartments[];
+  readonly regions: readonly RegionSummary[];
 }

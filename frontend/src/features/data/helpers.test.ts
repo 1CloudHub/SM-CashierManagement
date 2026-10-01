@@ -2,7 +2,7 @@ import { API_ERROR_CODES, type IngestionIssue } from '@lanewise/shared'
 import { describe, expect, it } from 'vitest'
 import { dataEn, dataFil } from '@/i18n/data-messages'
 import { ApiRequestError } from './api'
-import { ERROR_KEY, errorCopy, sortIssues } from './helpers'
+import { ERROR_KEY, datasetFromSearch, errorCopy, sortIssues } from './helpers'
 
 const t = (id: string) => dataEn[id] ?? id
 
@@ -39,5 +39,14 @@ describe('sortIssues', () => {
   it('lists errors before warnings and keeps row order within each severity', () => {
     const sorted = sortIssues([issue(1, 'warning'), issue(2, 'error'), issue(3, 'warning'), issue(4, 'error')])
     expect(sorted.map((i) => i.message)).toEqual(['error 2', 'error 4', 'warning 1', 'warning 3'])
+  })
+})
+
+describe('datasetFromSearch (SCR-052/053 import links)', () => {
+  it('pre-selects a known dataset and ignores anything else', () => {
+    expect(datasetFromSearch('?dataset=staff')).toBe('staff')
+    expect(datasetFromSearch('?dataset=master')).toBe('master')
+    expect(datasetFromSearch('?dataset=nope')).toBeUndefined()
+    expect(datasetFromSearch('')).toBeUndefined()
   })
 })

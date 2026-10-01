@@ -85,6 +85,7 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'POST', path: '/rule-versions/{versionId}/approve' },
   { method: 'POST', path: '/rule-versions/{versionId}/request-changes' },
   { method: 'POST', path: '/rule-versions/{versionId}/publish' },
+  { method: 'POST', path: '/rule-versions/{versionId}/approve-and-publish' },
   { method: 'GET', path: '/rule-versions/{versionId}/diff' },
   // Task 11: scenarios — list, settings, runs, staleness refresh, compare (SCR-030/031/032).
   { method: 'GET', path: '/scenarios' },
@@ -113,6 +114,17 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'POST', path: '/approvals/{scenarioId}/budget' },
   { method: 'POST', path: '/approvals/{scenarioId}/plan' },
   { method: 'POST', path: '/approvals/{scenarioId}/secured-outside' },
+  // Master data: stores, departments and lanes (SCR-052) and staff and availability (SCR-053).
+  { method: 'POST', path: '/stores' },
+  { method: 'PATCH', path: '/stores/{storeId}' },
+  { method: 'PATCH', path: '/departments/{departmentId}' },
+  { method: 'GET', path: '/staff' },
+  { method: 'POST', path: '/staff' },
+  { method: 'GET', path: '/staff/{staffId}' },
+  { method: 'PATCH', path: '/staff/{staffId}' },
+  { method: 'PUT', path: '/staff/{staffId}/availability' },
+  { method: 'POST', path: '/staff/{staffId}/unavailable-dates' },
+  { method: 'DELETE', path: '/staff/{staffId}/unavailable-dates/{entryId}' },
 ];
 
 /** Request headers the SPA sends: the defaults plus the demo role switcher's `X-Active-Role`. */

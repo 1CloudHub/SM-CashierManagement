@@ -6,6 +6,7 @@ import { ApprovalsPage } from '@/features/approvals/pages'
 import { ProfileScreen } from '@/features/auth/profile-screen'
 import { DataSourcesPage, UploadPage } from '@/features/data/pages'
 import { HomeScreen } from '@/features/home/home-screen'
+import { StaffPage, StoresPage } from '@/features/master-data/pages'
 import { SearchResultsScreen } from '@/features/search/search-results-screen'
 import { RuleSetsPage, RuleVersionEditorPage } from '@/features/rules/pages'
 import { ScenarioComparePage, ScenarioListPage, ScenarioSettingsPage } from '@/features/scenarios/pages'
@@ -33,6 +34,8 @@ const BUILT: Partial<Record<ScreenId, () => React.ReactNode>> = {
   // SCR-080 keeps its own shell from task 7 until it moves into AppLayout.
   'SCR-050': () => <DataSourcesPage />,
   'SCR-051': () => <UploadPage />,
+  'SCR-052': () => <StoresPage />,
+  'SCR-053': () => <StaffPage />,
   'SCR-080': () => <ProfileScreen />,
   'SCR-090': () => <StatusScreen />,
   'SCR-091': () => <HelpScreen />,

@@ -18,3 +18,4 @@ export * from './scenario-planning.js';
 export * from './search.js';
 export * from './view-state.js';
 export * from './location-privacy.js';
+export * from './master-data.js';

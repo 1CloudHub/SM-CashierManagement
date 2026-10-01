@@ -2,7 +2,14 @@
  * Pure presentation helpers shared by SCR-050 and SCR-051: API error -> copy,
  * plural selection, dataset/run status -> tone + message, ISO-date handling.
  */
-import type { DatasetSummary, IngestionIssue, IngestionRunDto, IngestionStatus } from '@lanewise/shared'
+import {
+  DATASET_TYPES,
+  type DatasetSummary,
+  type DatasetType,
+  type IngestionIssue,
+  type IngestionRunDto,
+  type IngestionStatus,
+} from '@lanewise/shared'
 import type { StatusTone } from '@/components/ui'
 import type { MessageValues } from '@/i18n'
 import { isApiRequestError, type ApiRequestErrorCode } from './api'
@@ -102,3 +109,10 @@ const SEVERITY_ORDER: Readonly<Record<IngestionIssue['severity'], number>> = { e
 export function sortIssues(issues: readonly IngestionIssue[]): IngestionIssue[] {
   return [...issues].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity])
 }
+
+/** `?dataset=master|staff|pos` (links from SCR-052/053) pre-selects the dataset; anything else is ignored. */
+export function datasetFromSearch(search: string): DatasetType | undefined {
+  const value = new URLSearchParams(search).get('dataset')
+  return (DATASET_TYPES as readonly string[]).includes(value ?? '') ? (value as DatasetType) : undefined
+}
+
