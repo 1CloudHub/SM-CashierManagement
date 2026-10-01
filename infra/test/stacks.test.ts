@@ -225,6 +225,14 @@ describe('API stack', () => {
     });
   });
 
+  it('grants API Gateway one API-wide invoke permission (stays under the 20 KB Lambda policy limit)', () => {
+    api.resourceCountIs('AWS::Lambda::Permission', 1);
+    api.hasResourceProperties('AWS::Lambda::Permission', {
+      Action: 'lambda:InvokeFunction',
+      Principal: 'apigateway.amazonaws.com',
+    });
+  });
+
   it('protects every other route with the Cognito user-pool authorizer (feature routes secure by default)', () => {
     api.resourceCountIs('AWS::ApiGateway::Authorizer', 1);
     api.hasResourceProperties('AWS::ApiGateway::Authorizer', {
@@ -303,6 +311,19 @@ describe('API stack', () => {
         'GET /snapshots',
         'GET /snapshots/{snapshotId}',
         'PATCH /snapshots/{snapshotId}',
+      ]),
+    );
+    // Task 15 location-privacy routes (api/src/routes/location-privacy.ts).
+    expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
+      expect.arrayContaining([
+        'GET /me/consents',
+        'POST /me/consents',
+        'DELETE /me/consents/{purpose}',
+        'GET /me/home-area',
+        'PUT /me/home-area',
+        'DELETE /me/home-area',
+        'GET /me/home-area/barangays',
+        'GET /staff/{staffId}/home-area',
       ]),
     );
     for (const route of PROTECTED_ROUTES) {
