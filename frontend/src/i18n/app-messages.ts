@@ -177,6 +177,7 @@ export const appEn: Bundle = {
 
   // ── Cost visibility (task 21, requirement 25) ─────────────────────────
   'cost.hidden': 'Hidden for your role',
+  'cost.none': 'No figure',
 }
 
 export const appFil: Bundle = {
@@ -344,4 +345,5 @@ export const appFil: Bundle = {
 
   // ── Cost visibility (task 21, requirement 25) ─────────────────────────
   'cost.hidden': 'Nakatago para sa iyong tungkulin',
+  'cost.none': 'Walang numero',
 }

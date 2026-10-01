@@ -6,8 +6,12 @@ import { cn } from '@/lib/utils'
 import { useCanSeeCost } from './use-can-see-cost'
 
 export interface CostValueProps extends Omit<CurrencyProps, 'value'> {
-  /** The ₱ amount from the API; absent when the server removed it for this role. */
-  value: number | undefined
+  /**
+   * The ₱ amount from the API: `undefined` when the server removed it for this
+   * role (hidden), `null` when there is no figure to show (e.g. a side that has
+   * not been run) — rendered as an em dash with a "none" label, not as hidden.
+   */
+  value: number | null | undefined
   /** The level the figure is reported at (network / store / department / individual). */
   level: CostLevel
 }
@@ -16,7 +20,9 @@ export interface CostValueProps extends Omit<CurrencyProps, 'value'> {
  * CostValue — renders a ₱ figure through the shared `Currency` component when
  * the active role may see cost at `level` and the API sent it; otherwise the
  * "Hidden for your role" state (text + icon, never colour alone), so layouts
- * keep their shape and screen-reader users hear why there is no figure.
+ * keep their shape and screen-reader users hear why there is no figure. A
+ * `null` value (no figure exists) renders an em dash announced as "No figure"
+ * — distinct from hidden, so a missing run is never mistaken for a permission.
  *
  * Use it for every cost figure on every screen (task 21; requirement 25), e.g.
  * `<CostValue value={row.cost} level="store" align="end" />` in a table cell.
@@ -26,7 +32,17 @@ export interface CostValueProps extends Omit<CurrencyProps, 'value'> {
 export function CostValue({ value, level, as = 'inline', className, ...currency }: CostValueProps) {
   const { t } = useI18n()
   const canSee = useCanSeeCost(level)
-  if (canSee && value !== undefined) return <Currency value={value} as={as} className={className} {...currency} />
+  if (canSee && typeof value === 'number') return <Currency value={value} as={as} className={className} {...currency} />
+  if (canSee && value === null) {
+    return (
+      <span
+        className={cn(as === 'block' ? 'flex' : 'inline-flex', 'text-text-muted', currency.align === 'end' && 'justify-end', className)}
+      >
+        <span aria-hidden="true">—</span>
+        <span className="sr-only">{t('cost.none')}</span>
+      </span>
+    )
+  }
   return (
     <span
       className={cn(

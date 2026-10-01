@@ -23,7 +23,14 @@ import {
   type StaleReason,
 } from '@lanewise/shared';
 import type pg from 'pg';
-import { EngineInputError, runScenarioEngine, type StoredRunResults } from '../../scenarios/engine.js';
+import {
+  EngineInputError,
+  runScenarioEngine,
+  type CurrentStaffRow,
+  type PinnedRuleVersion,
+  type PinnedSnapshot,
+  type StoredRunResults,
+} from '../../scenarios/engine.js';
 import { audit, type AuditedTx } from '../audit.js';
 import type { Queryable } from '../pool.js';
 import { isoOrNull, queryMaybe, queryOne } from '../rows.js';
@@ -91,6 +98,7 @@ interface ScenarioListRow extends pg.QueryResultRow, PinRows {
   updated_at: Date;
   synthetic: boolean;
   data_as_of: Date | null;
+  rules_as_of: Date | null;
   has_succeeded_run: boolean;
 }
 
@@ -99,6 +107,8 @@ const SELECT_LIST = `
          s.settings_changed_at, s.last_run_at, s.updated_at, s.synthetic,
          (SELECT d.loaded_at FROM scenario_snapshot p JOIN dataset_snapshot d ON d.id = p.snapshot_id
            WHERE p.scenario_id = s.id AND p.dataset_type = 'pos') AS data_as_of,
+         (SELECT max(v.published_at) FROM scenario_rule_version p JOIN rule_version v ON v.id = p.rule_version_id
+           WHERE p.scenario_id = s.id) AS rules_as_of,
          EXISTS (SELECT 1 FROM scenario_run r WHERE r.scenario_id = s.id AND r.status = 'succeeded') AS has_succeeded_run,
          coalesce((SELECT json_agg(json_build_object('dataset_type', p.dataset_type, 'snapshot_id', p.snapshot_id))
                      FROM scenario_snapshot p WHERE p.scenario_id = s.id), '[]') AS snapshots,
@@ -121,6 +131,8 @@ export interface ScenarioRecord {
   readonly planningFrom: string;
   readonly planningTo: string;
   readonly dataAsOf: string | null;
+  /** Latest publish time among the pinned rule versions. */
+  readonly rulesAsOf: string | null;
   readonly lastRunAt: string | null;
   readonly updatedAt: string;
   readonly synthetic: boolean;
@@ -145,6 +157,7 @@ function toRecord(row: ScenarioListRow, current: CurrentInputs): ScenarioRecord 
     planningFrom: settings.planningFrom,
     planningTo: settings.planningTo,
     dataAsOf: isoOrNull(row.data_as_of),
+    rulesAsOf: isoOrNull(row.rules_as_of),
     lastRunAt: isoOrNull(row.last_run_at),
     updatedAt: row.updated_at.toISOString(),
     synthetic: row.synthetic,
@@ -157,6 +170,8 @@ export interface ScenarioListFilter {
   readonly season?: string;
   readonly query?: string;
   readonly staleOnly?: boolean;
+  /** Only scenarios owned by this user (`owner=me`). */
+  readonly ownerId?: string;
 }
 
 export async function listScenarios(db: Queryable, filter: ScenarioListFilter): Promise<ScenarioRecord[]> {
@@ -173,6 +188,10 @@ export async function listScenarios(db: Queryable, filter: ScenarioListFilter): 
   if (filter.query) {
     values.push(`%${filter.query.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
     where.push(`s.name ILIKE $${values.length}`);
+  }
+  if (filter.ownerId) {
+    values.push(filter.ownerId);
+    where.push(`s.owner_id = $${values.length}`);
   }
   const { rows } = await db.query<ScenarioListRow>(
     `${SELECT_LIST} ${where.length > 0 ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY s.updated_at DESC, s.id LIMIT 500`,
@@ -212,8 +231,10 @@ export async function getRuleVersionPins(db: Queryable, id: string, synthetic: b
     rule_version_id: string;
     version: number;
     effective_from: string;
+    published_at: Date | null;
   }>(
-    `SELECT p.rule_set_id, rs.name, rs.rule_set_type, p.rule_version_id, v.version, v.effective_from::text AS effective_from
+    `SELECT p.rule_set_id, rs.name, rs.rule_set_type, p.rule_version_id, v.version, v.effective_from::text AS effective_from,
+            v.published_at
        FROM scenario_rule_version p
        JOIN rule_version v ON v.id = p.rule_version_id
        JOIN rule_set rs ON rs.id = p.rule_set_id
@@ -227,8 +248,61 @@ export async function getRuleVersionPins(db: Queryable, id: string, synthetic: b
     ruleVersionId: r.rule_version_id,
     version: r.version,
     effectiveFrom: r.effective_from,
+    publishedAt: isoOrNull(r.published_at),
     current: (current.ruleVersions[r.rule_set_id] ?? r.rule_version_id) === r.rule_version_id,
   }));
+}
+
+/** The scenario's pinned snapshots and rule versions as the engine reads them. */
+export async function getEngineInputs(
+  db: Queryable,
+  scenarioId: string,
+): Promise<{ snapshots: PinnedSnapshot[]; ruleVersions: PinnedRuleVersion[] }> {
+  const snapshots = await db.query<{ dataset_type: string; snapshot_id: string; storage_key: string | null; synthetic: boolean }>(
+    `SELECT p.dataset_type, p.snapshot_id, d.storage_key, d.synthetic
+       FROM scenario_snapshot p JOIN dataset_snapshot d ON d.id = p.snapshot_id WHERE p.scenario_id = $1`,
+    [scenarioId],
+  );
+  const rules = await db.query<{ rule_version_id: string; rule_set_type: string; effective_from: string; payload: Record<string, unknown> }>(
+    `SELECT p.rule_version_id, rs.rule_set_type, v.effective_from::text AS effective_from, v.payload
+       FROM scenario_rule_version p JOIN rule_version v ON v.id = p.rule_version_id JOIN rule_set rs ON rs.id = p.rule_set_id
+      WHERE p.scenario_id = $1`,
+    [scenarioId],
+  );
+  return {
+    snapshots: snapshots.rows.map((s) => ({
+      datasetType: s.dataset_type,
+      snapshotId: s.snapshot_id,
+      storageKey: s.storage_key,
+      synthetic: s.synthetic,
+    })),
+    ruleVersions: rules.rows.map((r) => ({
+      ruleVersionId: r.rule_version_id,
+      ruleSetType: r.rule_set_type,
+      effectiveFrom: r.effective_from,
+      payload: r.payload,
+    })),
+  };
+}
+
+/**
+ * Active staff per department and contract type (the hiring plan's current
+ * team). The contract type is `weekly_pattern.contractType` when present,
+ * else derived from the employment type (regular → FT, part_time → PT,
+ * seasonal → FLOAT), as the demo seed stores it.
+ */
+export async function currentStaffCounts(db: Queryable, synthetic: boolean): Promise<CurrentStaffRow[]> {
+  const { rows } = await db.query<{ department_id: string; contract_type: string; n: number }>(
+    `SELECT department_id,
+            coalesce(nullif(weekly_pattern->>'contractType', ''),
+                     CASE employment_type WHEN 'regular' THEN 'FT' WHEN 'part_time' THEN 'PT' ELSE 'FLOAT' END) AS contract_type,
+            count(*)::int AS n
+       FROM staff WHERE synthetic = $1 AND active GROUP BY 1, 2`,
+    [synthetic],
+  );
+  return rows
+    .filter((r) => r.contract_type === 'FT' || r.contract_type === 'PT' || r.contract_type === 'FLOAT')
+    .map((r) => ({ departmentId: r.department_id, contractType: r.contract_type as CurrentStaffRow['contractType'], count: r.n }));
 }
 
 export interface StoredRun {
@@ -438,17 +512,8 @@ export async function runScenario(tx: AuditedTx, id: string): Promise<{ runId: s
   const before = { snapshotIds: scenario.snapshotIds, ruleVersionIds: scenario.ruleVersionIds };
   await pinCurrent(tx, id, scenario.synthetic);
 
-  const snapshots = await tx.query<{ dataset_type: string; snapshot_id: string; storage_key: string | null; synthetic: boolean }>(
-    `SELECT p.dataset_type, p.snapshot_id, d.storage_key, d.synthetic
-       FROM scenario_snapshot p JOIN dataset_snapshot d ON d.id = p.snapshot_id WHERE p.scenario_id = $1`,
-    [id],
-  );
-  const rules = await tx.query<{ rule_set_id: string; rule_version_id: string; rule_set_type: string; effective_from: string; payload: Record<string, unknown> }>(
-    `SELECT p.rule_set_id, p.rule_version_id, rs.rule_set_type, v.effective_from::text AS effective_from, v.payload
-       FROM scenario_rule_version p JOIN rule_version v ON v.id = p.rule_version_id JOIN rule_set rs ON rs.id = p.rule_set_id
-      WHERE p.scenario_id = $1`,
-    [id],
-  );
+  const inputs = await getEngineInputs(tx, id);
+  const currentStaff = await currentStaffCounts(tx, scenario.synthetic);
   const stores = await tx.query<{ id: string; name: string; region_id: string; code: string }>(
     `SELECT id, name, region_id, code FROM store WHERE synthetic = $1`,
     [scenario.synthetic],
@@ -461,18 +526,9 @@ export async function runScenario(tx: AuditedTx, id: string): Promise<{ runId: s
   try {
     results = runScenarioEngine({
       settings: readScenarioSettings(scenario.settings),
-      snapshots: snapshots.rows.map((s) => ({
-        datasetType: s.dataset_type,
-        snapshotId: s.snapshot_id,
-        storageKey: s.storage_key,
-        synthetic: s.synthetic,
-      })),
-      ruleVersions: rules.rows.map((r) => ({
-        ruleVersionId: r.rule_version_id,
-        ruleSetType: r.rule_set_type,
-        effectiveFrom: r.effective_from,
-        payload: r.payload,
-      })),
+      snapshots: inputs.snapshots,
+      ruleVersions: inputs.ruleVersions,
+      currentStaff,
       storeFor: (domainId) => {
         const row = byCode.get(`DEMO-${domainId.toUpperCase()}`);
         return row ? { id: row.id, name: row.name, regionId: row.region_id } : null;
