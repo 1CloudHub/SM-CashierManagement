@@ -8,6 +8,7 @@ import { Router } from './http/router.js';
 import { createS3Storage, type IngestionStorage } from './ingestion/storage.js';
 import { healthHandler } from './routes/health.js';
 import { registerIngestionRoutes } from './routes/ingestion.js';
+import { registerLocationPrivacyRoutes } from './routes/location-privacy.js';
 import { registerMeRoutes } from './routes/me.js';
 import { registerSavedViewRoutes } from './routes/saved-views.js';
 import { registerSearchRoutes } from './routes/search.js';
@@ -65,5 +66,6 @@ export function createApp(deps: AppDeps = depsFromEnv()): Router {
   registerSavedViewRoutes(router, deps);
   registerIngestionRoutes(router, deps);
   registerRuleRoutes(router, deps);
+  registerLocationPrivacyRoutes(router, deps);
   return router.assertGuarded();
 }

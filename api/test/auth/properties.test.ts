@@ -49,6 +49,9 @@ afterAll(async () => {
   await db?.dispose();
 });
 
+/** `authenticated()` routes that act on the caller's own staff record (task 15). */
+const OWN_STAFF_RECORD = /^\/me\/(consents|home-area)(\/|$)/;
+
 const storeOf = (id: string) => org.stores.find((s) => s.id === id);
 
 /** A non-staff scope over the seeded org. */
@@ -201,6 +204,10 @@ describe('P12 active-role enforcement', () => {
           if (!active.ok) {
             allowed = false;
             denial = 403;
+          } else if (request.guard.kind === 'authenticated' && OWN_STAFF_RECORD.test(request.pattern)) {
+            // Task 15: only the active role's own staff record (Staff self scope).
+            allowed = active.role !== null && expectedScope(active.role, assigned).type === 'self';
+            if (!allowed) denial = 403;
           } else if (request.guard.kind === 'authenticated') {
             const bodyRole = (request.body as { role?: RoleCode } | undefined)?.role;
             allowed = request.method === 'GET' || selectableRoles(assignments, demoMode).includes(bodyRole as RoleCode);
@@ -226,10 +233,11 @@ describe('P12 active-role enforcement', () => {
           // Authorised: the handler ran. Task-9 ingestion routes addressed with
           // random ids/bodies legitimately answer 201/404/409 too; other routes
           // may answer 404 only for an unknown object whose path parameter is
-          // not a scope target (e.g. a rule version id). Never 401/403/5xx.
+          // not a scope target (e.g. a rule version id), and 409 for e.g.
+          // removing a home area the Staff user never shared (task 15). Never 401/403/5xx.
           const isIngestion = request.guard.kind === 'authorize' && request.guard.resource === 'data_ingestion';
           const unscopedParam = request.targetId !== null && request.guard.kind === 'authorize' && !request.guard.scopeTarget;
-          const accepted = [200, 422, ...(unscopedParam ? [404] : [])];
+          const accepted = [200, 422, ...(unscopedParam ? [404] : []), ...(OWN_STAFF_RECORD.test(request.pattern) ? [409] : [])];
           const featureOutcome = isIngestion
             ? res.status < 500 && res.status !== 401 && res.status !== 403
             : accepted.includes(res.status);

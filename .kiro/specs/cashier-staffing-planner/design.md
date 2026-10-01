@@ -185,6 +185,7 @@ V = view, E = edit, A = approve/publish, X = export, M = manage (create/edit/del
 | Data ingestion and upload (SCR-050/051) | V | — | V | — | — | — | M | — |
 | Stores / departments / lanes (SCR-052) | — | V | V | V (own) | V | — | M | — |
 | Staff records (SCR-053) | — | — | V | V E (own store) | M | — | V | — |
+| Staff home area: barangay only (SCR-053) | — | — | — | V (own store) | V | — | — | — |
 | Business rules: edit / submit | — | V | V | — | V | V | M | — |
 | Business rules: approve cost rules | — | — | — | — | — | A | — | — |
 | Business rules: publish non-cost rules | — | — | — | — | — | — | A | — |
