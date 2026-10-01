@@ -21,6 +21,8 @@ import { StateBlock } from '@/components/ui/state-block'
 import { STATUS_META } from '@/components/ui/status'
 import { cn } from '@/lib/utils'
 import { BorrowRequests, OpenShiftsBanner, type OffersClient } from '@/features/offers'
+import type { SelfServiceClient } from '@/features/self-service/api'
+import { StaffRequestsPanel } from '@/features/self-service/staff-requests-panel'
 import type { RosterClient } from './api'
 import { checkBreaches, dayRows, gridRows, monthCoverage, rosterTotals, toRosterModel, type RosterModel } from './adapt'
 import { DayTimeline } from './day-timeline'
@@ -44,7 +46,9 @@ export interface RosterScreenProps {
   isPhone?: boolean
   /** Task 17: offers and borrowing for the roster's open shifts (omitted → not shown). */
   offers?: OffersClient
-  /** The active role, for "Send open-shift offers" and "Approve lending own staff". */
+  /** Task 18: the store's staff time-off / swap requests (omitted → not shown). */
+  selfService?: SelfServiceClient
+  /** The active role, for "Send open-shift offers", "Approve lending own staff" and "Approve staff requests". */
   role?: RoleCode
   /** Where "Find cover nearby" leads (SCR-026). */
   mapHref?: string
@@ -92,7 +96,7 @@ function toReplacements(f: RosterFormat, candidates: readonly ReplacementCandida
  * Only the Store Manager edits (`canOverride` from the API); everyone else
  * reads.
  */
-export function RosterScreen({ client, storeId, departmentId = null, isPhone = false, offers, role, mapHref = '/plan/map' }: RosterScreenProps) {
+export function RosterScreen({ client, storeId, departmentId = null, isPhone = false, offers, selfService, role, mapHref = '/plan/map' }: RosterScreenProps) {
   const f = useRosterFormat()
   const uid = useId()
   const { announce } = useAnnouncer()
@@ -343,6 +347,16 @@ export function RosterScreen({ client, storeId, departmentId = null, isPhone = f
 
       {notice && (
         <Alert tone={notice.tone} title={notice.text} />
+      )}
+
+      {selfService && role && (role === 'STM' || role === 'PLN') && (
+        <StaffRequestsPanel
+          client={selfService}
+          storeId={detail.roster.storeId}
+          canDecide={can(role, 'staff_requests_approve', 'manage')}
+          refreshKey={reloadKey}
+          onChanged={() => setReloadKey((k) => k + 1)}
+        />
       )}
 
       {offers && role && (

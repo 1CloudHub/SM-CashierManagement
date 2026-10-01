@@ -34,10 +34,12 @@ export const SHIFT_OVERRIDE_TYPES = ['emergency_off', 'reassign', 'time_change',
 export type ShiftOverrideType = (typeof SHIFT_OVERRIDE_TYPES)[number];
 
 /**
- * Every recorded ShiftOverride type: the store-manager changes above plus the
- * task 17 fills of an open shift — by an accepted offer or a borrow (P14).
+ * Every recorded ShiftOverride type: the store-manager changes above, the
+ * task 17 fills of an open shift — by an accepted offer or a borrow — and the
+ * task 18 approved staff requests: a swap, and a shift left open by approved
+ * time off (P14, P19).
  */
-export const SHIFT_OVERRIDE_RECORD_TYPES = [...SHIFT_OVERRIDE_TYPES, 'offer_fill', 'borrow_fill'] as const;
+export const SHIFT_OVERRIDE_RECORD_TYPES = [...SHIFT_OVERRIDE_TYPES, 'offer_fill', 'borrow_fill', 'swap', 'time_off'] as const;
 export type ShiftOverrideRecordType = (typeof SHIFT_OVERRIDE_RECORD_TYPES)[number];
 
 /** Why a cashier is marked off at short notice (shift editor, Req 7.5). */
