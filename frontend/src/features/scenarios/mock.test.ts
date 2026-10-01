@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { RoleCode } from '@lanewise/shared'
+import { DEFAULT_SCENARIO_SETTINGS, ENGINE_SETTING_DEFAULTS, type RoleCode } from '@lanewise/shared'
 import { ApiError, createApiClient, createMockAdapter } from '@/api'
 import { createScenariosClient } from './api'
 
@@ -63,5 +63,64 @@ describe('mock /scenarios (task 11)', () => {
     expect(cmp.settings.map((s) => s.key)).toContain('growth')
     expect(cmp.results.headcount.delta).toBeGreaterThan(0)
     expect(cmp.results.cost?.delta).toBeGreaterThan(0)
+  })
+
+  it('returns rule defaults, base hourly rate, departments, rule publish times and hires', async () => {
+    const c = clientFor('PLN')
+    const d = await c.get('scn-xmas-2026-v3')
+    expect(d.defaults).toEqual(ENGINE_SETTING_DEFAULTS)
+    expect(d.baseHourlyRate).toBeGreaterThan(0)
+    expect(d.departments.length).toBeGreaterThan(3)
+    expect(d.ruleVersions.every((r) => typeof r.publishedAt === 'string')).toBe(true)
+    expect(d.rulesAsOf).toBe(d.ruleVersions.map((r) => r.publishedAt!).sort().at(-1))
+    expect((await c.list()).every((s) => s.rulesAsOf !== null)).toBe(true)
+    const r = d.latestRun!.results!
+    expect(r.seasonalHires).toBe(r.stores.reduce((n, s) => n + (s.hires ?? 0), 0))
+    expect(r.stores.every((s) => typeof s.hires === 'number')).toBe(true)
+    if ((r.seasonalHires ?? 0) > 0) expect(r.firstNeededBy).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+
+    // Store Manager: no network cost (base rate hidden), own store's departments only.
+    const stm = await clientFor('STM').get('scn-xmas-2026-v3')
+    expect(stm.baseHourlyRate).toBeUndefined()
+    expect(new Set(stm.departments.map((x) => x.storeId))).toEqual(new Set(['store-smsm-qc']))
+  })
+
+  it('validates and applies overrides; department issues carry the row and field (P4 outside Draft)', async () => {
+    const c = clientFor('PLN')
+    const copy = await c.duplicate('scn-xmas-2026-v3')
+    const err = await c
+      .update(copy.id, {
+        settings: {
+          ...copy.settings,
+          departmentOverrides: [{ departmentId: 'dept-qc-main', baselineTxPerDay: null, handleTimeMin: 99, upliftPct: null }],
+        },
+      })
+      .catch((e: unknown) => e)
+    expect((err as ApiError).details.map((x) => x.path)).toEqual(['body.settings.departmentOverrides.0.handleTimeMin'])
+    const base = (await c.run(copy.id)).latestRun!.results!
+    await c.update(copy.id, { settings: { ...copy.settings, waitSeconds: 20, servedWithinPct: 95, ftShiftPattern: '7+1' } })
+    const strict = (await c.run(copy.id)).latestRun!.results!
+    expect(strict.headcount).toBeGreaterThanOrEqual(base.headcount)
+    expect(strict.paidHours).not.toBe(base.paidHours)
+    await expect(c.update('scn-xmas-2026-v3', { settings: { ...DEFAULT_SCENARIO_SETTINGS, waitSeconds: 30 } })).rejects.toMatchObject({
+      code: 'conflict',
+    })
+  })
+
+  it('compares department overrides', async () => {
+    const cmp = await clientFor('PLN').compare('scn-xmas-2026-v3', 'scn-xmas-2026-v4')
+    expect(cmp.departmentSettings).toEqual([{ departmentId: 'dept-qc-main', field: 'handleTimeMin', from: null, to: 2.6 }])
+    expect(cmp.results.seasonalHires.delta).not.toBeNull()
+  })
+
+  it('filters to the caller’s own scenarios with owner=me', async () => {
+    const adapter = createMockAdapter()
+    const pln = createApiClient({ adapter, getActiveRole: () => 'PLN' })
+    const mine = await pln.request<{ scenarios: { ownerId: string }[] }>('GET', '/scenarios?owner=me')
+    expect(mine.scenarios.length).toBeGreaterThan(0)
+    expect(mine.scenarios.every((s) => s.ownerId === 'u-pln-ana')).toBe(true)
+    const hr = createApiClient({ adapter, getActiveRole: () => 'HR' })
+    expect((await hr.request<{ scenarios: unknown[] }>('GET', '/scenarios?owner=me')).scenarios).toEqual([])
+    await expect(pln.request('GET', '/scenarios?owner=bob')).rejects.toMatchObject({ code: 'validation_failed' })
   })
 })

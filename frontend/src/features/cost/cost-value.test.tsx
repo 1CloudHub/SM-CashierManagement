@@ -7,7 +7,7 @@ import { ActiveRoleProvider } from '@/app/active-role'
 import { I18nProvider } from '@/i18n'
 import { CostValue } from './cost-value'
 
-function renderCost(role: RoleCode, level: CostLevel, value: number | undefined, locale: 'en' | 'fil' = 'en') {
+function renderCost(role: RoleCode, level: CostLevel, value: number | null | undefined, locale: 'en' | 'fil' = 'en') {
   return render(
     <I18nProvider initialLocale={locale}>
       <ActiveRoleProvider demo={false} assignedRoles={[role]}>
@@ -53,6 +53,18 @@ describe('<CostValue> (task 21, requirement 25)', () => {
     unmount()
     renderCost('STM', 'store', 24_700)
     expect(screen.getByText(/₱/)).toBeInTheDocument()
+  })
+
+  it('renders a missing figure (null) as an em dash, not as hidden', () => {
+    const { container } = renderCost('PLN', 'network', null)
+    expect(container).toHaveTextContent('—')
+    expect(screen.getByText('No figure')).toHaveClass('sr-only')
+    expect(screen.queryByText('Hidden for your role')).toBeNull()
+  })
+
+  it('still shows hidden for a null figure the role may not see', () => {
+    renderCost('STF', 'network', null)
+    expect(screen.getByText('Hidden for your role')).toBeInTheDocument()
   })
 
   it('localises the hidden state (fil) and has no axe violations', async () => {

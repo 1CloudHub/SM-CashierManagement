@@ -245,6 +245,7 @@ export const appEn: Bundle = {
     'If anyone asks for changes, the scenario goes back to Draft and every step starts again when it is resubmitted. Approving the plan publishes it and replaces the previous published plan.',
   'help.support.body':
     'For access, sign-in or data questions, contact your LaneWise System Admin. If an error page shows a reference ID, include it so the team can find what happened.',
+  'cost.none': 'No figure',
 }
 
 export const appFil: Bundle = {
@@ -480,4 +481,5 @@ export const appFil: Bundle = {
     'Kapag may humingi ng pagbabago, babalik sa Draft ang scenario at uulit ang bawat hakbang kapag muling isinumite. Kapag inaprubahan ang plano, mapa-publish ito at papalitan ang dating na-publish na plano.',
   'help.support.body':
     'Para sa tanong tungkol sa access, pag-sign in o datos, makipag-ugnayan sa iyong LaneWise System Admin. Kung may reference ID sa pahina ng error, isama ito para makita ng team kung ano ang nangyari.',
+  'cost.none': 'Walang numero',
 }
