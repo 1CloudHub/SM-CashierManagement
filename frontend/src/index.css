@@ -251,3 +251,40 @@
 @utility lw-page-x {
   padding-inline: var(--lw-page-margin);
 }
+
+/* -----------------------------------------------------------------------
+ * App bar (wireframe `.topbar`): controls inside the primary-blue bar are
+ * outlined in the on-appbar colour on a transparent fill, inverting on hover.
+ * Unlayered so it wins over the controls' own utility classes.
+ * --------------------------------------------------------------------- */
+.lw-appbar :where(label, span, p, a, svg) {
+  color: var(--lw-on-appbar);
+}
+.lw-appbar :where(select, input, textarea) {
+  background-color: transparent;
+  border-color: var(--lw-on-appbar);
+  color: var(--lw-on-appbar);
+}
+.lw-appbar :where(select) option {
+  background-color: var(--lw-surface);
+  color: var(--lw-text);
+}
+.lw-appbar :where(input)::placeholder {
+  color: var(--lw-on-appbar);
+  opacity: 0.85;
+}
+.lw-appbar .lw-btn {
+  background-color: transparent;
+  border-color: var(--lw-on-appbar);
+  color: var(--lw-on-appbar);
+}
+.lw-appbar .lw-btn:hover {
+  background-color: var(--lw-on-appbar);
+  color: var(--lw-appbar);
+}
+.lw-appbar .lw-btn:hover :where(svg, span) {
+  color: var(--lw-appbar);
+}
+.lw-appbar :focus-visible {
+  outline-color: var(--lw-on-appbar);
+}
