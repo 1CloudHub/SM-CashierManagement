@@ -128,6 +128,7 @@
   --lw-on-primary: var(--lw-slate-0);
   --lw-primary-soft: var(--lw-blue-100);
   --lw-on-primary-soft: var(--lw-blue-700);
+  --lw-primary-hover: var(--lw-blue-700); /* hover step of the solid fill */
 
   --lw-accent: var(--lw-red-600);
   --lw-on-accent: var(--lw-slate-0);
@@ -146,6 +147,7 @@
   --lw-on-danger: var(--lw-slate-0);
   --lw-danger-soft: var(--lw-rose-100);
   --lw-on-danger-soft: var(--lw-rose-700);
+  --lw-danger-hover: var(--lw-rose-700); /* hover step of the solid fill */
 
   --lw-info: var(--lw-cyan-600);
   --lw-on-info: var(--lw-slate-0);
@@ -325,6 +327,7 @@
     --lw-on-primary: var(--lw-slate-950);
     --lw-primary-soft: var(--lw-blue-900);
     --lw-on-primary-soft: var(--lw-blue-200);
+    --lw-primary-hover: var(--lw-blue-300);
 
     --lw-accent: var(--lw-red-400);
     --lw-on-accent: var(--lw-slate-950);
@@ -343,6 +346,7 @@
     --lw-on-danger: var(--lw-slate-950);
     --lw-danger-soft: var(--lw-rose-950);
     --lw-on-danger-soft: var(--lw-red-300);
+    --lw-danger-hover: var(--lw-red-200);
 
     --lw-info: var(--lw-cyan-400);
     --lw-on-info: var(--lw-slate-950);
@@ -353,6 +357,10 @@
     --lw-outline-subtle: var(--lw-slate-700);
 
     --lw-focus-ring: var(--lw-blue-400);
+
+    /* Scrim stays a dark veil in dark mode (deeper, so the surface-on-bg
+     * step still reads behind a modal). */
+    --lw-scrim: rgb(2 6 23 / 0.75);
 
     --lw-viz-1: var(--lw-cat-blue-bright);
     --lw-viz-2: var(--lw-cat-vermillion-bright);
@@ -378,6 +386,7 @@
   --lw-on-primary: var(--lw-slate-950);
   --lw-primary-soft: var(--lw-blue-900);
   --lw-on-primary-soft: var(--lw-blue-200);
+  --lw-primary-hover: var(--lw-blue-300);
 
   --lw-accent: var(--lw-red-400);
   --lw-on-accent: var(--lw-slate-950);
@@ -396,6 +405,7 @@
   --lw-on-danger: var(--lw-slate-950);
   --lw-danger-soft: var(--lw-rose-950);
   --lw-on-danger-soft: var(--lw-red-300);
+  --lw-danger-hover: var(--lw-red-200);
 
   --lw-info: var(--lw-cyan-400);
   --lw-on-info: var(--lw-slate-950);
@@ -406,6 +416,10 @@
   --lw-outline-subtle: var(--lw-slate-700);
 
   --lw-focus-ring: var(--lw-blue-400);
+
+  /* Scrim stays a dark veil in dark mode (deeper, so the surface-on-bg
+   * step still reads behind a modal). */
+  --lw-scrim: rgb(2 6 23 / 0.75);
 
   --lw-viz-1: var(--lw-cat-blue-bright);
   --lw-viz-2: var(--lw-cat-vermillion-bright);

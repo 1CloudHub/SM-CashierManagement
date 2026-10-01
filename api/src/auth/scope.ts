@@ -65,7 +65,7 @@ export async function resolveScope(
 
 /**
  * Whether the object a deep link addresses exists **and** is in scope (for a
- * saved view: belongs to the caller). The caller answers `false` with the
+ * saved view or notification: belongs to the caller). The caller answers `false` with the
  * same 404 whether the object is missing or out of scope, so nothing about it
  * is revealed (requirement 2.4).
  */
@@ -82,6 +82,13 @@ export async function isTargetInScope(
     case 'saved_view': {
       const { rows } = await db.query<{ id: string } & pg.QueryResultRow>(
         'SELECT id FROM saved_view WHERE id = $1 AND user_id = $2',
+        [id, principal.userId],
+      );
+      return rows.length === 1;
+    }
+    case 'notification': {
+      const { rows } = await db.query<{ id: string } & pg.QueryResultRow>(
+        'SELECT id FROM notification WHERE id = $1 AND user_id = $2',
         [id, principal.userId],
       );
       return rows.length === 1;

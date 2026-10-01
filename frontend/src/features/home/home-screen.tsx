@@ -1,3 +1,5 @@
+import type { RoleCode } from '@lanewise/shared'
+import { Inbox } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import type { HomeSummary } from '@/api'
 import { AppLink } from '@/app/router'
@@ -14,6 +16,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableEmpty,
   TableHead,
   TableHeaderCell,
   TableRow,
@@ -22,6 +25,7 @@ import {
 } from '@/components/ui/table'
 import { CostValue } from '@/features/cost'
 import { useI18n } from '@/i18n'
+import { greetingKey } from './greeting'
 import { useHome } from './use-home'
 
 /**
@@ -63,18 +67,16 @@ export function HomeScreen() {
   )
 }
 
-function greetingKey(now: number): string {
-  const h = new Date(now).getHours()
-  return h < 12 ? 'home.greeting.morning' : h < 18 ? 'home.greeting.afternoon' : 'home.greeting.evening'
-}
-
 function HomeContent({ data }: { data: HomeSummary }) {
   const { t } = useI18n()
   // Fixed per load so the greeting and deadline pills don't shift on re-render.
   const [now] = useState(() => Date.now())
   return (
     <Stack gap={4}>
-      <h1 className="text-h1 text-text">{t(greetingKey(now), { name: data.firstName })}</h1>
+      <div>
+        <h1 className="text-h1 text-text">{t(greetingKey(now), { name: data.firstName })}</h1>
+        <p className="mt-1 text-body text-text-muted">{t(`home.subtitle.${data.role}`)}</p>
+      </div>
       <RoleCards data={data} now={now} />
       {data.kpis && <Kpis kpis={data.kpis} />}
       {data.recentScenarios && <RecentScenarios rows={data.recentScenarios} />}
@@ -93,6 +95,28 @@ function Pair({ children }: { children: [ReactNode, ReactNode] }) {
         {children[1]}
       </Col>
     </Grid>
+  )
+}
+
+/** In-card empty state: an icon plus text, so it never relies on colour. */
+function EmptyNote({ children }: { children: ReactNode }) {
+  return (
+    <p className="flex items-center gap-2 text-body text-text-muted">
+      <Inbox aria-hidden="true" className="size-5 shrink-0" />
+      <span>{children}</span>
+    </p>
+  )
+}
+
+/** Whole-variant empty state, when the server has nothing for this role yet. */
+function NothingToShow({ role }: { role: RoleCode }) {
+  const { t } = useI18n()
+  return (
+    <StateBlock
+      variant="empty"
+      title={t('home.empty.title')}
+      description={t(`home.subtitle.${role}`)}
+    />
   )
 }
 
@@ -121,6 +145,7 @@ function RoleCards({ data, now }: { data: HomeSummary; now: number }) {
       return (
         <Pair>
           <Section title={t('home.pln.attention')}>
+            {!data.attention?.length && <EmptyNote>{t('home.empty.title')}</EmptyNote>}
             <ul className="flex flex-col gap-2 text-body">
               {data.attention?.map((item) => (
                 <li key={item.kind}>
@@ -149,6 +174,7 @@ function RoleCards({ data, now }: { data: HomeSummary; now: number }) {
             </ul>
           </Section>
           <Section title={t('home.pln.deadlines')}>
+            {!data.deadlines?.length && <EmptyNote>{t('home.empty.deadlines')}</EmptyNote>}
             <ol className="flex flex-col gap-2 text-body">
               {data.deadlines?.map((d) => (
                 <li key={d.kind}>
@@ -171,6 +197,7 @@ function RoleCards({ data, now }: { data: HomeSummary; now: number }) {
       return (
         <Pair>
           <Section title={t('home.exe.approvalTitle')}>
+            {!data.pendingApproval && <EmptyNote>{t('home.empty.title')}</EmptyNote>}
             {data.pendingApproval && (
               <Stack gap={3}>
                 <p className="text-body">{t('home.exe.approvalBody', { name: data.pendingApproval.scenarioName })}</p>
@@ -183,9 +210,11 @@ function RoleCards({ data, now }: { data: HomeSummary; now: number }) {
             )}
           </Section>
           <Section title={t('home.exe.publishedTitle')}>
+            {!data.publishedPlan && <EmptyNote>{t('home.empty.published')}</EmptyNote>}
             {data.publishedPlan && (
               <p className="text-body">
-                ★ {data.publishedPlan.name} · <TextLink href="/plan/summary">{t('nav.summary')}</TextLink>
+                <span aria-hidden="true">★ </span>
+                {data.publishedPlan.name} · <TextLink href="/plan/summary">{t('nav.summary')}</TextLink>
               </p>
             )}
           </Section>
@@ -193,7 +222,7 @@ function RoleCards({ data, now }: { data: HomeSummary; now: number }) {
       )
     case 'STM': {
       const w = data.storeWeek
-      if (!w) return null
+      if (!w) return <NothingToShow role={data.role} />
       return (
         <Section title={t('home.stm.title', { store: w.storeName })}>
           <Cluster gap={2}>
@@ -215,6 +244,7 @@ function RoleCards({ data, now }: { data: HomeSummary; now: number }) {
       return (
         <Pair>
           <Section title={t('home.hr.approvalTitle')}>
+            {!data.pendingApproval && <EmptyNote>{t('home.empty.title')}</EmptyNote>}
             {data.pendingApproval && (
               <Stack gap={3}>
                 <p className="text-body">
@@ -232,6 +262,7 @@ function RoleCards({ data, now }: { data: HomeSummary; now: number }) {
             )}
           </Section>
           <Section title={t('home.hr.recruitingTitle')}>
+            {!data.recruiting && <EmptyNote>{t('home.empty.deadlines')}</EmptyNote>}
             {data.recruiting && (
               <p className="text-body">
                 {t('home.hr.recruitingBody', {
@@ -249,6 +280,7 @@ function RoleCards({ data, now }: { data: HomeSummary; now: number }) {
       return (
         <Pair>
           <Section title={t('home.fin.approvalTitle')}>
+            {!data.pendingApproval && <EmptyNote>{t('home.empty.title')}</EmptyNote>}
             {data.pendingApproval && (
               <Stack gap={3}>
                 <p className="text-body">
@@ -264,6 +296,7 @@ function RoleCards({ data, now }: { data: HomeSummary; now: number }) {
             )}
           </Section>
           <Section title={t('home.fin.costTitle')}>
+            {!data.costWatch && <EmptyNote>{t('home.empty.published')}</EmptyNote>}
             {data.costWatch && (
               <ul className="flex flex-col gap-1 text-body">
                 <li>
@@ -302,6 +335,7 @@ function RoleCards({ data, now }: { data: HomeSummary; now: number }) {
             </ul>
           </Section>
           <Section title={t('home.rst.draftRulesTitle')}>
+            {!data.draftRules?.length && <EmptyNote>{t('home.empty.draftRules')}</EmptyNote>}
             <ul className="flex flex-col gap-1 text-body">
               {data.draftRules?.map((r) => (
                 <li key={r.ruleSetId}>
@@ -315,9 +349,10 @@ function RoleCards({ data, now }: { data: HomeSummary; now: number }) {
       )
     case 'STF': {
       const s = data.nextShifts
-      if (!s) return null
+      if (!s) return <NothingToShow role={data.role} />
       return (
         <Section title={t('home.stf.title', { store: s.storeName, department: s.departmentName })}>
+          {s.shifts.length === 0 && <EmptyNote>{t('home.empty.shifts')}</EmptyNote>}
           <ul className="flex flex-col gap-2 text-body">
             {s.shifts.map((shift) => (
               <li key={shift.start}>
@@ -425,11 +460,12 @@ function RecentScenarios({ rows }: { rows: NonNullable<HomeSummary['recentScenar
           </TableRow>
         </TableHead>
         <TableBody>
+          {rows.length === 0 && <TableEmpty colSpan={4}>{t('home.empty.scenarios')}</TableEmpty>}
           {rows.map((row) => (
             <TableRow key={row.id}>
               <TableRowHeader>
                 <TextLink href={`/scenarios/${encodeURIComponent(row.id)}/settings`}>
-                  {row.status === 'published' ? '★ ' : ''}
+                  {row.status === 'published' && <span aria-hidden="true">★ </span>}
                   {row.name}
                 </TextLink>
               </TableRowHeader>

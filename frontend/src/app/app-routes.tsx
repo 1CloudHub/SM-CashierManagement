@@ -2,17 +2,23 @@ import { Outlet, Route, Routes } from 'react-router'
 import { App } from '@/App'
 import { useRouteFocus } from '@/components/a11y'
 import { HelpProvider } from '@/components/help'
+import { AuditPage, RolesPage, UserEditPage, UsersPage } from '@/features/admin/pages'
 import { ApprovalsPage } from '@/features/approvals/pages'
 import { ProfileScreen } from '@/features/auth/profile-screen'
 import { DataSourcesPage, UploadPage } from '@/features/data/pages'
+import { DepartmentPage, HiringPage, NetworkPage, SummaryPage } from '@/features/planning/pages'
 import { HomeScreen } from '@/features/home/home-screen'
+import { NetworkMapPage } from '@/features/network-map/pages'
+import { MyRosterPage } from '@/features/offers/pages'
+import { RosterPage } from '@/features/roster/pages'
+import { NotificationsPage } from '@/features/notifications/pages'
 import { StaffPage, StoresPage } from '@/features/master-data/pages'
 import { SearchResultsScreen } from '@/features/search/search-results-screen'
 import { RuleSetsPage, RuleVersionEditorPage } from '@/features/rules/pages'
 import { ScenarioComparePage, ScenarioListPage, ScenarioSettingsPage } from '@/features/scenarios/pages'
 import { SCREEN_BY_ID, SCREENS, type ScreenDef, type ScreenId } from './screens'
-import { GLOBAL_SEARCH_ID, useShellSlots } from './app-layout'
-import { useRouter } from './router'
+import { AppUserMenu, GLOBAL_SEARCH_ID } from './app-layout'
+import { Redirect, useRouter } from './router'
 import { Guarded, HelpScreen, NotFoundScreen, PlaceholderScreen, StatusScreen } from './screen-pages'
 
 /**
@@ -24,14 +30,25 @@ import { Guarded, HelpScreen, NotFoundScreen, PlaceholderScreen, StatusScreen } 
  */
 const BUILT: Partial<Record<ScreenId, () => React.ReactNode>> = {
   'SCR-010': () => <HomeScreen />,
+  'SCR-020': () => <NetworkPage />,
+  'SCR-021': () => <DepartmentPage />,
+  'SCR-023': () => <HiringPage />,
+  'SCR-024': () => <SummaryPage />,
+  'SCR-026': () => <NetworkMapPage />,
+  'SCR-022': () => <RosterPage />,
+  'SCR-025': () => <MyRosterPage />,
   'SCR-030': () => <ScenarioListPage />,
   'SCR-031': () => <ScenarioSettingsPage />,
   'SCR-032': () => <ScenarioComparePage />,
   'SCR-033': () => <ApprovalsPage />,
+  'SCR-040': () => <NotificationsPage />,
   'SCR-041': () => <SearchResultsScreen />,
   'SCR-060': () => <RuleSetsPage />,
   'SCR-061': () => <RuleVersionEditorPage />,
-  // SCR-080 keeps its own shell from task 7 until it moves into AppLayout.
+  'SCR-070': () => <UsersPage />,
+  'SCR-071': () => <UserEditPage />,
+  'SCR-072': () => <RolesPage />,
+  'SCR-073': () => <AuditPage />,
   'SCR-050': () => <DataSourcesPage />,
   'SCR-051': () => <UploadPage />,
   'SCR-052': () => <StoresPage />,
@@ -49,8 +66,8 @@ function screenElement(screen: ScreenDef) {
 const NAV_TARGETS = { home: '/', roster: '/plan/roster', map: '/plan/map' } as const
 
 /**
- * Persistent layout for app screens: global shortcuts (`?`, `/`, g h / g r /
- * g m), the help dialog, and focus to <main> on route change (screens remount
+ * Persistent layout for app screens: global shortcuts (`?`, `/`, `n`, g h /
+ * g r / g m), the help dialog, and focus to <main> on route change (screens remount
  * their AppLayout per route, so this must live above them).
  */
 function WithHelp() {
@@ -60,6 +77,9 @@ function WithHelp() {
     <HelpProvider
       onNavigate={(target) => navigate(NAV_TARGETS[target])}
       onFocusSearch={() => document.getElementById(GLOBAL_SEARCH_ID)?.focus()}
+      onOpenNotifications={() => navigate('/notifications')}
+      methodologyHref="/help#methodology"
+      supportHref="/help#support"
     >
       <Outlet />
     </HelpProvider>
@@ -67,11 +87,10 @@ function WithHelp() {
 }
 
 export function AppRoutes() {
-  const slots = useShellSlots()
   return (
     <Routes>
       {/* The gallery owns its own providers (help, toast, i18n). */}
-      <Route path="/gallery" element={<App accountSlot={slots.account} />} />
+      <Route path="/gallery" element={<App accountSlot={<AppUserMenu />} />} />
       <Route element={<WithHelp />}>
         {SCREENS.map((screen) => (
           <Route key={screen.id} path={screen.path} element={screenElement(screen)} />
@@ -79,6 +98,8 @@ export function AppRoutes() {
         {/* SCR-071 also edits an existing user. */}
         <Route path="/admin/users/:userId" element={screenElement(SCREEN_BY_ID['SCR-071'])} />
         <Route path="/index.html" element={screenElement(SCREEN_BY_ID['SCR-010'])} />
+        {/* SCR-090 without a kind: the generic status page is "not found". */}
+        <Route path="/status" element={<Redirect to="/status/404" />} />
         <Route path="*" element={<NotFoundScreen />} />
       </Route>
     </Routes>

@@ -1,6 +1,7 @@
 import { useId, useState, type ReactNode } from 'react'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Radio } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -10,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Field } from '@/components/ui/field'
+import { Textarea } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { STATUS_META, type StatusTone } from '@/components/ui/status'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -43,6 +45,11 @@ export interface Replacement {
   /** Already formatted, e.g. "FT-07 · same store · 5 days, 40 h". */
   readonly label: string
   readonly eligible: boolean
+  /**
+   * True when picking this cashier would break a labor rule that can never be
+   * overridden (missed 24-hour rest, overlap) — shown but not selectable.
+   */
+  readonly blocked?: boolean
 }
 
 export interface ShiftEditorProps {
@@ -58,6 +65,10 @@ export interface ShiftEditorProps {
   replacements?: readonly Replacement[]
   /** False on phones: only the emergency-off tab is usable (req. 24.2). */
   canEditTimes?: boolean
+  /** False for a shift being added: there is nobody to mark off yet. */
+  allowEmergency?: boolean
+  /** Offer "Remove shift" (store manager on a published roster, req. 7.1). */
+  onRemove?: (shiftId: string) => void
   onDraftChange?: (draft: ShiftDraft) => void
   onSave?: (draft: ShiftDraft) => void
   onEmergencyOff?: (choice: {
@@ -65,6 +76,8 @@ export interface ShiftEditorProps {
     replacementId: string | null
     findNearby: boolean
     reason: EmergencyReason
+    /** Why a labor rule is overridden, when the replacement breaks one (Req 7.3). */
+    overrideReason?: string
   }) => void
 }
 
@@ -73,6 +86,8 @@ export interface ShiftDraft {
   startMin: number
   endMin: number
   activities: ShiftActivity[]
+  /** Why a labor rule is overridden, when a check needs a reason (Req 7.3). */
+  reason?: string
 }
 
 const DEFAULT_ACTIVITY_MIN: Record<ActivityKind, number> = {
@@ -101,6 +116,8 @@ export function ShiftEditor({
   ruleChecks = [],
   replacements = [],
   canEditTimes = true,
+  allowEmergency = true,
+  onRemove,
   onDraftChange,
   onSave,
   onEmergencyOff,
@@ -119,6 +136,8 @@ export function ShiftEditor({
     replacements.find((r) => r.eligible)?.cashierId ?? NEARBY,
   )
   const [reason, setReason] = useState<EmergencyReason>('sickCall')
+  const [overrideReason, setOverrideReason] = useState('')
+  const [offOverrideReason, setOffOverrideReason] = useState('')
 
   const setDraft = (next: ShiftDraft) => {
     setDraftState(next)
@@ -148,6 +167,12 @@ export function ShiftEditor({
   }
 
   const blockingRule = ruleChecks.some((r) => r.tone === 'danger')
+  // A rule warning can be overridden, but only with a reason (Req 7.3, P14).
+  const needsReason = !blockingRule && ruleChecks.some((r) => r.tone === 'warning')
+  const reasonMissing = needsReason && overrideReason.trim().length === 0
+  const picked = replacements.find((r) => r.cashierId === replacement)
+  const offNeedsReason = picked !== undefined && !picked.eligible && !picked.blocked
+  const offReasonMissing = offNeedsReason && offOverrideReason.trim().length === 0
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -170,7 +195,9 @@ export function ShiftEditor({
             <TabsTrigger value="edit" disabled={!canEditTimes}>
               {f.t('roster.editor.tabEdit')}
             </TabsTrigger>
-            <TabsTrigger value="emergency">{f.t('roster.editor.tabEmergency')}</TabsTrigger>
+            <TabsTrigger value="emergency" disabled={!allowEmergency}>
+              {f.t('roster.editor.tabEmergency')}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="edit">
@@ -313,13 +340,34 @@ export function ShiftEditor({
                 </section>
               )}
 
+              {needsReason && (
+                <Field label={f.t('roster.editor.overrideReason')} hint={f.t('roster.editor.overrideReasonHint')} required>
+                  {(aria) => (
+                    <Textarea
+                      {...aria}
+                      rows={2}
+                      maxLength={500}
+                      value={overrideReason}
+                      onChange={(e) => setOverrideReason(e.target.value)}
+                    />
+                  )}
+                </Field>
+              )}
+
               <p className="text-body-sm text-text-muted">{f.t('roster.editor.hint')}</p>
               <DialogFooter>
+                {onRemove && (
+                  <Button variant="ghost" className="mr-auto" onClick={() => onRemove(shift.id)}>
+                    {f.t('roster.screen.removeShift')}
+                  </Button>
+                )}
                 <Button onClick={() => onOpenChange(false)}>{f.t('action.cancel')}</Button>
                 <Button
                   variant="primary"
-                  disabled={invalid || activityOutside || blockingRule}
-                  onClick={() => onSave?.(draft)}
+                  disabled={invalid || activityOutside || blockingRule || reasonMissing}
+                  onClick={() =>
+                    onSave?.(needsReason ? { ...draft, reason: overrideReason.trim() } : draft)
+                  }
                 >
                   {f.t('roster.editor.save')}
                 </Button>
@@ -334,33 +382,37 @@ export function ShiftEditor({
                   {f.t('roster.editor.replacement')}
                 </legend>
                 {replacements.map((r) => (
-                  <label key={r.cashierId} className="flex min-h-tap items-center gap-2 text-body-sm">
-                    <input
-                      type="radio"
-                      name={`${uid}-replacement`}
-                      value={r.cashierId}
-                      checked={replacement === r.cashierId}
-                      onChange={() => setReplacement(r.cashierId)}
-                    />
-                    <span>
-                      {r.label}{' '}
-                      <span aria-hidden="true">{r.eligible ? '✓' : '⚠'}</span>
-                      <span className="sr-only">
-                        {r.eligible ? f.t('roster.editor.eligible') : f.t('roster.editor.breaksRule')}
-                      </span>
-                    </span>
-                  </label>
-                ))}
-                <label className="flex min-h-tap items-center gap-2 text-body-sm">
-                  <input
-                    type="radio"
+                  <Radio
+                    key={r.cashierId}
+                    className="text-body-sm"
+                    label={
+                      <>
+                        {r.label}{' '}
+                        <span aria-hidden="true">{r.blocked ? '⛔' : r.eligible ? '✓' : '⚠'}</span>
+                        <span className="sr-only">
+                          {r.blocked
+                            ? f.t('roster.editor.blockedRule')
+                            : r.eligible
+                              ? f.t('roster.editor.eligible')
+                              : f.t('roster.editor.breaksRule')}
+                        </span>
+                      </>
+                    }
+                    disabled={r.blocked}
                     name={`${uid}-replacement`}
-                    value={NEARBY}
-                    checked={replacement === NEARBY}
-                    onChange={() => setReplacement(NEARBY)}
+                    value={r.cashierId}
+                    checked={replacement === r.cashierId}
+                    onChange={() => setReplacement(r.cashierId)}
                   />
-                  {f.t('roster.editor.findNearby')}
-                </label>
+                ))}
+                <Radio
+                  className="text-body-sm"
+                  label={f.t('roster.editor.findNearby')}
+                  name={`${uid}-replacement`}
+                  value={NEARBY}
+                  checked={replacement === NEARBY}
+                  onChange={() => setReplacement(NEARBY)}
+                />
               </fieldset>
               <Field label={f.t('roster.editor.reason')}>
                 {(aria) => (
@@ -377,16 +429,31 @@ export function ShiftEditor({
                   </Select>
                 )}
               </Field>
+              {offNeedsReason && (
+                <Field label={f.t('roster.editor.overrideReason')} hint={f.t('roster.editor.overrideReasonHint')} required>
+                  {(aria) => (
+                    <Textarea
+                      {...aria}
+                      rows={2}
+                      maxLength={500}
+                      value={offOverrideReason}
+                      onChange={(e) => setOffOverrideReason(e.target.value)}
+                    />
+                  )}
+                </Field>
+              )}
               <DialogFooter>
                 <Button onClick={() => onOpenChange(false)}>{f.t('action.cancel')}</Button>
                 <Button
                   variant="primary"
+                  disabled={offReasonMissing}
                   onClick={() =>
                     onEmergencyOff?.({
                       shiftId: shift.id,
                       replacementId: replacement === NEARBY ? null : replacement,
                       findNearby: replacement === NEARBY,
                       reason,
+                      ...(offNeedsReason ? { overrideReason: offOverrideReason.trim() } : {}),
                     })
                   }
                 >

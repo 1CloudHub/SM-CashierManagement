@@ -16,13 +16,15 @@ import type { RoutedRequest } from '../http/types.js';
 
 /**
  * Which path parameter names the object a deep link addresses, and its kind.
- * `saved_view` is owner-scoped: only the user who saved it may address it.
+ * `saved_view` and `notification` are owner-scoped: only the user who saved
+ * the view, or to whom the notification is addressed, may address it.
  */
 export type ScopeTarget =
   | { readonly kind: 'store'; readonly param: string }
   | { readonly kind: 'department'; readonly param: string }
   | { readonly kind: 'staff'; readonly param: string }
-  | { readonly kind: 'saved_view'; readonly param: string };
+  | { readonly kind: 'saved_view'; readonly param: string }
+  | { readonly kind: 'notification'; readonly param: string };
 
 export type RouteGuard =
   | { readonly kind: 'public' }

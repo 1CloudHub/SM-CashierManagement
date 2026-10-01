@@ -114,6 +114,60 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'POST', path: '/approvals/{scenarioId}/budget' },
   { method: 'POST', path: '/approvals/{scenarioId}/plan' },
   { method: 'POST', path: '/approvals/{scenarioId}/secured-outside' },
+  // Task 14: network view, department day plan, hiring plan and long-roster
+  // background jobs, leadership summary (SCR-020/021/023/024).
+  { method: 'GET', path: '/scenarios/{scenarioId}/network' },
+  { method: 'GET', path: '/scenarios/{scenarioId}/network/export' },
+  { method: 'GET', path: '/scenarios/{scenarioId}/departments/{departmentId}/day' },
+  { method: 'GET', path: '/scenarios/{scenarioId}/departments/{departmentId}/day/export' },
+  { method: 'GET', path: '/scenarios/{scenarioId}/hiring-plan' },
+  { method: 'POST', path: '/scenarios/{scenarioId}/hiring-plan/jobs' },
+  { method: 'GET', path: '/scenarios/{scenarioId}/hiring-plan/jobs/{jobId}' },
+  { method: 'GET', path: '/scenarios/{scenarioId}/hiring-plan/export' },
+  { method: 'POST', path: '/scenarios/{scenarioId}/rosters/jobs' },
+  { method: 'GET', path: '/scenarios/{scenarioId}/rosters/jobs/{jobId}' },
+  { method: 'GET', path: '/scenarios/{scenarioId}/summary' },
+  { method: 'GET', path: '/scenarios/{scenarioId}/summary/export' },
+  // Task 16: network map and auto-match (SCR-026).
+  { method: 'GET', path: '/network-map' },
+  { method: 'GET', path: '/network-map/stores/{storeId}/candidates' },
+  { method: 'GET', path: '/network-map/auto-match' },
+  // Task 13.4: published rosters and store-manager overrides (SCR-022).
+  { method: 'GET', path: '/stores/{storeId}/rosters' },
+  { method: 'GET', path: '/stores/{storeId}/rosters/{rosterId}' },
+  { method: 'GET', path: '/stores/{storeId}/rosters/{rosterId}/shifts/{shiftId}/replacements' },
+  { method: 'POST', path: '/stores/{storeId}/rosters/{rosterId}/overrides/check' },
+  { method: 'POST', path: '/stores/{storeId}/rosters/{rosterId}/overrides' },
+  // Task 14: network view, department day plan, hiring plan and long-roster
+  // background jobs, leadership summary (SCR-020/021/023/024).
+  // Task 19: notifications — the bell, SCR-040 and per-user preferences (own records only).
+  { method: 'GET', path: '/notifications' },
+  { method: 'POST', path: '/notifications/read-all' },
+  { method: 'POST', path: '/notifications/{notificationId}/read' },
+  { method: 'GET', path: '/notification-preferences' },
+  { method: 'PUT', path: '/notification-preferences' },
+  // Task 16: network map and auto-match (SCR-026).
+  // Task 17: shift offers (SCR-022/025/026) and store-to-store borrowing.
+  { method: 'GET', path: '/stores/{storeId}/shifts/{shiftId}/offer-candidates' },
+  { method: 'POST', path: '/stores/{storeId}/shifts/{shiftId}/offers' },
+  { method: 'GET', path: '/stores/{storeId}/offers' },
+  { method: 'GET', path: '/me/offers' },
+  { method: 'POST', path: '/me/offers/{offerId}/accept' },
+  { method: 'POST', path: '/me/offers/{offerId}/decline' },
+  { method: 'GET', path: '/stores/{storeId}/borrow-requests' },
+  { method: 'POST', path: '/stores/{storeId}/borrow-requests' },
+  { method: 'GET', path: '/stores/{storeId}/borrow-requests/{requestId}/candidates' },
+  { method: 'POST', path: '/stores/{storeId}/borrow-requests/{requestId}/decision' },
+  // Users and roles, audit log (SCR-070..073).
+  { method: 'GET', path: '/admin/scope-options' },
+  { method: 'GET', path: '/admin/users' },
+  { method: 'POST', path: '/admin/users' },
+  { method: 'GET', path: '/admin/users/{userId}' },
+  { method: 'PATCH', path: '/admin/users/{userId}' },
+  { method: 'POST', path: '/admin/users/{userId}/deactivate' },
+  { method: 'POST', path: '/admin/users/{userId}/resend' },
+  { method: 'GET', path: '/audit-events' },
+  { method: 'GET', path: '/audit-events/export' },
   // Master data: stores, departments and lanes (SCR-052) and staff and availability (SCR-053).
   { method: 'POST', path: '/stores' },
   { method: 'PATCH', path: '/stores/{storeId}' },
@@ -125,6 +179,18 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'PUT', path: '/staff/{staffId}/availability' },
   { method: 'POST', path: '/staff/{staffId}/unavailable-dates' },
   { method: 'DELETE', path: '/staff/{staffId}/unavailable-dates/{entryId}' },
+];
+
+/**
+ * The Cognito admin actions the API needs for user administration
+ * (api/src/auth/user-directory.ts): invite / re-send, re-enable, disable and
+ * sign out. Granted on the LaneWise user pool only.
+ */
+export const API_COGNITO_ADMIN_ACTIONS: readonly string[] = [
+  'cognito-idp:AdminCreateUser',
+  'cognito-idp:AdminDisableUser',
+  'cognito-idp:AdminEnableUser',
+  'cognito-idp:AdminUserGlobalSignOut',
 ];
 
 /** Request headers the SPA sends: the defaults plus the demo role switcher's `X-Active-Role`. */
@@ -202,6 +268,8 @@ export class ApiStack extends Stack {
         // against the active role either way (P12).
         DEMO_ROLE_SWITCHER: config.demoRoleSwitcher ? 'true' : 'false',
         CORS_ALLOWED_ORIGINS: allowedOrigins ? Fn.join(',', allowedOrigins) : '*',
+        // User administration invites and deactivates users in this pool (SCR-070/071).
+        COGNITO_USER_POOL_ID: props.userPool.userPoolId,
         ...props.serviceEnvironment,
       },
       ...(props.network && {
@@ -211,6 +279,12 @@ export class ApiStack extends Stack {
       }),
     });
     this.apiFunction = apiFn;
+    apiFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: [...API_COGNITO_ADMIN_ACTIONS],
+        resources: [props.userPool.userPoolArn],
+      }),
+    );
 
     const api = new apigateway.RestApi(this, 'RestApi', {
       restApiName: `lanewise-${config.envName}-api`,

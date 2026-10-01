@@ -32,6 +32,11 @@ export interface StateBlockProps {
   action?: React.ReactNode
   /** Reference id for support (error/offline). */
   referenceId?: string
+  /**
+   * Heading level of the title. Defaults to 2 (a region inside a page); use 1
+   * when the block IS the page (e.g. a full-page error/status screen).
+   */
+  headingLevel?: 1 | 2
   className?: string
 }
 
@@ -41,8 +46,10 @@ export function StateBlock({
   description,
   action,
   referenceId,
+  headingLevel = 2,
   className,
 }: StateBlockProps) {
+  const Heading = headingLevel === 1 ? 'h1' : 'h2'
   const Icon = VARIANT_ICON[variant]
   const isError = variant === 'error' || variant === 'offline'
   const tone =
@@ -62,7 +69,7 @@ export function StateBlock({
       )}
     >
       <Icon aria-hidden="true" className={cn('size-8', tone)} />
-      <h2 className="text-h2 text-text">{title}</h2>
+      <Heading className="text-h2 text-text">{title}</Heading>
       {description && (
         <p className="max-w-prose text-body text-text-muted">{description}</p>
       )}

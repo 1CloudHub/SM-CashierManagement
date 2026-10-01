@@ -3,6 +3,7 @@ import type { IsoDate } from '@lanewise/shared'
 import { cellActionLabel } from '@/components/a11y/labelling'
 import { Col, Grid } from '@/components/layout/grid'
 import { Stack } from '@/components/layout/stack'
+import { Checkbox, Radio } from '@/components/ui/checkbox'
 import { Currency, Num } from '@/components/ui/currency'
 import { StateBlock } from '@/components/ui/state-block'
 import { cn } from '@/lib/utils'
@@ -175,7 +176,9 @@ export function RosterGrid({
             {(
               [
                 ['shifts', <Num key="v" value={totals.shifts} />],
-                ['cost', <Currency key="v" value={totals.cost} options={{ maximumFractionDigits: 0 }} />],
+                ...(totals.cost === undefined
+                  ? []
+                  : ([['cost', <Currency key="v" value={totals.cost} options={{ maximumFractionDigits: 0 }} />]] as const)),
                 ['paidHours', <Num key="v" value={totals.paidHours} />],
                 ['openShifts', <Num key="v" value={totals.openShifts} />],
                 ['borrowed', <Num key="v" value={totals.borrowed} />],
@@ -322,27 +325,30 @@ export function RosterGrid({
               {f.t('roster.filters.departments')}
             </legend>
             {departments.map((d) => (
-              <label key={d.id} className="flex min-h-tap items-center gap-2 text-body-sm">
-                <input
-                  type="checkbox"
-                  checked={deptIds.includes(d.id)}
-                  onChange={(e) =>
-                    update({
-                      departmentIds: e.target.checked
-                        ? [...deptIds, d.id]
-                        : deptIds.filter((x) => x !== d.id),
-                    })
-                  }
-                />
-                <span
-                  aria-hidden="true"
-                  className="lw-cat-band grid size-5 place-items-center text-caption font-weight-bold"
-                  style={catStyle(d.viz)}
-                >
-                  {d.letter}
-                </span>
-                {d.shortName}
-              </label>
+              <Checkbox
+                key={d.id}
+                className="text-body-sm"
+                label={
+                  <span className="inline-flex items-center gap-2">
+                    <span
+                      aria-hidden="true"
+                      className="lw-cat-band grid size-5 place-items-center text-caption font-weight-bold"
+                      style={catStyle(d.viz)}
+                    >
+                      {d.letter}
+                    </span>
+                    {d.shortName}
+                  </span>
+                }
+                checked={deptIds.includes(d.id)}
+                onChange={(e) =>
+                  update({
+                    departmentIds: e.target.checked
+                      ? [...deptIds, d.id]
+                      : deptIds.filter((x) => x !== d.id),
+                  })
+                }
+              />
             ))}
           </fieldset>
           <fieldset className="m-0 flex flex-col gap-1 border-0 p-0">
@@ -350,15 +356,14 @@ export function RosterGrid({
               {f.t('roster.filters.colourBy')}
             </legend>
             {COLOUR_BY.map((c) => (
-              <label key={c} className="flex min-h-tap items-center gap-2 text-body-sm">
-                <input
-                  type="radio"
-                  name={`${uid}-colour-by`}
-                  checked={colourBy === c}
-                  onChange={() => update({ colourBy: c })}
-                />
-                {f.t(`roster.filters.colourBy.${c}`)}
-              </label>
+              <Radio
+                key={c}
+                className="text-body-sm"
+                label={f.t(`roster.filters.colourBy.${c}`)}
+                name={`${uid}-colour-by`}
+                checked={colourBy === c}
+                onChange={() => update({ colourBy: c })}
+              />
             ))}
           </fieldset>
         </Stack>

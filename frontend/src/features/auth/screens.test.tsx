@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { axe } from 'vitest-axe'
@@ -9,7 +9,13 @@ import { readOnboardingChoices } from './onboarding'
 import { PasskeyManager } from './passkey-manager'
 import { rememberReturnTo } from './return-to'
 import { SignInScreen } from './sign-in-screen'
-import { JUAN, fakeClient, passkey, renderWithAuth, setPath } from '@/test/auth'
+import { JUAN, Providers, fakeClient, passkey, renderWithAuth, setPath } from '@/test/auth'
+import { ApiProvider, createMockAdapter } from '@/api'
+import { ActiveRoleProvider } from '@/app/active-role'
+import { storeRole } from '@/app/active-role-storage'
+import { HelpProvider } from '@/components/help'
+import { ProfileScreen } from './profile-screen'
+import { readDefaultStore } from './default-store'
 
 beforeEach(() => {
   setPath('/sign-in')
@@ -120,11 +126,18 @@ describe('SCR-002 First sign-in / new device', () => {
     expect(client.startEmailCode).toHaveBeenCalledWith('juan@smretail.com')
 
     expect(await screen.findByText('We sent a 6-digit code to juan@smretail.com.')).toBeInTheDocument()
+    // Focus moves into the code field once the code is sent.
+    await waitFor(() => expect(screen.getByLabelText(/^code/i)).toHaveFocus())
     await user.type(screen.getByLabelText(/^code/i), '123456')
     await user.click(screen.getByRole('button', { name: 'Verify code' }))
     expect(client.confirmEmailCode).toHaveBeenCalledWith('123456')
 
     await screen.findByRole('heading', { name: 'Create a passkey' })
+    // Completed steps carry a visible check and an sr-only "completed".
+    const steps = within(screen.getByRole('list', { name: 'Setup steps' })).getAllByRole('listitem')
+    expect(steps[0]).toHaveTextContent('Verify email (completed)')
+    expect(steps[0]?.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    expect(steps[1]).not.toHaveTextContent('completed')
     expect(window.localStorage.getItem('lw.auth.passkeyPending')).toBe(JUAN.userId)
     await user.click(screen.getByRole('button', { name: 'Create passkey' }))
     expect(client.registerPasskey).toHaveBeenCalled()
@@ -226,5 +239,56 @@ describe('SCR-080 Passkeys (requirement 1.9)', () => {
     const { container } = renderWithAuth(<PasskeyManager passkeySupported />)
     await screen.findByRole('table')
     expect(await axe(container)).toHaveNoViolations()
+  })
+})
+
+describe('SCR-080 Profile and preferences', () => {
+  beforeEach(() => {
+    setPath('/profile')
+    window.localStorage.clear()
+  })
+
+  /** Profile runs inside the app shell, so it needs the signed-in providers too. */
+  function renderProfile(role: 'STM' | 'STF' = 'STM') {
+    storeRole(role, JUAN.userId)
+    const client = fakeClient({ currentUser: async () => ({ ...JUAN, name: 'Juan dela Cruz' }) })
+    return render(
+      <Providers client={client}>
+        <ActiveRoleProvider demo userId={JUAN.userId}>
+          <ApiProvider adapter={createMockAdapter()}>
+            <HelpProvider>
+              <ProfileScreen />
+            </HelpProvider>
+          </ApiProvider>
+        </ActiveRoleProvider>
+      </Providers>,
+    )
+  }
+
+  it('renders inside the app shell with summary, preferences, passkeys and no axe violations', async () => {
+    const { container } = renderProfile()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Profile and preferences' })).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('Profile and preferences')
+    expect(document.title).toBe('Profile and preferences — LaneWise')
+    const summary = screen.getByRole('region', { name: 'Profile' })
+    expect(await within(summary).findByText('Juan dela Cruz')).toBeInTheDocument()
+    expect(within(summary).getByText('juan@smretail.com')).toBeInTheDocument()
+    expect(within(summary).getByText('Store Manager')).toBeInTheDocument()
+    const prefs = screen.getByRole('region', { name: 'Preferences' })
+    expect(within(prefs).getByLabelText('Language')).toHaveValue('en')
+    expect(within(prefs).getByText('Asia/Manila')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Passkeys' })).toBeInTheDocument()
+    await screen.findByRole('table', { name: 'Your passkeys' })
+    expect(await axe(container)).toHaveNoViolations()
+  })
+
+  it('saves the default store per user on this device', async () => {
+    const user = userEvent.setup()
+    renderProfile()
+    const select = await screen.findByLabelText('Default store')
+    await waitFor(() => expect(within(select).getAllByRole('option').length).toBeGreaterThan(1))
+    const option = within(select).getAllByRole('option')[1]!
+    await user.selectOptions(select, option)
+    expect(readDefaultStore(JUAN.userId)).toBe(option.getAttribute('value'))
   })
 })

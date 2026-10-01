@@ -113,7 +113,7 @@ describe('SCR-052 Stores, departments and lanes', () => {
 
   it('shows "No access" to roles outside the row', () => {
     renderApp({ path: '/data/stores', role: 'FIN' })
-    expect(screen.getByRole('heading', { level: 1, name: 'No access' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: /You do not have access/ })).toBeInTheDocument()
   })
 })
 
@@ -229,7 +229,7 @@ describe('SCR-053 Staff and availability', () => {
 
   it('shows "No access" to roles outside the row', () => {
     renderApp({ path: '/data/staff', role: 'EXE' })
-    expect(screen.getByRole('heading', { level: 1, name: 'No access' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: /You do not have access/ })).toBeInTheDocument()
   })
 })
 

@@ -6,7 +6,14 @@
  * published Christmas scenario), through the app router with the real RBAC
  * enforcer and cost shaping.
  */
-import { DEFAULT_SCENARIO_SETTINGS, type RoleCode, type ScenarioComparison, type ScenarioDetail } from '@lanewise/shared';
+import {
+  DEFAULT_SCENARIO_SETTINGS,
+  ENGINE_SETTING_DEFAULTS,
+  type RoleCode,
+  type ScenarioComparison,
+  type ScenarioDetail,
+  type ScenarioListItem,
+} from '@lanewise/shared';
 import fc from 'fast-check';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from '../../src/app.js';
@@ -86,6 +93,68 @@ describe('11.1 scenario CRUD, lifecycle and runs', () => {
     expect(s.latestRun).toBeNull();
   });
 
+  it('returns the rule defaults, the base hourly rate, POS-learned departments and rule publish times', async () => {
+    const s = await createDraft('Defaults check');
+    // The demo rule versions carry the engine defaults.
+    expect(s.defaults).toEqual(ENGINE_SETTING_DEFAULTS);
+    expect(s.baseHourlyRate).toBe(80);
+    expect(s.departments).toHaveLength(24);
+    const qc = s.departments.find((d) => d.departmentId === demoId('department', 'smsm-qc:main'));
+    expect(qc).toMatchObject({ storeId: demoId('store', 'smsm-qc'), departmentName: 'Main lanes', storeName: 'SM Supermarket – Quezon City' });
+    expect(qc?.baselineTxPerDay).toBeGreaterThan(0);
+    expect(qc?.handleTimeMin).toBeGreaterThan(0);
+    expect(typeof qc?.upliftPct).toBe('number');
+    expect(s.ruleVersions.every((p) => typeof p.publishedAt === 'string')).toBe(true);
+    const latest = s.ruleVersions.map((p) => Date.parse(p.publishedAt ?? '')).reduce((a, b) => Math.max(a, b), 0);
+    expect(Date.parse(s.rulesAsOf ?? '')).toBe(latest);
+    const list = (await call('PLN', 'GET', '/scenarios', undefined, { q: 'Defaults check' })).body.scenarios as ScenarioListItem[];
+    expect(list[0]?.rulesAsOf).toBe(s.rulesAsOf);
+  });
+
+  it('filters the list to the caller\'s own scenarios with owner=me', async () => {
+    await createDraft('Owner check');
+    const mine = (await call('PLN', 'GET', '/scenarios', undefined, { owner: 'me' })).body.scenarios as ScenarioListItem[];
+    expect(mine.length).toBeGreaterThan(0);
+    expect(mine.every((x) => x.ownerId === demoUserId('PLN'))).toBe(true);
+    const hr = await call('HR', 'GET', '/scenarios', undefined, { owner: 'me' });
+    expect(hr.status).toBe(200);
+    expect(hr.body.scenarios).toEqual([]);
+    const bad = await call('PLN', 'GET', '/scenarios', undefined, { owner: 'someone' });
+    expect(bad.status).toBe(422);
+    expect(bad.body.error.code).toBe('validation_failed');
+  });
+
+  it('validates overrides, with the department row and field in the path, and saves them', async () => {
+    const s = await createDraft('Override check');
+    const deptId = demoId('department', 'smsm-qc:main');
+    const bad = await call('PLN', 'PATCH', `/scenarios/${s.id}`, {
+      settings: {
+        ...DEFAULT_SCENARIO_SETTINGS,
+        waitSeconds: 5,
+        departmentOverrides: [{ departmentId: deptId, baselineTxPerDay: null, handleTimeMin: 99, upliftPct: null }],
+      },
+    });
+    expect(bad.status).toBe(422);
+    const paths = (bad.body.error.details as { path: string }[]).map((d) => d.path).sort();
+    expect(paths).toEqual(['body.settings.departmentOverrides.0.handleTimeMin', 'body.settings.waitSeconds']);
+
+    const settings = {
+      ...DEFAULT_SCENARIO_SETTINGS,
+      waitSeconds: 45,
+      ftShiftPattern: '7+1' as const,
+      departmentOverrides: [{ departmentId: deptId, baselineTxPerDay: 2000, handleTimeMin: null, upliftPct: null }],
+    };
+    const ok = await call('PLN', 'PATCH', `/scenarios/${s.id}`, { settings });
+    expect(ok.status).toBe(200);
+    expect((ok.body.scenario as ScenarioDetail).settings).toEqual(settings);
+    // Keys left out mean "rule default".
+    const legacy: Record<string, unknown> = { ...settings };
+    for (const k of ['waitSeconds', 'ftShiftPattern', 'departmentOverrides']) delete legacy[k];
+    const old = await call('PLN', 'PATCH', `/scenarios/${s.id}`, { settings: legacy });
+    expect(old.status).toBe(200);
+    expect((old.body.scenario as ScenarioDetail).settings).toEqual(DEFAULT_SCENARIO_SETTINGS);
+  });
+
   it('runs the engine and records exactly the pinned inputs on the run (P6)', async () => {
     const s = await run((await createDraft('Run check')).id);
     const r = s.latestRun;
@@ -99,6 +168,11 @@ describe('11.1 scenario CRUD, lifecycle and runs', () => {
     expect(results?.cost).toBeGreaterThan(0);
     // DOM-001 Fixture C: the demo network peaks at 254 lanes at 17:00 on Dec 19.
     expect(results?.peak).toEqual({ date: '2026-12-19', hour: 17, lanesOpen: 254 });
+    // Hires against the seeded active staff, per store and in total.
+    expect(results?.stores.every((x) => typeof x.hires === 'number')).toBe(true);
+    expect(results?.seasonalHires).toBe(results?.stores.reduce((sum, x) => sum + (x.hires ?? 0), 0));
+    if ((results?.seasonalHires ?? 0) > 0) expect(results?.firstNeededBy).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    else expect(results?.firstNeededBy).toBeNull();
     expect(s.submitBlocker).toBeNull();
     expect(s.lastRunAt).not.toBeNull();
   });
@@ -119,6 +193,9 @@ describe('11.1 scenario CRUD, lifecycle and runs', () => {
       { numRuns: 15 },
     );
     expect((await call('PLN', 'POST', `/scenarios/${s.id}/run`, {})).status).toBe(409);
+    // Overrides are settings too: frozen outside Draft.
+    const override = await call('PLN', 'PATCH', `/scenarios/${s.id}`, { settings: { ...DEFAULT_SCENARIO_SETTINGS, waitSeconds: 30 } });
+    expect(override.status).toBe(409);
     const after = (await call('PLN', 'GET', `/scenarios/${s.id}`)).body.scenario as ScenarioDetail;
     expect(after.settings).toEqual(s.settings);
     expect(after.editable).toBe(false);
@@ -280,6 +357,9 @@ describe('11.3 compare', () => {
     expect(res.status).toBe(200);
     const c = res.body as ScenarioComparison;
     expect(c.settings).toEqual([{ key: 'growth', from: 1.05, to: 1.2 }]);
+    expect(c.departmentSettings).toEqual([]);
+    expect(c.results.seasonalHires.delta).toBe((b.latestRun?.results?.seasonalHires ?? 0) - (a.latestRun?.results?.seasonalHires ?? 0));
+    expect(c.results.stores.every((x) => x.hires.a !== null && x.hires.b !== null)).toBe(true);
     expect(c.results.headcount.delta).toBe((b.latestRun?.results?.headcount ?? 0) - (a.latestRun?.results?.headcount ?? 0));
     expect(c.results.headcount.delta).toBeGreaterThan(0);
     expect(c.results.peakLanes.delta).toBeGreaterThan(0);
@@ -314,8 +394,42 @@ describe('11.3 compare', () => {
     expect(stores.map((x) => x.storeId)).toEqual([demoId('store', 'smsm-qc')]);
     expect(stores.every((x) => (x.cost ?? 0) > 0)).toBe(true);
     expect(results?.headcount).toBe(stores.reduce((sum, x) => sum + x.headcount, 0));
+    expect(results?.seasonalHires).toBe(stores.reduce((sum, x) => sum + (x.hires ?? 0), 0));
+    // The base hourly rate is a network cost figure: hidden from a Store Manager; departments in scope only.
+    expect(seen.baseHourlyRate).toBeUndefined();
+    expect('baseHourlyRate' in seen).toBe(false);
+    expect(new Set(seen.departments.map((d) => d.storeId))).toEqual(new Set([demoId('store', 'smsm-qc')]));
+    expect(seen.departments).toHaveLength(2);
     // The seeded plan it superseded is no longer listed for the Store Manager.
     const list = await call('STM', 'GET', '/scenarios', undefined, { season: DEMO_SEASON });
     expect(list.body.scenarios.map((x: { id: string }) => x.id)).toEqual([s.id]);
+  });
+});
+
+describe('11.3 compare department overrides and engine overrides', () => {
+  it('lists department override changes and applies service and shift overrides to the run', async () => {
+    const deptId = demoId('department', 'smsm-qc:express');
+    const a = await run((await createDraft('Override A')).id);
+    const b0 = await createDraft('Override B');
+    const patched = await call('PLN', 'PATCH', `/scenarios/${b0.id}`, {
+      settings: {
+        ...DEFAULT_SCENARIO_SETTINGS,
+        waitSeconds: 30,
+        servedWithinPct: 95,
+        departmentOverrides: [{ departmentId: deptId, baselineTxPerDay: null, handleTimeMin: 1.5, upliftPct: null }],
+      },
+    });
+    expect(patched.status).toBe(200);
+    const b = await run(b0.id);
+    const c = (await call('PLN', 'GET', '/scenarios/compare', undefined, { a: a.id, b: b.id })).body as ScenarioComparison;
+    expect(c.departmentSettings).toEqual([{ departmentId: deptId, field: 'handleTimeMin', from: null, to: 1.5 }]);
+    expect(c.settings.map((x) => x.key)).toEqual(['servedWithinPct', 'waitSeconds']);
+    expect(c.results.headcount.delta).toBeGreaterThanOrEqual(0);
+    expect(c.results.peakLanes.delta).toBeGreaterThan(0);
+
+    const p0 = await createDraft('Override pattern');
+    await call('PLN', 'PATCH', `/scenarios/${p0.id}`, { settings: { ...DEFAULT_SCENARIO_SETTINGS, ftShiftPattern: '7+1' } });
+    const p = await run(p0.id);
+    expect(p.latestRun?.results?.paidHours).not.toBe(a.latestRun?.results?.paidHours);
   });
 });

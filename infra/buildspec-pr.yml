@@ -49,10 +49,10 @@ phases:
       - echo "install — restoring dependencies"
       - cd "$CODEBUILD_SRC_DIR/packages/shared" && npm ci
       - cd "$CODEBUILD_SRC_DIR/packages/domain" && npm ci
+      - cd "$CODEBUILD_SRC_DIR/packages/matching" && npm ci
       - cd "$CODEBUILD_SRC_DIR/api" && npm ci
       - cd "$CODEBUILD_SRC_DIR/frontend" && npm ci
       - cd "$CODEBUILD_SRC_DIR/infra" && npm ci
-      - cd "$CODEBUILD_SRC_DIR/packages/matching" && npm ci
 
   build:
     commands:
@@ -61,10 +61,11 @@ phases:
       # The API depends on @lanewise/domain (file:) for the demo seed (task 23),
       # so the domain package is built before the API.
       - cd "$CODEBUILD_SRC_DIR/packages/domain" && npm run build
+      # ... and on @lanewise/matching (file:) for the network map (task 16).
+      - cd "$CODEBUILD_SRC_DIR/packages/matching" && npm run build
       - cd "$CODEBUILD_SRC_DIR/api" && npm run build
       - cd "$CODEBUILD_SRC_DIR/frontend" && npm run build
       - cd "$CODEBUILD_SRC_DIR/infra" && npm run build
-      - cd "$CODEBUILD_SRC_DIR/packages/matching" && npm run build
 
   pre_build:
     commands:

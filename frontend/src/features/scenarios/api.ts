@@ -19,10 +19,12 @@ export interface ScenarioListQuery {
   readonly season?: string
   readonly stale?: boolean
   readonly q?: string
+  /** `me` — only scenarios the caller owns. */
+  readonly owner?: 'me' | ''
 }
 
 export interface ScenariosClient {
-  list(query?: ScenarioListQuery): Promise<readonly ScenarioListItem[]>
+  list(query?: ScenarioListQuery, init?: { signal?: AbortSignal }): Promise<readonly ScenarioListItem[]>
   create(input: { name: string; season: string; settings?: ScenarioSettingsValues }): Promise<ScenarioDetail>
   get(id: string): Promise<ScenarioDetail>
   update(id: string, input: { name?: string; settings?: ScenarioSettingsValues }): Promise<ScenarioDetail>
@@ -41,6 +43,7 @@ export function listQueryString(query: ScenarioListQuery = {}): string {
   if (query.season) p.set('season', query.season)
   if (query.stale) p.set('stale', 'true')
   if (query.q?.trim()) p.set('q', query.q.trim())
+  if (query.owner) p.set('owner', query.owner)
   const s = p.toString()
   return s ? `?${s}` : ''
 }
@@ -52,7 +55,9 @@ export function createScenariosClient(api: Pick<ApiClient, 'request'>): Scenario
   const one = async (method: HttpMethod, path: string, body?: unknown) =>
     (await request<{ scenario: ScenarioDetail }>(method, path, body)).scenario
   return {
-    list: async (query) => (await request<{ scenarios: ScenarioListItem[] }>('GET', `/scenarios${listQueryString(query)}`)).scenarios,
+    list: async (query, init) =>
+      (await api.request<{ scenarios: ScenarioListItem[] }>('GET', `/scenarios${listQueryString(query)}`, init?.signal ? { signal: init.signal } : {}))
+        .scenarios,
     create: (input) => one('POST', '/scenarios', input),
     get: (sid) => one('GET', `/scenarios/${id(sid)}`),
     update: (sid, input) => one('PATCH', `/scenarios/${id(sid)}`, input),

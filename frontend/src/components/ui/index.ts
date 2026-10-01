@@ -10,6 +10,7 @@ export { Alert, type AlertProps } from './alert'
 export { Breadcrumbs, type Crumb } from './breadcrumbs'
 export { Button, type ButtonProps } from './button'
 export { buttonVariants } from './button-variants'
+export { Checkbox, Radio, type CheckboxProps, type RadioProps } from './checkbox'
 export {
   Card,
   CardHeader,

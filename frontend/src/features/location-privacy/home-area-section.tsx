@@ -8,10 +8,11 @@ import {
 } from '@lanewise/shared'
 import { ApiError } from '@/api'
 import { useAnnouncer } from '@/components/a11y'
-import { Cluster, Section, Stack } from '@/components/layout'
+import { Section, Stack } from '@/components/layout'
 import {
   Alert,
   Button,
+  Checkbox,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -256,16 +257,12 @@ function ConsentPrompt({
           <p className="text-body-sm text-text-muted">{t('homeArea.consent.version', { version })}</p>
         </Stack>
       </div>
-      <Cluster gap={2} as="label" htmlFor={readId} className="min-h-tap text-body text-text">
-        <input
-          id={readId}
-          type="checkbox"
-          className="size-5 accent-primary"
-          checked={read}
-          onChange={(e) => setRead(e.target.checked)}
-        />
-        {t('homeArea.consent.read')}
-      </Cluster>
+      <Checkbox
+        id={readId}
+        label={t('homeArea.consent.read')}
+        checked={read}
+        onChange={(e) => setRead(e.target.checked)}
+      />
       <div>
         <Button
           variant="primary"
@@ -390,16 +387,12 @@ function HomeAreaForm({
             </Select>
           )}
         </Field>
-        <Cluster gap={2} as="label" htmlFor={crossId} className="min-h-tap text-body text-text">
-          <input
-            id={crossId}
-            type="checkbox"
-            className="size-5 accent-primary"
-            checked={crossStore}
-            onChange={(e) => setCrossStore(e.target.checked)}
-          />
-          {t('homeArea.crossStore')}
-        </Cluster>
+        <Checkbox
+          id={crossId}
+          label={t('homeArea.crossStore')}
+          checked={crossStore}
+          onChange={(e) => setCrossStore(e.target.checked)}
+        />
         <div>
           <Button type="submit" variant="primary" loading={busy} loadingLabel={t('auth.working')}>
             {t('homeArea.save')}

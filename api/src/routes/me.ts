@@ -23,6 +23,7 @@ import { resolveScope } from '../auth/scope.js';
 import { requireIdentity, type Identity, type Principal } from '../context.js';
 import { withAuditedTransaction } from '../db/audit.js';
 import { queryMaybe } from '../db/rows.js';
+import { NoChange as NoActivation, activateInvitedUser } from '../db/repositories/admin-users.js';
 import { provisionUser, setActiveRole } from '../db/repositories/users.js';
 import { ApiError, errors } from '../http/errors.js';
 import type { Router } from '../http/router.js';
@@ -81,6 +82,22 @@ async function buildMe(
   };
 }
 
+/**
+ * The first signed-in `GET /me` of an invited user (SCR-071) makes them
+ * active and links their Cognito identity — one `user.activated` event,
+ * recorded as the user themselves.
+ */
+async function activateIfInvited(db: pg.Pool, userId: string, role: RoleCode, sub: string, requestId: string): Promise<void> {
+  const row = await queryMaybe<{ status: string } & pg.QueryResultRow>(db, 'SELECT status FROM app_user WHERE id = $1', [userId]);
+  if (row?.status !== 'invited') return;
+  try {
+    await withAuditedTransaction(db, { userId, activeRole: role, requestId }, (tx) => activateInvitedUser(tx, userId, sub));
+  } catch (err) {
+    // A concurrent request activated them first.
+    if (!(err instanceof NoActivation)) throw err;
+  }
+}
+
 const setActiveRoleBody = z.object({ role: z.enum(ROLE_CODES) }).strict();
 
 class NoChange extends Error {}
@@ -89,7 +106,11 @@ export function registerMeRoutes(router: Router, deps: MeDeps): Router {
   return router
     .get('/me', authenticated(), async (request, context) => {
       const identity = requireIdentity(context);
-      const body = await buildMe(deps.db(), identity, context.principal, request.headers[ACTIVE_ROLE_HEADER_KEY], deps.rbac);
+      const principal = context.principal;
+      if (principal !== null && principal.activeRole !== null) {
+        await activateIfInvited(deps.db(), principal.userId, principal.activeRole, identity.sub, context.requestId);
+      }
+      const body = await buildMe(deps.db(), identity, principal, request.headers[ACTIVE_ROLE_HEADER_KEY], deps.rbac);
       return { statusCode: 200, body };
     })
     .put('/me/active-role', authenticated(), async (request, context) => {
