@@ -128,7 +128,7 @@ function visible(principal: Principal, record: planning.ScenarioRecord): boolean
 }
 
 /** Results limited to in-scope stores (P1), with every ₱ figure tagged for cost visibility. */
-function resultsFor(principal: Principal, stored: StoredRunResults) {
+export function resultsFor(principal: Principal, stored: StoredRunResults) {
   const scope = principal.scope;
   const stores = stored.stores.filter((s) => scope !== null && isStoreInScope(scope, { id: s.storeId, regionId: s.regionId }));
   const headcountByType = { FT: 0, PT: 0, FLOAT: 0 };
@@ -158,7 +158,7 @@ function resultsFor(principal: Principal, stored: StoredRunResults) {
   };
 }
 
-function listItem(r: planning.ScenarioRecord) {
+export function listItem(r: planning.ScenarioRecord) {
   return {
     id: r.id,
     name: r.name,

@@ -247,6 +247,17 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
         viewer: mockViewer(role),
       })
     }
+    if (pathname === '/approvals' || pathname.startsWith('/approvals/')) {
+      // Shares the scenario rows; results are shaped for the role like /scenarios.
+      return scenarios.approvals.handle({
+        method: request.method,
+        pathname,
+        query: new URLSearchParams(search),
+        body: request.body,
+        role,
+        viewer: mockViewer(role),
+      })
+    }
     const { key, id } = routeOf(request.method, pathname)
     const handler = ROUTES[key]
     if (!handler) return fail('not_found', 'We couldn’t find that.')
