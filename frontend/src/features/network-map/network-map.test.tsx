@@ -43,12 +43,12 @@ describe('SCR-026 Network map', () => {
     expect(screen.queryByTestId('maplibre-map')).toBeNull()
     // Status in words (not colour alone), short stores first.
     const rows = within(table).getAllByRole('row').slice(1)
-    expect(within(rows[0]!).getByRole('rowheader')).toHaveTextContent('SM Megamall')
+    expect(within(rows[0]!).getByRole('rowheader')).toHaveTextContent('SM Supermarket – Megamall')
     expect(rows[0]).toHaveTextContent('Short 4')
-    expect(within(table).getByRole('rowheader', { name: 'SM Aura' }).closest('tr')).toHaveTextContent('Spare 3')
-    expect(within(table).getByRole('rowheader', { name: 'SM Makati' }).closest('tr')).toHaveTextContent('Balanced')
+    expect(within(table).getByRole('rowheader', { name: 'SM Supermarket – Aura' }).closest('tr')).toHaveTextContent('Spare 3')
+    expect(within(table).getByRole('rowheader', { name: 'The SM Store – Makati' }).closest('tr')).toHaveTextContent('Balanced')
     // Pins are buttons named with their status.
-    expect(screen.getByRole('button', { name: 'SM Megamall: Short 4. 26 needed, 22 rostered.' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'SM Supermarket – Megamall: Short 4. 26 needed, 22 rostered.' })).toBeInTheDocument()
     // Staff layer: counts per barangay only.
     const counts = screen.getByRole('table', { name: /home area|barangay/i })
     expect(within(counts).getByRole('rowheader', { name: 'Wack-Wack Greenhills' })).toBeInTheDocument()
@@ -60,15 +60,17 @@ describe('SCR-026 Network map', () => {
     const user = userEvent.setup()
     renderMap()
     await storesTable()
-    await user.click(screen.getByRole('button', { name: 'Find cover at SM Megamall' }))
+    await user.click(screen.getByRole('button', { name: 'Find cover at SM Supermarket – Megamall' }))
     const ranked = await screen.findByRole('table', { name: 'Candidates ranked by travel time' })
-    const first = within(ranked).getAllByRole('row')[1]!
-    expect(first).toHaveTextContent('XS-14 · SM Center Pasig')
-    expect(first).toHaveTextContent('Brgy. Wack-Wack Greenhills, Mandaluyong')
+    const xs14 = within(ranked).getByRole('checkbox', { name: 'Select XS-14' }).closest('tr')!
+    expect(xs14).toHaveTextContent('XS-14 · SM Supermarket – Megamall')
+    expect(xs14).toHaveTextContent('Brgy. Wack-Wack Greenhills, Mandaluyong')
+    // Other stores' cashiers within reach are ranked too.
+    expect(ranked).toHaveTextContent('SaveMore – Center Pasig')
     const nearMiss = screen.getByRole('table', { name: 'Cashiers within reach who can’t take this shift' })
     expect(nearMiss).toHaveTextContent('Not trained on this department')
-    expect(screen.getByText('3 cashiers aren’t shown because they don’t share a home area.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'SM Megamall: Short 4. 26 needed, 22 rostered.' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText('6 cashiers aren’t shown because they don’t share a home area.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'SM Supermarket – Megamall: Short 4. 26 needed, 22 rostered.' })).toHaveAttribute('aria-pressed', 'true')
     await user.click(within(ranked).getByRole('checkbox', { name: 'Select XS-14' }))
     expect(screen.getByRole('button', { name: 'Offer shift to 1 selected' })).toBeDisabled()
     expect(screen.getByRole('complementary', { name: 'Selected store' })).toHaveTextContent('Borrow from a nearby store')
@@ -81,17 +83,18 @@ describe('SCR-026 Network map', () => {
     const client = createApiClient({ adapter, getActiveRole: () => 'PLN' })
     renderMap('PLN', { api: networkMapApiFromClient(client), offers: createOffersClient(client) })
     await storesTable()
-    await user.click(screen.getByRole('button', { name: 'Find cover at SM Megamall' }))
+    await user.click(screen.getByRole('button', { name: 'Find cover at SM Supermarket – Megamall' }))
     const ranked = await screen.findByRole('table', { name: 'Candidates ranked by travel time' })
     await user.click(within(ranked).getByRole('checkbox', { name: 'Select XS-14' }))
     await user.click(screen.getByRole('button', { name: 'Offer shift to 1 selected' }))
     const panel = screen.getByRole('complementary', { name: 'Selected store' })
     expect(await within(panel).findByText('Offers sent to 1 cashiers.')).toBeInTheDocument()
     const status = screen.getByRole('list', { name: 'Offers for this shift' })
-    expect(status).toHaveTextContent(/XS-14 · waiting, 30 min left/)
+    // Jo Tan is Megamall's own cashier, so the store sees the name (other stores' cashiers stay pseudonymous).
+    expect(status).toHaveTextContent(/XS-14 Jo Tan · waiting, 30 min left/)
     // Already offered: the checkbox is checked and locked.
     expect(within(ranked).getByRole('checkbox', { name: 'Select XS-14' })).toBeDisabled()
-    await user.click(screen.getAllByRole('button', { name: 'Request 1' })[0]!)
+    await user.click(screen.getAllByRole('button', { name: /^Request \d+$/ })[0]!)
     expect(await within(panel).findByText(/Borrow request sent to .*Its store manager decides\./)).toBeInTheDocument()
     expect(log.filter((r) => r.method === 'POST').map((r) => r.path.replace(/^\/stores\/[^/]+/, ''))).toEqual([
       expect.stringMatching(/^\/shifts\/[^/]+\/offers$/),
@@ -103,7 +106,7 @@ describe('SCR-026 Network map', () => {
     const user = userEvent.setup()
     renderMap()
     await storesTable()
-    const pin = screen.getByRole('button', { name: /^SM Aura: Spare 3/ })
+    const pin = screen.getByRole('button', { name: /^SM Supermarket – Aura: Spare 3/ })
     pin.focus()
     await user.keyboard('{Enter}')
     expect(pin).toHaveAttribute('aria-pressed', 'true')
@@ -114,10 +117,10 @@ describe('SCR-026 Network map', () => {
     const user = userEvent.setup()
     renderMap()
     const table = await storesTable()
-    expect(within(table).getByRole('rowheader', { name: 'SM Center Pasig' })).toBeInTheDocument()
+    expect(within(table).getByRole('rowheader', { name: 'SaveMore – Center Pasig' })).toBeInTheDocument()
     await user.click(screen.getByRole('checkbox', { name: 'SaveMore' }))
-    await waitFor(async () => expect(within(await storesTable()).queryByRole('rowheader', { name: 'SM Center Pasig' })).toBeNull())
-    expect(within(await storesTable()).getByRole('rowheader', { name: 'SM Megamall' })).toBeInTheDocument()
+    await waitFor(async () => expect(within(await storesTable()).queryByRole('rowheader', { name: 'SaveMore – Center Pasig' })).toBeNull())
+    expect(within(await storesTable()).getByRole('rowheader', { name: 'SM Supermarket – Megamall' })).toBeInTheDocument()
   })
 
   it('P1: a Store Manager sees their own store only; Executives and HR get no auto-match', async () => {
@@ -171,7 +174,7 @@ describe('SCR-026 Network map', () => {
     const user = userEvent.setup()
     renderMap()
     await storesTable()
-    await user.click(screen.getByRole('button', { name: 'Find cover at SM Megamall' }))
+    await user.click(screen.getByRole('button', { name: 'Find cover at SM Supermarket – Megamall' }))
     await screen.findByRole('table', { name: 'Candidates ranked by travel time' })
     const text = document.body.textContent ?? ''
     expect(text).not.toMatch(/-?\d{1,3}\.\d{3,}/)
@@ -182,7 +185,7 @@ describe('SCR-026 Network map', () => {
     const user = userEvent.setup()
     const { container } = renderMap()
     await storesTable()
-    await user.click(screen.getByRole('button', { name: 'Find cover at SM Megamall' }))
+    await user.click(screen.getByRole('button', { name: 'Find cover at SM Supermarket – Megamall' }))
     await screen.findByRole('table', { name: 'Candidates ranked by travel time' })
     expect(await axe(container)).toHaveNoViolations()
   })

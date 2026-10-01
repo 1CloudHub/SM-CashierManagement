@@ -13,14 +13,18 @@ import {
   type RoleCode,
 } from '@lanewise/shared'
 import { ACTIVE_ROLE_HEADER, type ApiAdapter, type ApiRequest, type ApiResponse } from './client'
+import { createIngestionStore } from './mock-ingestion'
+import { createLocationPrivacyStore } from './mock-location-privacy'
 import { createMasterDataStore } from './mock-master-data'
 import { createPlanningStore } from './mock-planning'
 import { createOfferStore } from './mock-offers'
 import { createNotificationStore } from './mock-notifications'
 import { createSelfServiceStore } from './mock-self-service'
 import { createRosterStore } from './mock-rosters'
-import { createAdminStore } from './mock-admin'
+import { MOCK_PENDING_INVITATIONS, createAdminStore, mockRecentAudit } from './mock-admin'
+import { createRulesStore } from './mock-rules'
 import { createScenarioStore } from './mock-scenarios'
+import { STF_STAFF_ID, STM_STORE_ID } from './mock-world'
 import { createSavedViewStore, mockContextOptions, mockSearch, type MockResult } from './mock-directory'
 import { mockAutoMatch, mockNetworkMap, mockStoreCandidates, parseMockNetworkQuery, type MockNetworkResult } from './mock-network-map'
 import type { HomeKpis, HomeScenarioRow, HomeSummary } from './types'
@@ -57,9 +61,9 @@ const NETWORK: CostTarget = { level: 'network' }
 export function mockViewer(role: RoleCode): CostViewer {
   switch (role) {
     case 'STM':
-      return { role, scope: { type: 'store', storeIds: ['store-smsm-qc'] } }
+      return { role, scope: { type: 'store', storeIds: [STM_STORE_ID] } }
     case 'STF':
-      return { role, scope: { type: 'self', staffId: 'staff-pt-02' } }
+      return { role, scope: { type: 'self', staffId: STF_STAFF_ID } }
     default:
       return { role, scope: { type: 'global' } }
   }
@@ -77,11 +81,15 @@ const KPIS: CostDraft<HomeKpis> = {
 }
 
 const RECENT_SCENARIOS: readonly HomeScenarioRow[] = [
-  { id: 'scn-xmas-2026-v3', name: 'Christmas 2026 v3', status: 'published', stale: false, updatedAt: '2026-10-01T09:00:00+08:00', ownerName: 'Ana' },
-  { id: 'scn-xmas-2026-v4', name: 'Christmas 2026 v4', status: 'submitted', stale: true, updatedAt: '2026-10-03T14:30:00+08:00', ownerName: 'Ana' },
+  { id: 'scn-xmas-2026-v4', name: 'Christmas 2026 v4', status: 'submitted', stale: false, updatedAt: '2026-09-29T09:10:00+08:00', ownerName: 'Ana Reyes' },
+  { id: 'scn-ber-2026-v1', name: 'Ber months 2026 v1', status: 'submitted', stale: false, updatedAt: '2026-09-29T11:30:00+08:00', ownerName: 'Ana Reyes' },
+  { id: 'scn-xmas-2026-ft5', name: '5-day FT rule test', status: 'draft', stale: true, updatedAt: '2026-09-24T10:20:00+08:00', ownerName: 'Paolo Navarro' },
+  { id: 'scn-xmas-2026-v5', name: 'Christmas 2026 v5 (what-if)', status: 'draft', stale: true, updatedAt: '2026-09-22T16:05:00+08:00', ownerName: 'Paolo Navarro' },
+  { id: 'scn-xmas-2026-v3', name: 'Christmas 2026 v3', status: 'published', stale: false, updatedAt: '2026-09-18T09:00:00+08:00', ownerName: 'Ana Reyes' },
 ]
 
 const V4 = { scenarioId: 'scn-xmas-2026-v4', scenarioName: 'Christmas 2026 v4' } as const
+const BER = { scenarioId: 'scn-ber-2026-v1', scenarioName: 'Ber months 2026 v1' } as const
 
 /** `GET /home` for `role`, shaped by the cost policy (P11, requirement 25). */
 export function mockHome(role: RoleCode): HomeSummary {
@@ -133,7 +141,7 @@ function mockHomeDraft(role: RoleCode): CostDraft<HomeSummary> {
       return {
         role,
         firstName,
-        pendingApproval: { ...V4, step: 'headcount', headcount: 251 },
+        pendingApproval: { ...BER, step: 'headcount', headcount: 183 },
         recruiting: { offersDue: '2026-10-05', toRecruitMin: 313, toRecruitMax: 327 },
         kpis: KPIS,
       }
@@ -141,10 +149,10 @@ function mockHomeDraft(role: RoleCode): CostDraft<HomeSummary> {
       return {
         role,
         firstName,
-        pendingApproval: { ...V4, step: 'budget', seasonCost: costFigure(NETWORK, 13_100_000) },
+        pendingApproval: { ...BER, step: 'budget', seasonCost: costFigure(NETWORK, 21_700_000) },
         costWatch: {
           publishedCost: costFigure(NETWORK, 13_600_000),
-          draftCost: costFigure(NETWORK, 13_100_000),
+          draftCost: costFigure(NETWORK, 12_800_000),
           draftScenarioName: V4.scenarioName,
         },
         kpis: KPIS,
@@ -154,10 +162,14 @@ function mockHomeDraft(role: RoleCode): CostDraft<HomeSummary> {
         role,
         firstName,
         dataFreshness: [
-          { dataset: 'pos', loadedAt: '2026-09-28T06:00:00+08:00' },
-          { dataset: 'staff', loadedAt: null },
+          { dataset: 'pos', loadedAt: '2026-09-28T14:02:00+08:00' },
+          { dataset: 'master', loadedAt: '2026-09-20T10:15:00+08:00' },
+          { dataset: 'staff', loadedAt: '2026-09-01T06:00:00+08:00' },
         ],
-        draftRules: [{ ruleSetId: 'rules-wages', name: 'Wage rates', version: '2026.2' }],
+        draftRules: [
+          { ruleSetId: 'rules-wages', name: 'Wage rates (by region)', version: 'v3' },
+          { ruleSetId: 'rules-transport', name: 'Transport allowance', version: 'v2' },
+        ],
       }
     case 'STF':
       return {
@@ -178,7 +190,7 @@ function mockHomeDraft(role: RoleCode): CostDraft<HomeSummary> {
         },
       }
     case 'ADM':
-      return { role, firstName, pendingInvitations: 3 }
+      return { role, firstName, pendingInvitations: MOCK_PENDING_INVITATIONS, recentAudit: mockRecentAudit() }
   }
 }
 
@@ -255,8 +267,11 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
   const planning = createPlanningStore()
   const rosters = createRosterStore()
   const offerStore = createOfferStore(rosters)
-  const selfService = createSelfServiceStore(rosters)
   const admin = createAdminStore()
+  const selfService = createSelfServiceStore(rosters)
+  const rules = createRulesStore()
+  const ingestion = createIngestionStore()
+  const locationPrivacy = createLocationPrivacyStore()
   return async (request) => {
     log?.push(request)
     if (latencyMs > 0) await new Promise((resolve) => setTimeout(resolve, latencyMs))
@@ -286,6 +301,10 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
         role,
         viewer: mockViewer(role),
       })
+    }
+    if (locationPrivacy.owns(pathname)) {
+      // SCR-080 home area and consent (Staff, own record only; barangay level), see ./mock-location-privacy.
+      return locationPrivacy.handle({ method: request.method, pathname, query: new URLSearchParams(search), body: request.body, role })
     }
     if (pathname === '/notifications' || pathname.startsWith('/notifications/') || pathname === '/notification-preferences') {
       // The role's own inbox only (P11); no ₱ figures in notifications.
@@ -319,6 +338,14 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
         role,
         viewer: mockViewer(role),
       })
+    }
+    if (rules.owns(pathname)) {
+      // SCR-060/061 rule sets and versions, see ./mock-rules.
+      return rules.handle({ method: request.method, pathname, body: request.body, role })
+    }
+    if (ingestion.owns(pathname)) {
+      // SCR-050/051 datasets, ingestion history and snapshots, see ./mock-ingestion.
+      return ingestion.handle({ method: request.method, pathname, query: new URLSearchParams(search), body: request.body, role })
     }
     if (masterData.owns(pathname)) {
       // SCR-052/053 stores, departments, staff and availability (scoped like the API; no ₱).

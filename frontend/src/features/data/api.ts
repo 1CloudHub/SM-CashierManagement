@@ -244,7 +244,8 @@ export function dataApiFromClient(client: ApiClient, fetchImpl: FetchLike = (inp
       request('GET', `/ingestions${query({ datasetType: q.datasetType, limit: q.limit })}`),
     exportHistory: () => request('GET', '/ingestions/export'),
     requestUploadUrl: (body) => request('POST', '/ingestions/uploads', body),
-    uploadFile: (target, file) => standalone.uploadFile(target, file),
+    // The in-memory mock API (VITE_API_MOCK) hands out `mock:` URLs: there is no bucket to PUT to.
+    uploadFile: (target, file) => (target.uploadUrl.startsWith('mock:') ? Promise.resolve() : standalone.uploadFile(target, file)),
     createIngestion: (body) => request('POST', '/ingestions', body),
     getIngestion: (runId) => request('GET', `/ingestions/${id(runId)}`),
     getReport: (runId) => request('GET', `/ingestions/${id(runId)}/report`),

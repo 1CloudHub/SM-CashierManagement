@@ -12,13 +12,13 @@ const code = (p: Promise<unknown>) => p.then(() => null, (e: unknown) => (e inst
 describe('mock /stores, /departments, /staff (SCR-052/053)', () => {
   it('scopes stores and staff like the API', async () => {
     const as = clients()
-    expect((await as('RST').listStores()).stores.length).toBe(6)
+    expect((await as('RST').listStores()).stores.length).toBe(8)
     expect((await as('STM').listStores()).stores.map((s) => s.id)).toEqual(['st-qc'])
     expect(await code(as('FIN').listStores())).toBe(403)
     expect(new Set((await as('STM').listStaff()).staff.map((s) => s.storeId))).toEqual(new Set(['st-qc']))
     expect(await code(as('EXE').listStaff())).toBe(403)
     // Out of scope answers like missing.
-    expect(await code(as('STM').updateStaff('st-moa-ft03', { active: false }))).toBe(404)
+    expect(await code(as('STM').updateStaff('st-moa-ft51', { active: false }))).toBe(404)
     expect(await code(as('STM').updateStaff('nope', { active: false }))).toBe(404)
   })
 

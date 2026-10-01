@@ -7,6 +7,7 @@ import { useRouter } from '@/app/router'
 import { useScreenCrumbs } from '@/app/screen-crumbs'
 import { SCREEN_BY_ID, type ScreenId } from '@/app/screens'
 import { ContextBar } from '@/features/context/context-bar'
+import { useContextOptions } from '@/features/context/use-context-data'
 import { useI18n } from '@/i18n'
 import { createPlanningClient, type PlanningClient } from './api'
 import { DepartmentScreen } from './department-screen'
@@ -59,7 +60,15 @@ export function DepartmentPage() {
   const { role } = useActiveRole()
   const { location } = useRouter()
   const { title, crumbs } = usePage('SCR-021')
-  const state = useMemo(() => viewStateOf(location.search), [location.search])
+  const options = useContextOptions()
+  const state = useMemo(() => {
+    const view = viewStateOf(location.search)
+    if (view.dept) return view
+    // No department chosen: open the first in-scope store's first department (like the weekly roster).
+    const storeId = view.store ?? options.data?.stores[0]?.id
+    const dept = options.data?.departments.find((d) => d.storeId === storeId)?.id
+    return dept && storeId ? { ...view, store: storeId, dept } : view
+  }, [location.search, options.data])
   return (
     <AppLayout title={title} crumbs={crumbs} contextBar={<ContextBar screen="SCR-021" />}>
       <DepartmentScreen client={client} role={role} state={state} />

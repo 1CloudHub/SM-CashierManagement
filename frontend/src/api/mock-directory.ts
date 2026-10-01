@@ -15,6 +15,7 @@ import {
   type StoreFormat,
 } from '@lanewise/shared'
 import type { ContextOptions } from './types'
+import { STM_STORE_ID, WORLD_DEPARTMENTS, WORLD_REGIONS, WORLD_SCENARIOS, WORLD_STAFF, WORLD_STORES } from './mock-world'
 
 /**
  * Mock organisation for search, the context bar and saved views (task 20).
@@ -25,11 +26,7 @@ import type { ContextOptions } from './types'
  * simulated, not SM actuals.
  */
 
-export const MOCK_REGIONS = [
-  { id: 'reg-luzon', name: 'Luzon' },
-  { id: 'reg-visayas', name: 'Visayas' },
-  { id: 'reg-mindanao', name: 'Mindanao' },
-] as const
+export const MOCK_REGIONS: readonly { id: string; name: string }[] = WORLD_REGIONS.map(({ id, name }) => ({ id, name }))
 
 export const MOCK_STORES: readonly {
   id: string
@@ -37,45 +34,16 @@ export const MOCK_STORES: readonly {
   name: string
   format: StoreFormat
   regionId: string
-}[] = [
-  { id: 'st-qc', code: 'smsm-qc', name: 'SM Supermarket – Quezon City', format: 'sm_supermarket', regionId: 'reg-luzon' },
-  { id: 'st-moa', code: 'smhm-moa', name: 'SM Hypermarket – Mall of Asia', format: 'sm_hypermarket', regionId: 'reg-luzon' },
-  { id: 'st-lp', code: 'smsv-lp', name: 'SaveMore – Las Piñas', format: 'savemore', regionId: 'reg-luzon' },
-  { id: 'st-cebu', code: 'smsm-cebu', name: 'SM Supermarket – Cebu City', format: 'sm_supermarket', regionId: 'reg-visayas' },
-  { id: 'st-iloilo', code: 'smst-iloilo', name: 'The SM Store – Iloilo', format: 'sm_store', regionId: 'reg-visayas' },
-  { id: 'st-davao', code: 'smhm-davao', name: 'SM Hypermarket – Davao', format: 'sm_hypermarket', regionId: 'reg-mindanao' },
-]
+}[] = WORLD_STORES.map(({ id, code, name, format, regionId }) => ({ id, code, name, format, regionId }))
 
-const DEPARTMENT_NAMES = ['Main checkout lanes', 'Express lanes', 'Customer service'] as const
+export const MOCK_DEPARTMENTS: readonly { id: string; name: string; storeId: string }[] = WORLD_DEPARTMENTS.map(({ id, name, storeId }) => ({ id, name, storeId }))
 
-export const MOCK_DEPARTMENTS = MOCK_STORES.flatMap((store) =>
-  DEPARTMENT_NAMES.map((name, i) => ({ id: `${store.id}-d${i + 1}`, name, storeId: store.id })),
+export const MOCK_SCENARIOS = WORLD_SCENARIOS
+
+/** Every cashier of the demo world; the Staff persona is Juan dela Cruz (PT-02) at Quezon City. */
+export const MOCK_STAFF: readonly { id: string; name: string; employeeNo: string; storeId: string; departmentId: string }[] = WORLD_STAFF.map(
+  ({ id, name, employeeNo, storeId, departmentId }) => ({ id, name, employeeNo, storeId, departmentId }),
 )
-
-export const MOCK_SCENARIOS = [
-  { id: 'scn-xmas-2026-v3', name: 'Christmas 2026 v3', season: 'christmas-2026', status: 'published', stale: false },
-  { id: 'scn-xmas-2026-v4', name: 'Christmas 2026 v4', season: 'christmas-2026', status: 'submitted', stale: true },
-  { id: 'scn-xmas-2026-v5', name: 'Christmas 2026 v5 (what-if)', season: 'christmas-2026', status: 'draft', stale: false },
-  { id: 'scn-xmas-2025', name: 'Christmas 2025', season: 'christmas-2025', status: 'superseded', stale: false },
-] as const
-
-/** Two cashiers per store; the demo cashier (the Staff persona) is PT-02 at Quezon City. */
-export const MOCK_STAFF = MOCK_STORES.flatMap((store, s) => [
-  {
-    id: `${store.id}-ft03`,
-    name: ['Ana Reyes', 'Ben Cruz', 'Carla Santos', 'Dan Villanueva', 'Ella Ramos', 'Fe Bautista'][s] ?? 'Cashier',
-    employeeNo: 'FT-03',
-    storeId: store.id,
-    departmentId: `${store.id}-d1`,
-  },
-  {
-    id: `${store.id}-pt02`,
-    name: ['Juan dela Cruz', 'Liza Garcia', 'Mark Flores', 'Nina Torres', 'Oscar Lim', 'Pia Mendoza'][s] ?? 'Cashier',
-    employeeNo: 'PT-02',
-    storeId: store.id,
-    departmentId: `${store.id}-d2`,
-  },
-])
 
 export const MOCK_SEASONS = [
   { id: 'nov02-dec31', start: '2026-11-02', end: '2026-12-31' },
@@ -86,7 +54,7 @@ export const MOCK_SEASONS = [
 /** Store ids in the role's (demo) scope; Staff see no store-wide data. */
 export function mockStoreScope(role: RoleCode): readonly string[] {
   if (role === 'STF') return []
-  if (role === 'STM') return ['st-qc']
+  if (role === 'STM') return [STM_STORE_ID]
   return MOCK_STORES.map((s) => s.id)
 }
 
@@ -166,7 +134,7 @@ export function mockContextOptions(role: RoleCode): ContextOptions {
   const regionIds = new Set(stores.map((s) => s.regionId))
   const publishedOnly = role === 'STF' || seesPublishedScenariosOnly(role)
   return {
-    scenarios: role === 'STF' ? [] : MOCK_SCENARIOS.filter((s) => !publishedOnly || s.status === 'published').map(({ id, name, status, stale }) => ({ id, name, status, stale })),
+    scenarios: role === 'STF' ? [] : MOCK_SCENARIOS.filter((s) => s.status !== 'archived' && (!publishedOnly || s.status === 'published')).map(({ id, name, status, stale }) => ({ id, name, status, stale })),
     regions: MOCK_REGIONS.filter((r) => regionIds.has(r.id)),
     formats: [...new Set(stores.map((s) => s.format))],
     stores,

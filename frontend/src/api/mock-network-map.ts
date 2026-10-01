@@ -3,7 +3,7 @@
  * Metro Manila network shaped like the SCR-026 wireframe. Synthetic only.
  *
  * It follows the API's rules so screens behave the same against it:
- *   - P1: a Store Manager sees their own store (SM Megamall) only; roles
+ *   - P1: a Store Manager sees their own store (Quezon City) only; roles
  *     without the map get 403, and auto-match is Planner / Store Manager only.
  *   - P15: candidates are pseudonymous IDs with a barangay, never a name or
  *     anything finer; the staff layer is counts per barangay.
@@ -22,90 +22,51 @@ import {
   type StoreCandidatesResponse,
   type StoreFormat,
 } from '@lanewise/shared'
+import {
+  STM_STORE_ID,
+  WEEKLY_LIMIT,
+  WORLD_BARANGAYS,
+  WORLD_STAFF,
+  WORLD_STORES,
+  barangayByCode,
+  storeNameOf,
+  storeTravelMinutes,
+  travelMinutes,
+  type WorldStaff,
+  type WorldStore,
+} from './mock-world'
 
 /** The store a mock Store Manager is scoped to. */
-export const MOCK_STM_STORE_ID = 'store-megamall'
+export const MOCK_STM_STORE_ID = STM_STORE_ID
 
-interface MockStore {
-  id: string
-  code: string
-  name: string
-  city: string
-  format: StoreFormat
-  lat: number
-  lon: number
-  required: number
-  rostered: number
-}
+type MockStore = WorldStore
+const STORES: readonly MockStore[] = WORLD_STORES
 
-const S = (id: string, code: string, name: string, city: string, format: StoreFormat, lat: number, lon: number, required: number, rostered: number): MockStore => ({
-  id: `store-${id}`,
-  code,
-  name,
-  city,
-  format,
-  lat,
-  lon,
-  required,
-  rostered,
-})
-
-const STORES: readonly MockStore[] = [
-  S('megamall', 'MEGA', 'SM Megamall', 'Mandaluyong', 'sm_supermarket', 14.585, 121.0565, 26, 22),
-  S('north-edsa', 'NEDSA', 'SM City North EDSA', 'Quezon City', 'sm_hypermarket', 14.6566, 121.03, 24, 21),
-  S('moa', 'MOA', 'SM Mall of Asia', 'Pasay', 'sm_supermarket', 14.5352, 120.9822, 22, 20),
-  S('fairview', 'FAIR', 'SM City Fairview', 'Quezon City', 'sm_supermarket', 14.7346, 121.0596, 16, 14),
-  S('aura', 'AURA', 'SM Aura', 'Taguig', 'sm_supermarket', 14.5455, 121.0546, 14, 17),
-  S('center-pasig', 'PASIG', 'SM Center Pasig', 'Pasig', 'savemore', 14.5794, 121.0801, 10, 12),
-  S('manila', 'MNL', 'SM City Manila', 'Manila', 'sm_store', 14.5903, 120.983, 18, 20),
-  S('makati', 'MKT', 'SM Makati', 'Makati', 'sm_store', 14.5509, 121.0244, 12, 12),
-  S('southmall', 'SOUTH', 'SM Southmall', 'Las Piñas', 'sm_hypermarket', 14.433, 121.0102, 15, 14),
-  S('valenzuela', 'VAL', 'SM City Valenzuela', 'Valenzuela', 'savemore', 14.6955, 120.9663, 11, 10),
-  S('araneta', 'ARA', 'SM City Araneta', 'Quezon City', 'sm_supermarket', 14.6206, 121.0529, 15, 16),
-  S('marikina', 'MRK', 'SM City Marikina', 'Marikina', 'sm_hypermarket', 14.6266, 121.0849, 13, 14),
-  S('bicutan', 'BIC', 'SM City Bicutan', 'Parañaque', 'savemore', 14.4869, 121.0447, 11, 10),
-  S('san-lazaro', 'SLZ', 'SM City San Lazaro', 'Manila', 'savemore', 14.6155, 120.9849, 10, 9),
-  S('sta-mesa', 'STM', 'SM City Sta. Mesa', 'Manila', 'sm_supermarket', 14.6039, 121.0177, 12, 12),
-]
-
-const BARANGAYS = [
-  { code: '991401001', name: 'Wack-Wack Greenhills', city: 'Mandaluyong', count: 6 },
-  { code: '991403002', name: 'San Antonio', city: 'Pasig', count: 5 },
-  { code: '991403003', name: 'Kapitolyo', city: 'Pasig', count: 4 },
-  { code: '991404004', name: 'Socorro', city: 'Quezon City', count: 7 },
-  { code: '991404005', name: 'Bagong Pag-asa', city: 'Quezon City', count: 3 },
-  { code: '991607006', name: 'Pinagsama', city: 'Taguig', count: 5 },
-  { code: '991380007', name: 'Poblacion', city: 'Makati', count: 4 },
-  { code: '991305008', name: 'Baclaran', city: 'Parañaque', count: 3 },
-  { code: '991305009', name: 'Barangay 76', city: 'Pasay', count: 2 },
-  { code: '991501010', name: 'Malinta', city: 'Valenzuela', count: 2 },
-]
+/** Barangays with at least one cashier sharing a home area there (the staff layer counts them). */
+const BARANGAYS = WORLD_BARANGAYS.map((b) => ({
+  code: b.code,
+  name: b.name,
+  city: b.city,
+  count: WORLD_STAFF.filter((w) => w.active && w.homeArea === b.code).length,
+})).filter((b) => b.count > 0)
 
 const DEPARTMENTS = [
   { key: 'main checkout lanes', name: 'Main checkout lanes' },
   { key: 'express lanes', name: 'Express lanes' },
 ]
 
-interface MockCandidate {
-  displayId: string
-  homeStoreId: string
-  barangay: number
-  /** Travel by car (min) to every store, before the mode factor. */
-  baseMin: number
-  weekly: [number, number]
-  exclude?: 'NOT_TRAINED' | 'MANDATORY_REST' | 'WEEKLY_HOURS'
-}
+type Exclusion = 'NOT_TRAINED' | 'MANDATORY_REST' | 'WEEKLY_HOURS'
 
-const CANDIDATES: readonly MockCandidate[] = [
-  { displayId: 'XS-14', homeStoreId: 'store-center-pasig', barangay: 0, baseMin: 8, weekly: [32, 48] },
-  { displayId: 'PT-41', homeStoreId: 'store-center-pasig', barangay: 1, baseMin: 11, weekly: [18, 30] },
-  { displayId: 'FL-07', homeStoreId: 'store-aura', barangay: 2, baseMin: 13, weekly: [24, 40] },
-  { displayId: 'FT-88', homeStoreId: 'store-araneta', barangay: 3, baseMin: 18, weekly: [40, 48], exclude: 'MANDATORY_REST' },
-  { displayId: 'PT-19', homeStoreId: 'store-aura', barangay: 5, baseMin: 19, weekly: [12, 30], exclude: 'NOT_TRAINED' },
-  { displayId: 'FT-23', homeStoreId: 'store-makati', barangay: 6, baseMin: 14, weekly: [36, 48] },
-  { displayId: 'PT-62', homeStoreId: 'store-north-edsa', barangay: 4, baseMin: 16, weekly: [28, 30], exclude: 'WEEKLY_HOURS' },
-  { displayId: 'FT-51', homeStoreId: 'store-moa', barangay: 8, baseMin: 12, weekly: [30, 48] },
-]
+/** Cashiers who opted in to sharing a home area; everyone else is only counted (P15). */
+const SHARING: readonly WorldStaff[] = WORLD_STAFF.filter((w) => w.active && w.homeArea !== null)
+const WITHOUT_CONSENT = WORLD_STAFF.filter((w) => w.active && w.homeArea === null).length
+
+function exclusionOf(w: WorldStaff, departmentKey: string): Exclusion | null {
+  if (w.restBlocked) return 'MANDATORY_REST'
+  if (w.weekHours + 4 > WEEKLY_LIMIT[w.contract]) return 'WEEKLY_HOURS'
+  const suffix = departmentKey === 'express lanes' ? '-d2' : '-d1'
+  return w.departmentId.endsWith(suffix) || w.trainedDepartmentIds.some((d) => d.endsWith(suffix)) ? null : 'NOT_TRAINED'
+}
 
 const ROLES_WITH_MAP: readonly RoleCode[] = ['EXE', 'PLN', 'STM', 'HR']
 const ROLES_WITH_AUTO_MATCH: readonly RoleCode[] = ['PLN', 'STM']
@@ -139,39 +100,39 @@ function pin(s: MockStore, query: NetworkMapQuery): MapStorePin {
   }
 }
 
-const travel = (base: number, mode: MapTravelMode, storeIndex: number) => Math.round((base + (storeIndex % 5) * 2) * (mode === 'car' ? 1 : 1.5))
-
 function ring(mode: MapTravelMode, minutes: number): 1 | 2 | 3 | null {
   const [a, b, c] = MAP_RING_MINUTES[mode]
   return minutes <= a ? 1 : minutes <= b ? 2 : minutes <= c ? 3 : null
 }
 
-function candidateBase(c: MockCandidate, storeIndex: number, mode: MapTravelMode) {
-  const b = BARANGAYS[c.barangay] ?? BARANGAYS[0]!
-  const travelMin = travel(c.baseMin, mode, storeIndex)
+function candidateBase(w: WorldStaff, storeId: string, mode: MapTravelMode) {
+  const b = barangayByCode(w.homeArea ?? '')
+  const travelMin = travelMinutes(w.homeArea ?? '', storeId, mode)
   return {
-    staffId: `staff-${c.displayId.toLowerCase()}`,
-    displayId: c.displayId,
-    homeStoreId: c.homeStoreId,
-    homeStoreName: STORES.find((s) => s.id === c.homeStoreId)?.name ?? '',
-    homeArea: { barangay: b.name, city: b.city },
+    staffId: w.id,
+    displayId: w.employeeNo,
+    homeStoreId: w.storeId,
+    homeStoreName: storeNameOf(w.storeId),
+    homeArea: { barangay: b?.name ?? '', city: b?.city ?? '' },
     travelMin,
     ringBand: ring(mode, travelMin),
   }
 }
 
-function ranked(storeIndex: number, storeId: string, query: NetworkMapQuery): RankedMapCandidate[] {
-  return CANDIDATES.filter((c) => !c.exclude)
-    .map((c) => candidateBase(c, storeIndex, query.mode))
-    .filter((c) => c.travelMin <= query.maxTravelMin)
-    .sort((a, b) => a.travelMin - b.travelMin || (a.displayId < b.displayId ? -1 : 1))
-    .map((c, i) => {
-      const src = CANDIDATES.find((x) => x.displayId === c.displayId)!
-      const withShift = src.weekly[0] + 4
+const departmentKeyOf = (query: NetworkMapQuery) => query.department ?? 'main checkout lanes'
+
+function ranked(storeId: string, query: NetworkMapQuery): RankedMapCandidate[] {
+  return SHARING.filter((w) => exclusionOf(w, departmentKeyOf(query)) === null && (w.crossStoreOffers || w.storeId === storeId))
+    .map((w) => ({ w, c: candidateBase(w, storeId, query.mode) }))
+    .filter(({ c }) => c.travelMin <= query.maxTravelMin)
+    .sort((a, b) => a.c.travelMin - b.c.travelMin || (a.c.displayId < b.c.displayId ? -1 : 1))
+    .map(({ w, c }, i) => {
+      const withShift = w.weekHours + 4
+      const limit = WEEKLY_LIMIT[w.contract]
       return {
         ...c,
         rank: i + 1,
-        weeklyHours: { withShift, limit: src.weekly[1], headroom: src.weekly[1] - withShift },
+        weeklyHours: { withShift, limit, headroom: limit - withShift },
         flags: c.homeStoreId === storeId ? [] : (['CROSS_STORE'] as const),
       }
     })
@@ -194,20 +155,20 @@ export function mockNetworkMap(role: RoleCode, query: NetworkMapQuery): MockNetw
 
 export function mockStoreCandidates(role: RoleCode, storeId: string, query: NetworkMapQuery): MockNetworkResult<StoreCandidatesResponse> {
   if (!ROLES_WITH_MAP.includes(role)) return forbidden
-  const index = STORES.findIndex((s) => s.id === storeId)
-  const store = STORES[index]
+  const store = STORES.find((s) => s.id === storeId)
   if (!store || !storesFor(role, { ...query, formats: undefined }).some((s) => s.id === storeId)) {
     return { ok: false, status: 404, message: 'We couldn’t find that store, or it isn’t in your scope.' }
   }
   const p = pin(store, query)
   const short = p.status === 'gap'
   const startHour = query.dayPart === 'early' ? 7 : query.dayPart === 'midday' ? 13 : 17
-  const excluded = CANDIDATES.filter((c) => c.exclude)
-    .map((c) => ({ ...candidateBase(c, index, query.mode), reasons: [c.exclude!] }))
+  const excluded = SHARING.map((w) => ({ w, reason: exclusionOf(w, departmentKeyOf(query)) }))
+    .filter((x): x is { w: WorldStaff; reason: Exclusion } => x.reason !== null)
+    .map(({ w, reason }) => ({ ...candidateBase(w, storeId, query.mode), reasons: [reason] }))
     .filter((c) => (c.travelMin ?? Infinity) <= query.maxTravelMin)
-  const nearbySurplus = STORES.map((s, i) => ({ s, p: pin(s, query), i }))
+  const nearbySurplus = STORES.map((s) => ({ s, p: pin(s, query) }))
     .filter(({ s, p: other }) => s.id !== storeId && other.status === 'surplus' && role !== 'STM')
-    .map(({ s, p: other, i }) => ({ storeId: s.id, name: s.name, surplus: other.delta, travelMin: travel(10, query.mode, i + index) }))
+    .map(({ s, p: other }) => ({ storeId: s.id, name: s.name, surplus: other.delta, travelMin: storeTravelMinutes(s.id, storeId, query.mode) }))
     .filter((x) => x.travelMin <= query.maxTravelMin)
     .sort((a, b) => a.travelMin - b.travelMin)
   return {
@@ -219,9 +180,9 @@ export function mockStoreCandidates(role: RoleCode, storeId: string, query: Netw
         ? { shiftId: `open-${store.code.toLowerCase()}-1`, departmentKey: query.department ?? 'main checkout lanes', date: query.date, startHour, endHour: startHour + 4 }
         : null,
       travelSource: 'matrix',
-      ranked: short ? ranked(index, storeId, query) : [],
+      ranked: short ? ranked(storeId, query) : [],
       excluded: short ? excluded : [],
-      excludedWithoutConsent: short ? 3 : 0,
+      excludedWithoutConsent: short ? WITHOUT_CONSENT : 0,
       nearbySurplus: short ? nearbySurplus : [],
     },
   }
@@ -229,7 +190,7 @@ export function mockStoreCandidates(role: RoleCode, storeId: string, query: Netw
 
 export function mockAutoMatch(role: RoleCode, query: NetworkMapQuery): MockNetworkResult<AutoMatchResponse> {
   if (!ROLES_WITH_AUTO_MATCH.includes(role)) return { ok: false, status: 403, message: 'Only planners and store managers can propose offers.' }
-  const stores = storesFor(role, query).map((s) => ({ s, p: pin(s, query), i: STORES.indexOf(s) }))
+  const stores = storesFor(role, query).map((s) => ({ s, p: pin(s, query) }))
   const short = stores.filter((x) => x.p.status === 'gap')
   const lenders = role === 'STM' ? [] : stores.filter((x) => x.p.status === 'surplus').map((x) => ({ ...x, left: x.p.delta }))
   const used = new Set<string>()
@@ -238,12 +199,12 @@ export function mockAutoMatch(role: RoleCode, query: NetworkMapQuery): MockNetwo
   const unfilled: AutoMatchResponse['unfilled'][number][] = []
   const startHour = query.dayPart === 'early' ? 7 : query.dayPart === 'midday' ? 13 : 17
   const departmentKey = query.department ?? 'main checkout lanes'
-  for (const { s, p, i } of short) {
+  for (const { s, p } of short) {
     for (let k = 0; k < p.openShifts; k++) {
       const shiftId = `open-${s.code.toLowerCase()}-${k + 1}`
-      const cand = ranked(i, s.id, query).find((c) => !used.has(c.staffId))
+      const cand = ranked(s.id, query).find((c) => !used.has(c.staffId))
       const lender = lenders.find((l) => l.left > 0)
-      const moveMin = lender ? travel(10, query.mode, lender.i + i) : Infinity
+      const moveMin = lender ? storeTravelMinutes(lender.s.id, s.id, query.mode) : Infinity
       if (cand && cand.travelMin <= moveMin) {
         used.add(cand.staffId)
         offers.push({ shiftId, storeId: s.id, storeName: s.name, departmentKey, date: query.date, startHour, endHour: startHour + 4, travelMin: cand.travelMin, candidate: cand })
@@ -279,7 +240,7 @@ export function mockAutoMatch(role: RoleCode, query: NetworkMapQuery): MockNetwo
         storesInvolved: involved.size,
         totalTravelMin,
         averageTravelMin: covered === 0 ? 0 : Math.round((totalTravelMin / covered) * 10) / 10,
-        excludedWithoutConsent: 3,
+        excludedWithoutConsent: WITHOUT_CONSENT,
       },
     },
   }
@@ -304,25 +265,5 @@ export function parseMockNetworkQuery(q: URLSearchParams): NetworkMapQuery | nul
     maxTravelMin,
     ...(department ? { department } : {}),
     ...(formats.length > 0 ? { formats: formats as StoreFormat[] } : {}),
-  }
-}
-
-/** The map's stores (ids, codes, names) for the task 17 mock offers store. */
-export const MOCK_MAP_STORES: readonly { readonly id: string; readonly code: string; readonly name: string }[] = STORES.map(({ id, code, name }) => ({ id, code, name }))
-
-/** A map candidate the mock offers store may send an offer to (eligible ones only; pseudonymous display name). */
-export function mockMapCandidate(staffId: string) {
-  const c = CANDIDATES.find((x) => `staff-${x.displayId.toLowerCase()}` === staffId && x.exclude === undefined)
-  if (!c) return null
-  const b = BARANGAYS[c.barangay] ?? BARANGAYS[0]!
-  return {
-    staffId,
-    displayId: c.displayId,
-    name: `Cashier ${c.displayId}`,
-    homeStoreId: c.homeStoreId,
-    homeArea: { barangay: b.name, city: b.city },
-    travelMin: c.baseMin,
-    weekHours: c.weekly[0],
-    limit: c.weekly[1],
   }
 }

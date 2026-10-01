@@ -26,6 +26,7 @@ import {
   type ScopeOptions,
 } from '@lanewise/shared'
 import type { ApiResponse } from './client'
+import { PEOPLE, STORE_MANAGERS, WORLD_REGIONS, WORLD_STAFF, WORLD_STORES, demoNow } from './mock-world'
 
 /**
  * In-memory `/admin/*` and `/audit-events` for the mock API (SCR-070..073).
@@ -39,25 +40,24 @@ import type { ApiResponse } from './client'
 
 type Mutable<T> = { -readonly [K in keyof T]: T[K] }
 
-const REGIONS = [
-  { id: 'region-ncr', name: 'NCR' },
-  { id: 'region-luzon', name: 'Luzon' },
-] as const
+const REGIONS: readonly { id: string; name: string }[] = WORLD_REGIONS.map(({ id, name }) => ({ id, name }))
 
-const STORES = [
-  { id: 'store-smsm-qc', name: 'SM Supermarket – QC', regionId: 'region-ncr' },
-  { id: 'store-sms-manila', name: 'SM Store – Manila', regionId: 'region-ncr' },
-  { id: 'store-hyp-pampanga', name: 'SM Hypermarket – Pampanga', regionId: 'region-luzon' },
-] as const
+const STORES: readonly { id: string; name: string; regionId: string }[] = WORLD_STORES.map(({ id, name, regionId }) => ({ id, name, regionId }))
 
 const SCOPE_OPTIONS: ScopeOptions = { regions: [...REGIONS], stores: [...STORES] }
 
-/** Staff records a Staff role links to by work email (Q16). */
-const STAFF_BY_EMAIL: Readonly<Record<string, { id: string; name: string }>> = {
-  'ben.cruz@smretail.com': { id: 'staff-pt-02', name: 'Ben Cruz' },
+/** Work email of a cashier (first name + surname): how a Staff role links to a staff record (Q16). */
+export function staffEmail(name: string): string {
+  const [first = '', ...rest] = name.toLowerCase().normalize('NFD').replace(/[^a-z ]/g, '').split(' ')
+  return `${first}.${rest.join('')}@smretail.com`
 }
 
-const ADMIN = { id: 'u-adm-juan', name: 'Juan dela Cruz' }
+/** Staff records a Staff role links to by work email (Q16). */
+const STAFF_BY_EMAIL: Readonly<Record<string, { id: string; name: string }>> = Object.fromEntries(
+  WORLD_STAFF.map((w) => [staffEmail(w.name), { id: w.id, name: w.name }]),
+)
+
+const ADMIN = { id: PEOPLE.admin.id, name: PEOPLE.admin.name }
 
 interface MockAuditRow {
   readonly id: string
@@ -84,60 +84,142 @@ function scopeView(input: AdminScopeInput): AdminScopeView {
   }
 }
 
+const storeRef = (id: string) => ({ id, name: STORES.find((x) => x.id === id)?.name ?? id })
+
+/** Status of each store manager's account (three invitations are still open). */
+const MANAGER_STATUS: Readonly<Record<string, { status: AdminUser['status']; lastSignIn: string | null; invitedAt: string | null }>> = {
+  'st-qc': { status: 'active', lastSignIn: '2026-10-01T07:45:00+08:00', invitedAt: null },
+  'st-north-edsa': { status: 'active', lastSignIn: '2026-09-30T18:20:00+08:00', invitedAt: null },
+  'st-megamall': { status: 'active', lastSignIn: '2026-10-01T08:05:00+08:00', invitedAt: null },
+  'st-pasig': { status: 'invited', lastSignIn: null, invitedAt: '2026-10-01T08:30:00+08:00' },
+  'st-moa': { status: 'active', lastSignIn: '2026-09-29T17:10:00+08:00', invitedAt: null },
+  'st-aura': { status: 'invited', lastSignIn: null, invitedAt: '2026-10-01T08:31:00+08:00' },
+  'st-makati': { status: 'active', lastSignIn: '2026-09-28T12:00:00+08:00', invitedAt: null },
+  'st-lp': { status: 'invited', lastSignIn: null, invitedAt: '2026-09-26T14:00:00+08:00' },
+}
+
 function seedUsers(): Mutable<AdminUser>[] {
+  const hq = (person: (typeof PEOPLE)[keyof typeof PEOPLE], roles: RoleCode[], lastSignIn: string | null, status: AdminUser['status'] = 'active', scope: AdminScopeView = { type: 'global' }): Mutable<AdminUser> => ({
+    id: person.id,
+    email: person.email,
+    name: person.name,
+    status,
+    roles,
+    scope,
+    lastSignIn,
+    invitedAt: null,
+  })
+  const staffUser = (staffId: string, lastSignIn: string | null, status: AdminUser['status'] = 'active'): Mutable<AdminUser> => {
+    const w = WORLD_STAFF.find((x) => x.id === staffId)
+    const name = w?.name ?? staffId
+    return { id: `u-stf-${staffId}`, email: staffEmail(name), name, status, roles: ['STF'], scope: { type: 'self', staff: { id: staffId, name } }, lastSignIn, invitedAt: null }
+  }
   return [
-    {
-      id: 'u-pln-ana',
-      email: 'ana@1cloudhub.com',
-      name: 'Ana Reyes',
-      status: 'active',
-      roles: ['PLN'],
-      scope: { type: 'region', regions: [REGIONS[1]] },
-      lastSignIn: '2026-10-03T09:12:00+08:00',
-      invitedAt: null,
-    },
-    {
-      id: 'u-stm-juan',
-      email: 'juan@smretail.com',
-      name: 'Juan dela Cruz',
-      status: 'invited',
+    hq(PEOPLE.admin, ['ADM'], '2026-10-01T08:55:00+08:00'),
+    hq(PEOPLE.planner, ['PLN'], '2026-10-01T09:12:00+08:00'),
+    hq(PEOPLE.planner2, ['PLN'], '2026-09-30T17:40:00+08:00', 'active', { type: 'region', regions: REGIONS.filter((r) => r.id !== 'reg-ncr-north') }),
+    hq(PEOPLE.hr, ['HR'], '2026-09-30T10:02:00+08:00'),
+    hq(PEOPLE.finance, ['FIN'], '2026-10-01T09:15:00+08:00'),
+    hq(PEOPLE.executive, ['EXE'], '2026-09-30T16:31:00+08:00'),
+    hq(PEOPLE.steward, ['RST'], '2026-09-29T15:22:00+08:00'),
+    hq(PEOPLE.formerSteward, ['RST'], '2026-08-12T10:05:00+08:00', 'disabled'),
+    ...STORE_MANAGERS.map((m): Mutable<AdminUser> => ({
+      id: m.id,
+      email: m.email,
+      name: m.name,
+      status: MANAGER_STATUS[m.storeId]?.status ?? 'active',
       roles: ['STM'],
-      scope: { type: 'store', stores: [{ id: STORES[0].id, name: STORES[0].name }] },
-      lastSignIn: null,
-      invitedAt: '2026-10-02T15:00:00+08:00',
-    },
-    {
-      id: 'u-fin-rsantos',
-      email: 'r.santos@smretail.com',
-      name: 'R. Santos',
-      status: 'active',
-      roles: ['FIN'],
-      scope: { type: 'global' },
-      lastSignIn: '2026-09-30T16:40:00+08:00',
-      invitedAt: null,
-    },
-    {
-      id: 'u-rst-lim',
-      email: 'k.lim@smretail.com',
-      name: 'K. Lim',
-      status: 'disabled',
-      roles: ['RST'],
-      scope: { type: 'global' },
-      lastSignIn: '2026-08-12T10:05:00+08:00',
-      invitedAt: null,
-    },
+      scope: { type: 'store', stores: [storeRef(m.storeId)] },
+      lastSignIn: MANAGER_STATUS[m.storeId]?.lastSignIn ?? null,
+      invitedAt: MANAGER_STATUS[m.storeId]?.invitedAt ?? null,
+    })),
+    staffUser('st-qc-ft03', '2026-09-30T19:02:00+08:00'),
+    staffUser('st-qc-pt05', '2026-10-01T06:40:00+08:00'),
+    staffUser('st-north-edsa-pt62', '2026-09-29T21:15:00+08:00'),
+    staffUser('st-megamall-xs14', '2026-09-30T12:30:00+08:00'),
+    staffUser('st-north-edsa-pt24', '2026-07-30T18:00:00+08:00', 'disabled'),
   ]
 }
 
+/** The latest seeded audit events (SCR-010 System Admin home). */
+export function mockRecentAudit(limit = 5): { id: string; at: string; userName: string; event: string; objectName: string | null }[] {
+  return seedAudit()
+    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
+    .slice(0, limit)
+    .map((e) => ({ id: e.id, at: e.at, userName: e.user.name, event: e.event, objectName: e.objectName }))
+}
+
+/** Invitations not yet accepted (SCR-010 System Admin home). */
+export const MOCK_PENDING_INVITATIONS = seedUsers().filter((u) => u.status === 'invited').length
+
+type AuditSeed = readonly [at: string, person: { readonly id: string; readonly short: string }, role: RoleCode, action: AuditAction, event: string, objectType: string, objectId: string, objectName: string | null, before: AuditSnapshot, after: AuditSnapshot]
+
 function seedAudit(): MockAuditRow[] {
-  const rows: Omit<MockAuditRow, 'id'>[] = [
-    { at: '2026-09-15T11:02:00+08:00', user: { id: 'u-rst-lim', name: 'K. Lim' }, activeRole: 'RST', action: 'publish', event: 'rule_version.published', objectType: 'rule_version', objectId: 'rv-wages-2026-1', objectName: 'Wage rates v1', before: { ncrBaseRate: 85 }, after: { ncrBaseRate: 87 } },
-    { at: '2026-09-28T06:00:00+08:00', user: { id: 'u-rst-lim', name: 'K. Lim' }, activeRole: 'RST', action: 'ingestion', event: 'dataset.loaded', objectType: 'dataset_snapshot', objectId: 'snap-pos-0928', objectName: null, before: null, after: { rows: 182_400 } },
-    { at: '2026-10-01T16:30:00+08:00', user: { id: 'u-exe-mcruz', name: 'M. Cruz' }, activeRole: 'EXE', action: 'publish', event: 'scenario.published', objectType: 'scenario', objectId: 'scn-xmas-2026-v3', objectName: 'Christmas 2026 v3', before: { status: 'approved' }, after: { status: 'published', replaces: 'Christmas 2026 v2' } },
-    { at: '2026-10-02T15:00:00+08:00', user: ADMIN, activeRole: 'ADM', action: 'create', event: 'user.invited', objectType: 'user', objectId: 'u-stm-juan', objectName: 'Juan dela Cruz', before: null, after: { email: 'juan@smretail.com', roles: ['STM'] } },
-    { at: '2026-10-03T10:14:00+08:00', user: { id: 'u-pln-ana', name: 'Ana Reyes' }, activeRole: 'PLN', action: 'submit', event: 'scenario.submitted', objectType: 'scenario', objectId: 'scn-xmas-2026-v4', objectName: 'Christmas 2026 v4', before: { status: 'draft' }, after: { status: 'submitted' } },
+  const { admin, planner, planner2, hr, finance, executive, steward, formerSteward } = PEOPLE
+  const qcManager = STORE_MANAGERS[0] as (typeof STORE_MANAGERS)[number]
+  const V = (n: number) => [`scn-xmas-2026-v${n}`, `Christmas 2026 v${n}`] as const
+  const rows: readonly AuditSeed[] = [
+    ['2026-06-20T10:00:00+08:00', finance, 'FIN', 'publish', 'rule_version.published', 'rule_version', 'rv-wages-2', 'Wage rates (by region) v2', { ncrHourly: 82.5 }, { ncrHourly: 86.875 }],
+    ['2026-08-05T11:00:00+08:00', formerSteward, 'RST', 'ingestion', 'dataset.loaded', 'dataset_snapshot', 'snap-master-0805', 'Stores, departments, lanes', null, { rows: 21 }],
+    ['2026-08-11T17:05:00+08:00', formerSteward, 'RST', 'ingestion', 'ingestion.failed', 'ingestion_run', 'run-pos-0811', 'pos_export.xlsx.csv', null, { status: 'failed' }],
+    ['2026-08-12T09:30:00+08:00', formerSteward, 'RST', 'ingestion', 'dataset.loaded', 'dataset_snapshot', 'snap-pos-0812', 'POS hourly', null, { rows: 28_512 }],
+    ['2026-08-29T16:31:00+08:00', formerSteward, 'RST', 'ingestion', 'ingestion.cancelled', 'ingestion_run', 'run-staff-0829', 'staff_roster_draft.csv', { status: 'validated' }, { status: 'cancelled' }],
+    ['2026-08-31T17:00:00+08:00', admin, 'ADM', 'role_change', 'user.deactivated', 'user', formerSteward.id, formerSteward.name, { status: 'active' }, { status: 'disabled' }],
+    ['2026-09-01T06:00:00+08:00', formerSteward, 'RST', 'ingestion', 'dataset.loaded', 'dataset_snapshot', 'snap-staff-0901', 'Staff roster and availability', null, { rows: WORLD_STAFF.length }],
+    ['2026-09-01T09:00:00+08:00', admin, 'ADM', 'create', 'user.invited', 'user', steward.id, steward.name, null, { email: steward.email, roles: ['RST'] }],
+    ['2026-09-02T14:00:00+08:00', planner, 'PLN', 'create', 'scenario.created', 'scenario', ...V(1), null, { growth: 1 }],
+    ['2026-09-02T15:00:00+08:00', planner, 'PLN', 'submit', 'scenario.submitted', 'scenario', ...V(1), { status: 'draft' }, { status: 'submitted' }],
+    ['2026-09-03T10:00:00+08:00', hr, 'HR', 'decision', 'approval.decided', 'scenario', ...V(1), { headcount: 'pending' }, { headcount: 'approved' }],
+    ['2026-09-04T16:00:00+08:00', finance, 'FIN', 'decision', 'approval.decided', 'scenario', ...V(1), { budget: 'pending' }, { budget: 'changes_requested' }],
+    ['2026-09-05T11:00:00+08:00', planner, 'PLN', 'edit', 'scenario.archived', 'scenario', ...V(1), { status: 'draft' }, { status: 'archived' }],
+    ['2026-09-10T09:00:00+08:00', planner, 'PLN', 'create', 'scenario.created', 'scenario', ...V(2), null, { growth: 1.03, parent: 'Christmas 2026 v1' }],
+    ['2026-09-10T11:00:00+08:00', planner, 'PLN', 'submit', 'scenario.submitted', 'scenario', ...V(2), { status: 'draft' }, { status: 'submitted' }],
+    ['2026-09-11T16:00:00+08:00', executive, 'EXE', 'publish', 'scenario.published', 'scenario', ...V(2), { status: 'approved' }, { status: 'published' }],
+    ['2026-09-15T06:00:00+08:00', steward, 'RST', 'ingestion', 'dataset.loaded', 'dataset_snapshot', 'snap-pos-0915', 'POS hourly', null, { rows: 38_016 }],
+    ['2026-09-16T10:00:00+08:00', planner, 'PLN', 'create', 'scenario.created', 'scenario', ...V(3), null, { growth: 1.05, parent: 'Christmas 2026 v2' }],
+    ['2026-09-16T11:00:00+08:00', planner, 'PLN', 'submit', 'scenario.submitted', 'scenario', ...V(3), { status: 'draft' }, { status: 'submitted' }],
+    ['2026-09-17T10:00:00+08:00', hr, 'HR', 'decision', 'approval.decided', 'scenario', ...V(3), { headcount: 'pending' }, { headcount: 'approved' }],
+    ['2026-09-17T15:00:00+08:00', finance, 'FIN', 'decision', 'approval.decided', 'scenario', ...V(3), { budget: 'pending' }, { budget: 'approved' }],
+    ['2026-09-18T09:00:00+08:00', executive, 'EXE', 'publish', 'scenario.published', 'scenario', ...V(3), { status: 'approved' }, { status: 'published', replaces: 'Christmas 2026 v2' }],
+    ['2026-09-18T09:05:00+08:00', executive, 'EXE', 'export', 'summary.exported', 'scenario', ...V(3), null, { format: 'csv' }],
+    ['2026-09-20T10:15:00+08:00', steward, 'RST', 'ingestion', 'dataset.loaded', 'dataset_snapshot', 'snap-master-0920', 'Stores, departments, lanes', null, { rows: 24 }],
+    ['2026-09-20T14:00:00+08:00', steward, 'RST', 'edit', 'department.updated', 'department', 'st-megamall-d1', 'SM Supermarket – Megamall · Main checkout lanes', { installedLanes: 26 }, { installedLanes: 24 }],
+    ['2026-09-21T11:00:00+08:00', planner, 'PLN', 'create', 'saved_view.created', 'saved_view', 'view-seed-1', 'Over capacity — all stores', null, { screen: 'network' }],
+    ['2026-09-22T16:00:00+08:00', planner2, 'PLN', 'create', 'scenario.created', 'scenario', ...V(5), null, { growth: 1.12, parent: 'Christmas 2026 v4' }],
+    ['2026-09-24T09:00:00+08:00', steward, 'RST', 'submit', 'rule_version.submitted', 'rule_version', 'rv-transport-2', 'Transport allowance v2', { status: 'draft' }, { status: 'submitted' }],
+    ['2026-09-24T10:00:00+08:00', planner2, 'PLN', 'create', 'scenario.created', 'scenario', 'scn-xmas-2026-ft5', '5-day FT rule test', null, { ftShiftPattern: '7+1' }],
+    ['2026-09-25T11:00:00+08:00', finance, 'FIN', 'decision', 'rule_version.changes_requested', 'rule_version', 'rv-transport-2', 'Transport allowance v2', { status: 'submitted' }, { status: 'changes_requested' }],
+    ['2026-09-26T14:00:00+08:00', admin, 'ADM', 'create', 'user.invited', 'user', 'u-stm-fpineda', 'Francis Pineda', null, { email: 'f.pineda@smretail.com', roles: ['STM'] }],
+    ['2026-09-27T09:40:00+08:00', steward, 'RST', 'ingestion', 'ingestion.blocked', 'ingestion_run', 'run-pos-0927', 'pos_hourly_aug-dec_2025.csv', null, { errors: 112, warnings: 8 }],
+    ['2026-09-27T10:05:00+08:00', steward, 'RST', 'export', 'ingestion.report_exported', 'ingestion_run', 'run-pos-0927', 'pos_hourly_aug-dec_2025.csv', null, { rows: 120 }],
+    ['2026-09-28T14:02:00+08:00', steward, 'RST', 'ingestion', 'dataset.loaded', 'dataset_snapshot', 'snap-pos-0928', 'POS hourly', { rows: 38_016 }, { rows: 47_548, staleScenarios: 2 }],
+    ['2026-09-28T14:02:00+08:00', steward, 'RST', 'edit', 'scenario.marked_stale', 'scenario', ...V(5), { stale: false }, { stale: true }],
+    ['2026-09-29T08:40:00+08:00', planner, 'PLN', 'edit', 'scenario.recalculated', 'scenario', ...V(4), { dataAsOf: '2026-09-15' }, { dataAsOf: '2026-09-28' }],
+    ['2026-09-29T09:10:00+08:00', planner, 'PLN', 'submit', 'scenario.submitted', 'scenario', ...V(4), { status: 'draft' }, { status: 'submitted' }],
+    ['2026-09-29T11:30:00+08:00', planner, 'PLN', 'submit', 'scenario.submitted', 'scenario', 'scn-ber-2026-v1', 'Ber months 2026 v1', { status: 'draft' }, { status: 'submitted' }],
+    ['2026-09-29T15:20:00+08:00', steward, 'RST', 'submit', 'rule_version.submitted', 'rule_version', 'rv-wages-3', 'Wage rates (by region) v3', { status: 'draft' }, { status: 'submitted', ncrHourly: 87.5 }],
+    ['2026-09-30T10:00:00+08:00', hr, 'HR', 'decision', 'approval.decided', 'scenario', ...V(4), { headcount: 'pending' }, { headcount: 'approved' }],
+    ['2026-09-30T11:00:00+08:00', qcManager, 'STM', 'edit', 'staff.availability_changed', 'staff', 'st-qc-pt06', 'Arlene Mac', { sun: ['morning', 'afternoon', 'evening'] }, { sun: [] }],
+    ['2026-09-30T16:30:00+08:00', executive, 'EXE', 'decision', 'approval.secured_outside', 'scenario', ...V(4), { budget: 'pending' }, { budget: 'secured_outside', reference: 'email 30 Sep' }],
+    ['2026-09-30T17:00:00+08:00', admin, 'ADM', 'role_change', 'user.scope_changed', 'user', planner2.id, planner2.name, { scope: 'global' }, { scope: 'NCR East, NCR South' }],
+    ['2026-10-01T07:10:00+08:00', hr, 'HR', 'create', 'passkey.added', 'passkey', 'pk-ltan-2', 'L. Tan · iPhone', null, { device: 'iPhone' }],
+    ['2026-10-01T08:30:00+08:00', admin, 'ADM', 'create', 'user.invited', 'user', 'u-stm-jdelacruz', 'Joel de la Rosa', null, { email: 'j.delarosa@smretail.com', roles: ['STM'] }],
+    ['2026-10-01T08:31:00+08:00', admin, 'ADM', 'create', 'user.invited', 'user', 'u-stm-bcastro', 'Bernard Castro', null, { email: 'b.castro@smretail.com', roles: ['STM'] }],
+    ['2026-10-01T09:15:00+08:00', finance, 'FIN', 'export', 'hiring_plan.exported', 'scenario', ...V(3), null, { format: 'csv' }],
   ]
-  return rows.map((r, i) => ({ id: `evt-${i}`, ...r }))
+  return rows.map(([at, person, activeRole, action, event, objectType, objectId, objectName, before, after], i) => ({
+    id: `evt-${i}`,
+    at,
+    user: { id: person.id, name: person.short },
+    activeRole,
+    action,
+    event,
+    objectType,
+    objectId,
+    objectName,
+    before,
+    after,
+  }))
 }
 
 let seq = 0
@@ -176,7 +258,7 @@ export interface MockAdminStore {
   handle(input: { method: string; pathname: string; query: URLSearchParams; body: unknown; role: RoleCode }): ApiResponse
 }
 
-export function createAdminStore(now: () => string = () => new Date().toISOString()): MockAdminStore {
+export function createAdminStore(now: () => string = () => demoNow().toISOString()): MockAdminStore {
   const users = seedUsers()
   const events = seedAudit()
 
@@ -200,7 +282,7 @@ export function createAdminStore(now: () => string = () => new Date().toISOStrin
       .filter((e) => !to || day(e.at) <= to)
       .filter((e) => !userId || e.user.id === userId)
       .filter((e) => !object || [e.objectType, e.objectId, e.objectName ?? '', e.event].some((v) => v.toLowerCase().includes(object)))
-      .sort((a, b) => b.at.localeCompare(a.at))
+      .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
   }
 
   const entry = (e: MockAuditRow): AuditLogEntry => ({ ...e, category: auditEventCategory(e) })

@@ -22,8 +22,8 @@ import {
   type ShiftOfferStatus,
 } from '@lanewise/shared'
 import type { ApiResponse } from './client'
-import { MOCK_STAFF, MOCK_STORES, mockStoreScope } from './mock-directory'
-import { MOCK_MAP_STORES, MOCK_STM_STORE_ID, mockMapCandidate } from './mock-network-map'
+import { mockStoreScope } from './mock-directory'
+import { STF_STAFF_ID, STM_STORE_ID, WEEKLY_LIMIT, WORLD_STAFF, WORLD_STORES, barangayByCode, managerOf, storeNameOf, storeTravelMinutes, travelMinutes } from './mock-world'
 import type { MockOpenShift, MockRosterStore } from './mock-rosters'
 
 /**
@@ -44,7 +44,7 @@ import type { MockOpenShift, MockRosterStore } from './mock-rosters'
  * data — simulated, not SM actuals.
  */
 
-const STAFF_SELF = 'staff-pt-02'
+const STAFF_SELF = STF_STAFF_ID
 const PAY_PER_HOUR = 86.875
 
 interface Candidate {
@@ -58,13 +58,31 @@ interface Candidate {
   readonly limit: number
 }
 
-const storeName = (id: string) => MOCK_STORES.find((s) => s.id === id)?.name ?? MOCK_MAP_STORES.find((s) => s.id === id)?.name ?? id
+const storeName = (id: string) => storeNameOf(id)
 
-const CANDIDATES: readonly Candidate[] = [
-  { staffId: STAFF_SELF, displayId: 'PT-02', name: 'Juan dela Cruz', homeStoreId: 'st-qc', homeArea: { barangay: 'Bagong Pag-asa', city: 'Quezon City' }, travelMin: 9, weekHours: 12, limit: 30 },
-  { staffId: 'cand-xs14', displayId: 'XS-14', name: 'Jo Santos', homeStoreId: 'st-moa', homeArea: { barangay: 'Wack-Wack Greenhills', city: 'Mandaluyong' }, travelMin: 22, weekHours: 32, limit: 48 },
-  { staffId: 'cand-pt41', displayId: 'PT-41', name: 'Rosa Lim', homeStoreId: 'st-lp', homeArea: { barangay: 'Kapitolyo', city: 'Pasig' }, travelMin: 28, weekHours: 16, limit: 30 },
-]
+/**
+ * Offer candidates for a store (world cashiers): active, sharing a home area,
+ * open to cross-store offers (or of this store), not on a 6th day in a row and
+ * ranked by public-transport travel time from their barangay.
+ */
+function candidatesFor(storeId: string): Candidate[] {
+  return WORLD_STAFF.filter((w) => w.active && w.homeArea !== null && !w.restBlocked && (w.crossStoreOffers || w.storeId === storeId))
+    .map((w) => {
+      const area = barangayByCode(w.homeArea ?? '')
+      return {
+        staffId: w.id,
+        displayId: w.employeeNo,
+        name: w.name,
+        homeStoreId: w.storeId,
+        homeArea: { barangay: area?.name ?? '', city: area?.city ?? '' },
+        travelMin: travelMinutes(w.homeArea ?? '', storeId),
+        weekHours: w.weekHours,
+        limit: WEEKLY_LIMIT[w.contract],
+      }
+    })
+    .filter((c) => c.weekHours + 4 <= c.limit)
+    .sort((x, y) => x.travelMin - y.travelMin || x.displayId.localeCompare(y.displayId))
+}
 
 interface Offer {
   id: string
@@ -97,7 +115,7 @@ const forbidden = () => fail('forbidden', 'You do not have access to this resour
 /** A map shift id (`open-<store code>-<n>`, see ./mock-network-map) as an open shift on Dec 19, 1–5 PM. */
 function mapShift(shiftId: string, date: IsoDate): MockOpenShift | null {
   const m = /^open-(.+)-\d+$/.exec(shiftId)
-  const store = m ? [...MOCK_STORES, ...MOCK_MAP_STORES].find((s) => s.code.toLowerCase() === m[1]) : undefined
+  const store = m ? WORLD_STORES.find((s) => s.code.toLowerCase() === m[1]) : undefined
   return store ? { id: shiftId, storeId: store.id, rosterId: `ros-${store.id}`, departmentName: 'Main checkout lanes', date, startMin: 13 * 60, endMin: 17 * 60 } : null
 }
 
@@ -108,46 +126,128 @@ export interface MockOfferStore {
 export function createOfferStore(rosters: MockRosterStore, now: () => Date = () => new Date()): MockOfferStore {
   let offers: Offer[] = []
   const known = new Map<string, MockOpenShift>()
+  const t0 = now().getTime()
+  const ago = (min: number) => new Date(t0 - min * 60_000).toISOString()
+  const window = (date: IsoDate, startMin: number, endMin: number) => ({
+    windowStart: new Date(Date.parse(`${date}T00:00:00+08:00`) + startMin * 60_000).toISOString(),
+    windowEnd: new Date(Date.parse(`${date}T00:00:00+08:00`) + endMin * 60_000).toISOString(),
+  })
+  const lent = (staffId: string, shiftId: string) => {
+    const w = WORLD_STAFF.find((x) => x.id === staffId)
+    return { staffId, employeeNo: w?.employeeNo ?? staffId, name: w?.name ?? staffId, shiftId }
+  }
+  const sat = window('2026-12-19', 13 * 60, 17 * 60)
+  const borrow = (
+    id: string,
+    fromStoreId: string,
+    toStoreId: string,
+    shiftIds: string[],
+    rest: Pick<BorrowRequestDto, 'status' | 'note' | 'requestedAt' | 'decidedBy' | 'decidedAt' | 'declineReason' | 'cashiers'>,
+  ): BorrowRequestDto => ({
+    id,
+    fromStoreId,
+    fromStoreName: storeName(fromStoreId),
+    toStoreId,
+    toStoreName: storeName(toStoreId),
+    departmentName: 'Main checkout lanes',
+    date: '2026-12-19',
+    ...sat,
+    count: shiftIds.length,
+    shiftIds,
+    travelMin: storeTravelMinutes(fromStoreId, toStoreId),
+    requestedBy: managerOf(toStoreId)?.name ?? 'Store manager',
+    overrideReason: null,
+    ...rest,
+  })
+  const pending = { status: 'pending', decidedBy: null, decidedAt: null, declineReason: null, cashiers: [] } as const
+  // Pending, approved and declined requests between the stores (map wireframe "Borrow from a nearby store").
   const borrows: BorrowRequestDto[] = [
-    {
-      id: 'bor-moa-1',
-      fromStoreId: 'st-qc',
-      fromStoreName: storeName('st-qc'),
-      toStoreId: 'st-moa',
-      toStoreName: storeName('st-moa'),
-      departmentName: 'Main checkout lanes',
-      date: '2026-12-19',
-      windowStart: '2026-12-19T05:00:00.000Z',
-      windowEnd: '2026-12-19T09:00:00.000Z',
-      count: 1,
-      shiftIds: ['open-smhm-moa-1'],
-      travelMin: 25,
-      status: 'pending',
-      note: 'Payday rush at MOA',
-      requestedBy: 'Demo STM (MOA)',
-      requestedAt: '2026-12-18T08:00:00.000Z',
-      decidedBy: null,
-      decidedAt: null,
-      overrideReason: null,
+    borrow('bor-mega-qc', STM_STORE_ID, 'st-megamall', ['open-smsm-mega-2'], { ...pending, note: 'Payday rush at Megamall', requestedAt: ago(60 * 3) }),
+    borrow('bor-mega-aura', 'st-aura', 'st-megamall', ['open-smsm-mega-3'], { ...pending, note: 'Aura has a surplus of 3 on Saturday', requestedAt: ago(60 * 3) }),
+    borrow('bor-nedsa-pasig', 'st-pasig', 'st-north-edsa', ['open-smhm-nedsa-1'], {
+      status: 'approved',
+      note: null,
+      requestedAt: ago(60 * 26),
+      decidedBy: managerOf('st-pasig')?.name ?? null,
+      decidedAt: ago(60 * 22),
       declineReason: null,
+      cashiers: [lent('st-pasig-ft43', 'open-smhm-nedsa-1')],
+    }),
+    borrow('bor-qc-mega', 'st-megamall', STM_STORE_ID, ['open-qc-2026-12-19-b'], {
+      status: 'declined',
+      note: 'Cover for the 1–5 PM peak',
+      requestedAt: ago(60 * 30),
+      decidedBy: managerOf('st-megamall')?.name ?? null,
+      decidedAt: ago(60 * 28),
+      declineReason: 'We are short ourselves on Saturday.',
       cashiers: [],
-    },
+    }),
   ]
+  for (const b of borrows) {
+    for (const c of b.cashiers) {
+      rosters.fill(c.shiftId, { id: c.staffId, employeeNo: c.employeeNo, name: c.name, contract: 'FT', departmentId: '', trainedDepartmentIds: [], borrowedFrom: b.fromStoreName, borrowedTravelMin: b.travelMin }, 'borrow_fill', b.decidedBy ?? 'Store manager')
+    }
+  }
 
   const shiftOf = (shiftId: string): MockOpenShift | null => rosters.openShift(shiftId) ?? known.get(shiftId) ?? mapShift(shiftId, '2026-12-19')
   const expire = () => {
     offers = expireOffers(offers, now()).offers
   }
-  // The roster's stores (./mock-directory) and the map's (./mock-network-map); a Store Manager has one of each.
-  const inScope = (role: RoleCode, storeId: string) =>
-    mockStoreScope(role).includes(storeId) ||
-    (MOCK_MAP_STORES.some((s) => s.id === storeId) && role !== 'STF' && (role !== 'STM' || storeId === MOCK_STM_STORE_ID))
-  /** A candidate by id: the roster demo candidates or an eligible map candidate (auto-match, store panel). */
-  const candidateOf = (staffId: string): Candidate | undefined => CANDIDATES.find((c) => c.staffId === staffId) ?? mockMapCandidate(staffId) ?? undefined
+  const inScope = (role: RoleCode, storeId: string) => mockStoreScope(role).includes(storeId)
+  /** A candidate by id: any eligible world cashier for the shift's store. */
+  const candidateOf = (staffId: string, storeId?: string): Candidate | undefined => {
+    const w = WORLD_STAFF.find((x) => x.id === staffId)
+    return w ? candidatesFor(storeId ?? w.storeId).find((c) => c.staffId === staffId) ?? candidatesFor(w.storeId).find((c) => c.staffId === staffId) : undefined
+  }
+
+  // Seeded offers: a live broadcast, one filled shift (accepted + withdrawn + declined) and the
+  // Staff persona's own offers (live, accepted, expired) — SCR-022/025/026 offer panels.
+  const extra = (id: string, storeId: string, date: IsoDate, startMin: number, endMin: number): MockOpenShift => {
+    const shift = { id, storeId, rosterId: `ros-${storeId}`, departmentName: 'Main checkout lanes', date, startMin, endMin }
+    known.set(id, shift)
+    return shift
+  }
+  const seed = (shift: MockOpenShift | null, staffId: string, status: ShiftOfferStatus, sentAgo: number, respondedAgo: number | null = null, by = managerOf(shift?.storeId ?? '')?.name ?? 'Store manager') => {
+    const c = shift ? candidateOf(staffId, shift.storeId) : undefined
+    if (!shift || !c) return
+    seq += 1
+    const sentAt = ago(sentAgo)
+    offers.push({
+      id: `off-seed-${seq}`,
+      shiftId: shift.id,
+      storeId: shift.storeId,
+      rosterId: shift.rosterId,
+      departmentName: shift.departmentName,
+      date: shift.date,
+      startMin: shift.startMin,
+      endMin: shift.endMin,
+      staffId,
+      status,
+      sentBy: by,
+      sentAt,
+      expiresAt: new Date(Date.parse(sentAt) + OFFER_EXPIRY_MINUTES * 60_000).toISOString(),
+      respondedAt: respondedAgo === null ? null : ago(respondedAgo),
+      travelMin: c.travelMin,
+      allowance: transportAllowanceFor(c.travelMin),
+      pay: Math.round(((shift.endMin - shift.startMin) / 60) * PAY_PER_HOUR * 100) / 100,
+    })
+  }
+  const qcEvening = shiftOf('open-qc-2026-12-19')
+  seed(qcEvening, 'st-north-edsa-ft21', 'sent', 8)
+  seed(qcEvening, 'st-north-edsa-ft22', 'sent', 8)
+  seed(qcEvening, 'st-qc-pt14', 'declined', 8, 5)
+  const megaFour = shiftOf('open-smsm-mega-4')
+  seed(megaFour, 'st-pasig-ft42', 'accepted', 70, 66)
+  seed(megaFour, 'st-pasig-pt41', 'withdrawn', 70, 66)
+  seed(megaFour, 'st-pasig-fl07', 'declined', 70, 68)
+  rosters.fill('open-smsm-mega-4', { id: 'st-pasig-ft42', employeeNo: 'FT-42', name: 'Edgar Soriano', contract: 'FT', departmentId: '', trainedDepartmentIds: [], borrowedFrom: storeName('st-pasig'), borrowedTravelMin: travelMinutes('137403003', 'st-megamall') }, 'offer_fill', managerOf('st-megamall')?.name ?? 'Store manager')
+  seed(extra('open-smsm-mega-sun-1', 'st-megamall', '2026-12-20', 13 * 60, 17 * 60), STAFF_SELF, 'sent', 6)
+  seed(extra('open-smhm-nedsa-fri-1', 'st-north-edsa', '2026-12-18', 17 * 60, 21 * 60), STAFF_SELF, 'accepted', 60 * 20, 60 * 20 - 4)
+  seed(extra('open-smhm-moa-wed-1', 'st-moa', '2026-12-16', 17 * 60, 21 * 60), STAFF_SELF, 'sent', 60 * 48)
 
   const toDto = (o: Offer): CostDraft<ShiftOfferDto> => {
-    const c = candidateOf(o.staffId)
-    const regionId = MOCK_STORES.find((s) => s.id === o.storeId)?.regionId ?? ''
+    const c = candidateOf(o.staffId, o.storeId)
+    const regionId = WORLD_STORES.find((s) => s.id === o.storeId)?.regionId ?? ''
     return {
       id: o.id,
       shiftId: o.shiftId,
@@ -187,13 +287,13 @@ export function createOfferStore(rosters: MockRosterStore, now: () => Date = () 
     pay: o.pay,
   })
 
-  /** Lending-store cashiers for a request: the store's two demo cashiers. */
+  /** Lending-store cashiers for a request: its active main-lane cashiers with weekly headroom. */
   const lenders = (r: BorrowRequestDto): LendCandidate[] =>
-    MOCK_STAFF.filter((s) => s.storeId === r.fromStoreId).map((s, i) => ({
+    WORLD_STAFF.filter((s) => s.storeId === r.fromStoreId && s.active && !s.restBlocked && (s.departmentId.endsWith('-d1') || s.trainedDepartmentIds.some((d) => d.endsWith('-d1'))) && s.weekHours + 4 <= WEEKLY_LIMIT[s.contract]).map((s) => ({
       staffId: s.id,
       employeeNo: s.employeeNo,
       name: s.name,
-      weekHours: 24 + 8 * i,
+      weekHours: s.weekHours,
       eligibleShiftIds: [...r.shiftIds],
     }))
 
@@ -226,7 +326,7 @@ export function createOfferStore(rosters: MockRosterStore, now: () => Date = () 
           return fail('conflict', r.code === 'expired' ? 'This offer has expired.' : r.code === 'filled' || own.status === 'withdrawn' ? 'This shift has just been filled.' : 'You have already answered this offer.')
         }
         offers = r.offers
-        const c = CANDIDATES.find((x) => x.staffId === STAFF_SELF) as Candidate
+        const c = candidateOf(STAFF_SELF, own.storeId) as Candidate
         rosters.fill(
           own.shiftId,
           { id: c.staffId, employeeNo: c.displayId, name: c.name, contract: 'PT', departmentId: '', trainedDepartmentIds: [], borrowedFrom: c.homeStoreId === own.storeId ? null : storeName(c.homeStoreId), borrowedTravelMin: c.travelMin },
@@ -259,8 +359,9 @@ export function createOfferStore(rosters: MockRosterStore, now: () => Date = () 
         if (!shift || shift.storeId !== storeId) return notFound()
         const maxTravelMin = Number(query.get('maxTravelMin') ?? (body as { maxTravelMin?: number } | null)?.maxTravelMin ?? 30)
         const live = new Set(offers.filter((o) => o.shiftId === shift.id && o.status === 'sent').map((o) => o.staffId))
-        const eligible = CANDIDATES.filter((c) => c.travelMin <= maxTravelMin)
-        const sendable = (id: string) => eligible.find((c) => c.staffId === id) ?? mockMapCandidate(id) ?? undefined
+        const eligible = candidatesFor(storeId).filter((c) => c.travelMin <= maxTravelMin)
+        // Auto-match may propose a cashier just past the panel's travel limit, so any candidate of the store is sendable.
+        const sendable = (id: string) => eligible.find((c) => c.staffId === id) ?? candidatesFor(storeId).find((c) => c.staffId === id)
         const candidate = (c: Candidate): OfferCandidate => ({
           staffId: c.staffId,
           displayId: c.displayId,
@@ -329,7 +430,7 @@ export function createOfferStore(rosters: MockRosterStore, now: () => Date = () 
         const b = (body ?? {}) as { fromStoreId?: unknown; shiftIds?: unknown; note?: unknown }
         const shiftIds = Array.isArray(b.shiftIds) ? (b.shiftIds.filter((x) => typeof x === 'string') as string[]) : []
         const shifts = shiftIds.map(shiftOf)
-        if (typeof b.fromStoreId !== 'string' || b.fromStoreId === storeId || ![...MOCK_STORES, ...MOCK_MAP_STORES].some((s) => s.id === b.fromStoreId)) {
+        if (typeof b.fromStoreId !== 'string' || b.fromStoreId === storeId || !WORLD_STORES.some((s) => s.id === b.fromStoreId)) {
           return fail('validation_failed', 'This borrow request cannot be made.', [{ path: 'body.fromStoreId', message: 'Pick another store to borrow from.' }])
         }
         if (shifts.length === 0 || shifts.some((s) => !s || s.storeId !== storeId)) {

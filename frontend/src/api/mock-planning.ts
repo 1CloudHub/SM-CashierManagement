@@ -36,6 +36,7 @@ import {
 } from '@lanewise/shared'
 import type { ApiResponse } from './client'
 import { MOCK_DEPARTMENTS, MOCK_SCENARIOS, MOCK_STORES, mockStoreScope } from './mock-directory'
+import { DEMO_TODAY, WORLD_STORES } from './mock-world'
 
 /**
  * In-memory planning endpoints for the mock API (task 14): network view,
@@ -78,14 +79,16 @@ interface MockDept {
   readonly index: number
 }
 
-const STORE_SCALE: Readonly<Record<string, number>> = { 'st-moa': 1.4, 'st-davao': 1.3, 'st-cebu': 1.15, 'st-lp': 0.7, 'st-iloilo': 0.8 }
+const STORE_SCALE: Readonly<Record<string, number>> = Object.fromEntries(WORLD_STORES.map((s) => [s.id, s.scale]))
+/** NCR minimum wage ÷ 8 plus on-cost (the published wage rule), with a small premium for the CBD stores. */
+const rateOf = (regionId: string | undefined) => (regionId === 'reg-ncr-south' ? 94 : 92)
 
 function deptInput(scenarioId: string, dept: MockDept, date: string): DepartmentDayInput & { shiftRows: DepartmentDayView['shifts'] } {
   const store = MOCK_STORES.find((s) => s.id === dept.storeId) ?? MOCK_STORES[0]
   const size = DEPT_SIZE[dept.index] ?? DEPT_SIZE[2]
   const scale = (STORE_SCALE[dept.storeId] ?? 1) * (0.95 + hash(scenarioId) * 0.1)
-  // Cebu main lanes are short of installed lanes at the evening peak (wireframe example).
-  const installed = dept.id === 'st-cebu-d1' ? 20 : Math.round(size.lanes * Math.min(scale, 1.3))
+  // Megamall main lanes are short of installed lanes at the afternoon peak (wireframe example).
+  const installed = dept.id === 'st-megamall-d1' ? 24 : Math.round(size.lanes * Math.min(scale, 1.3))
   const hours = HOURS.map((hour) => {
     const need = Math.max(1, Math.round(size.base * scale * curve(hour) * dayFactor(date)))
     const open = Math.min(need, installed)
@@ -108,7 +111,7 @@ function deptInput(scenarioId: string, dept: MockDept, date: string): Department
       shiftRows.push({ id: `${type.toLowerCase()}-${k}`, type, start, end: start + (type === 'PT' ? 4 : 8), mealHour: null, paidHours: type === 'PT' ? 4 : 8 })
     }
   }
-  const rate = store?.regionId === 'reg-luzon' ? 92 : 78
+  const rate = rateOf(store?.regionId)
   return {
     departmentId: dept.id,
     departmentName: dept.name,
@@ -255,7 +258,7 @@ export function createPlanningStore(): MockPlanningStore {
           busiestWeek: '2026-12-21',
           shifts: Math.round(paidHours / 7),
           paidHours,
-          cost: paidHours * (s.regionId === 'reg-luzon' ? 92 : 78),
+          cost: paidHours * rateOf(s.regionId),
           ftAvgWeeklyHours: 46.5,
         }
       })
@@ -276,7 +279,7 @@ export function createPlanningStore(): MockPlanningStore {
         departments,
       }
     }) satisfies (Omit<HiringStoreRow, 'cost'> & { cost: number })[]
-    const today = new Date().toISOString().slice(0, 10)
+    const today = DEMO_TODAY
     const ft = stores.reduce((n, s) => n + s.hiresByType.FT, 0)
     const pt = stores.reduce((n, s) => n + s.hiresByType.PT, 0)
     const milestones: [string, string, PlanningContractType, number][] = [

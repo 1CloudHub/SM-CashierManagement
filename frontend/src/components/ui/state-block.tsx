@@ -62,6 +62,7 @@ export function StateBlock({
   return (
     <div
       role={isError ? 'alert' : 'status'}
+      data-state={variant}
       aria-live={isError ? 'assertive' : 'polite'}
       className={cn(
         'flex flex-col items-center gap-3 border border-outline bg-surface px-6 py-12 text-center',

@@ -40,7 +40,7 @@ describe('SCR-052 Stores, departments and lanes', () => {
     const qc = await screen.findByRole('rowheader', { name: /^SM Supermarket – Quezon City/ })
     const storeRow = qc.closest('tr')!
     expect(within(storeRow).getByText('SM Supermarket')).toBeInTheDocument()
-    expect(within(storeRow).getByText('Luzon')).toBeInTheDocument()
+    expect(within(storeRow).getByText('NCR North')).toBeInTheDocument()
     expect(within(storeRow).getByText('45')).toBeInTheDocument() // 30 + 11 + 4 installed lanes
     expect(table('Stores and departments').getAllByRole('rowheader', { name: /Main checkout lanes/ }).length).toBeGreaterThan(1)
     expect(screen.getByRole('link', { name: 'Import' })).toHaveAttribute('href', '/data/upload?dataset=master')
@@ -89,11 +89,12 @@ describe('SCR-052 Stores, departments and lanes', () => {
     const user = userEvent.setup()
     renderApp({ path: '/data/stores', role: 'PLN' })
     await screen.findByRole('rowheader', { name: /^SM Supermarket – Quezon City/ })
-    await user.selectOptions(screen.getByLabelText('Region'), 'Visayas')
+    await user.selectOptions(screen.getByLabelText('Region'), 'NCR South')
     expect(screen.queryByRole('rowheader', { name: /^SM Supermarket – Quezon City/ })).toBeNull()
-    expect(screen.getByRole('rowheader', { name: /^SM Supermarket – Cebu City/ })).toBeInTheDocument()
+    expect(screen.getByRole('rowheader', { name: /^SM Supermarket – Aura/ })).toBeInTheDocument()
     await user.selectOptions(screen.getByLabelText('Format'), 'The SM Store')
-    expect(screen.queryByRole('rowheader', { name: /^SM Supermarket – Cebu City/ })).toBeNull()
+    expect(screen.queryByRole('rowheader', { name: /^SM Supermarket – Aura/ })).toBeNull()
+    expect(screen.getByRole('rowheader', { name: /^The SM Store – Makati/ })).toBeInTheDocument()
     await user.type(within(screen.getByRole('search', { name: 'Filter stores' })).getByLabelText('Search'), 'zzz')
     expect(screen.getByRole('heading', { name: 'No matches' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Clear filters' }))
@@ -178,12 +179,12 @@ describe('SCR-053 Staff and availability', () => {
     await screen.findByRole('button', { name: 'PT-02, availability for Juan dela Cruz' })
     expect(screen.queryByText('Liza Garcia')).toBeNull()
     expect(screen.queryByRole('button', { name: '+ Staff' })).toBeNull()
-    await user.click(screen.getByRole('button', { name: 'Edit Ana Reyes' }))
+    await user.click(screen.getByRole('button', { name: 'Edit Cora Fisco' }))
     const dialog = await screen.findByRole('dialog', { name: 'Edit FT-03' })
     await user.selectOptions(within(dialog).getByLabelText('Preferred rest'), 'Friday')
     await user.click(within(dialog).getByRole('button', { name: 'Save' }))
     expect((await screen.findAllByText('Staff FT-03 saved.')).length).toBeGreaterThan(0)
-    const row = screen.getByRole('button', { name: 'FT-03, availability for Ana Reyes' }).closest('tr')!
+    const row = screen.getByRole('button', { name: 'FT-03, availability for Cora Fisco' }).closest('tr')!
     expect(within(row).getByText('Fri')).toBeInTheDocument()
   })
 
@@ -222,9 +223,10 @@ describe('SCR-053 Staff and availability', () => {
     await screen.findByRole('button', { name: 'PT-02, availability for Juan dela Cruz' })
     await user.selectOptions(screen.getByLabelText('Type'), 'Full-time')
     await waitFor(() => expect(screen.queryByRole('button', { name: /^PT-02/ })).toBeNull())
-    expect(screen.getAllByRole('button', { name: /^FT-03/ }).length).toBeGreaterThan(1)
-    await user.type(screen.getByLabelText('Search name or ID'), 'Ana')
-    expect(screen.getAllByRole('button', { name: /^FT-03/ })).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: /^FT-\d+/ }).length).toBeGreaterThan(20)
+    await user.type(screen.getByLabelText('Search name or ID'), 'Cora')
+    await waitFor(() => expect(screen.getAllByRole('button', { name: /^FT-\d+/ })).toHaveLength(1))
+    expect(screen.getByRole('button', { name: 'FT-03, availability for Cora Fisco' })).toBeInTheDocument()
   })
 
   it('shows "No access" to roles outside the row', () => {
