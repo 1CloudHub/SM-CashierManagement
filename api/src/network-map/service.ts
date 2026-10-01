@@ -14,6 +14,7 @@ import {
   ringBand,
   timeWindowOf,
   type ExcludedCandidate,
+  type MatchResult,
   type OpenShift,
   type RankedCandidate,
   type SurplusSupply,
@@ -119,7 +120,7 @@ export async function networkMap(db: Queryable, scope: Scope, query: NetworkMapQ
  * The travel matrix for the candidates' barangays → `storeIds`: precomputed
  * minutes where present, straight-line estimates for the rest.
  */
-async function travelMatrix(
+export async function travelMatrix(
   db: Queryable,
   candidates: readonly repo.CandidateRecord[],
   storeIds: readonly string[],
@@ -284,4 +285,24 @@ export async function autoMatchProposal(db: Queryable, scope: Scope, query: Netw
     unfilled: proposal.unfilled.map((u) => ({ shiftId: u.shiftId, storeId: u.storeId, storeName: name(u.storeId), departmentKey: u.departmentId })),
     summary: { ...proposal.summary, totalTravelMin: round2(proposal.summary.totalTravelMin) },
   });
+}
+
+/**
+ * Ranked, eligible candidates for one open shift (task 17 offers; P15, P16):
+ * consenting staff of the shift's provenance, their shifts at every store
+ * counted, ranked by `@lanewise/matching`. Used both to list who may be
+ * offered the shift and to re-check a selection before offers are sent.
+ */
+export async function rankForShift(
+  db: Queryable,
+  options: { readonly synthetic: boolean; readonly shift: OpenShift; readonly mode: NetworkMapQuery['mode']; readonly maxTravelMin: number },
+): Promise<{ readonly result: MatchResult; readonly names: ReadonlyMap<string, string>; readonly travelSource: TravelSource }> {
+  const { shift, mode, maxTravelMin } = options;
+  const window = timeWindowOf(shift.date, Math.floor(shift.startHour));
+  const candidates = await repo.listMatchCandidates(db, { synthetic: options.synthetic, date: shift.date });
+  const query: NetworkMapQuery = { date: shift.date, dayPart: 'midday', mode, maxTravelMin };
+  const t = await travelMatrix(db, candidates, [shift.storeId], query, window);
+  const result = rankCandidates({ shift, mode, maxTravelMin, window }, candidates, t.matrix);
+  const names = await repo.storeNames(db, [...new Set(candidates.map((c) => c.homeStoreId))]);
+  return { result, names, travelSource: t.source };
 }

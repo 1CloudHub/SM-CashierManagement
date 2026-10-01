@@ -137,6 +137,17 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'GET', path: '/stores/{storeId}/rosters/{rosterId}/shifts/{shiftId}/replacements' },
   { method: 'POST', path: '/stores/{storeId}/rosters/{rosterId}/overrides/check' },
   { method: 'POST', path: '/stores/{storeId}/rosters/{rosterId}/overrides' },
+  // Task 17: shift offers (SCR-022/025/026) and store-to-store borrowing.
+  { method: 'GET', path: '/stores/{storeId}/shifts/{shiftId}/offer-candidates' },
+  { method: 'POST', path: '/stores/{storeId}/shifts/{shiftId}/offers' },
+  { method: 'GET', path: '/stores/{storeId}/offers' },
+  { method: 'GET', path: '/me/offers' },
+  { method: 'POST', path: '/me/offers/{offerId}/accept' },
+  { method: 'POST', path: '/me/offers/{offerId}/decline' },
+  { method: 'GET', path: '/stores/{storeId}/borrow-requests' },
+  { method: 'POST', path: '/stores/{storeId}/borrow-requests' },
+  { method: 'GET', path: '/stores/{storeId}/borrow-requests/{requestId}/candidates' },
+  { method: 'POST', path: '/stores/{storeId}/borrow-requests/{requestId}/decision' },
 ];
 
 /** Request headers the SPA sends: the defaults plus the demo role switcher's `X-Active-Role`. */

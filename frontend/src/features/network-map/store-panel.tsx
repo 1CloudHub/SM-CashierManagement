@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import type { NetworkMapQuery, StoreCandidatesResponse } from '@lanewise/shared'
+import { useEffect, useState } from 'react'
+import type { NetworkMapQuery, ShiftOfferDto, StoreCandidatesResponse } from '@lanewise/shared'
+import { useAnnouncer } from '@/components/a11y'
 import { Cluster, Section, Stack } from '@/components/layout'
 import {
   Alert,
@@ -17,6 +18,7 @@ import {
   TableWrap,
 } from '@/components/ui'
 import { useI18n } from '@/i18n'
+import { OfferStatusList, type OffersClient } from '@/features/offers'
 import { clock, STATUS_PRESENTATION, statusLabel } from './format'
 
 export type PanelState =
@@ -28,13 +30,48 @@ export type PanelState =
 /**
  * Selected store (SCR-026 side panel): its gap, nearby stores with spare
  * cashiers, and ranked eligible candidates (requirement 11.2–11.5). Candidates
- * appear as ID, home store and barangay only (requirement 12.5). Sending
- * offers and borrow requests belongs to task 17, so those actions are shown
- * but disabled with a note; nothing is sent from here.
+ * appear as ID, home store and barangay only (requirement 12.5). Roles that
+ * may send offers (task 17 — requirement 13, 14) offer the shift to the
+ * selected cashiers (30-minute expiry, first acceptance wins; status listed
+ * below) and request cashiers from a nearby store for the lending store
+ * manager to approve.
  */
-export function StorePanel({ panel, query, departmentName }: { panel: PanelState; query: NetworkMapQuery; departmentName: (key: string) => string }) {
+export function StorePanel({
+  panel,
+  query,
+  departmentName,
+  offers,
+  canSend = false,
+}: {
+  panel: PanelState
+  query: NetworkMapQuery
+  departmentName: (key: string) => string
+  /** Task 17 offers/borrowing client; without it the actions stay disabled. */
+  offers?: OffersClient
+  canSend?: boolean
+}) {
   const { t, formatDate } = useI18n()
+  const { announce } = useAnnouncer()
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set())
+  const [sent, setSent] = useState<readonly ShiftOfferDto[]>([])
+  const [busy, setBusy] = useState(false)
+  const [notice, setNotice] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null)
+  const ready = panel.state === 'ready' ? panel.data : null
+  const storeId = ready?.store.storeId
+  const shiftId = ready?.shift?.shiftId
+
+  // Offers already out for the panel's shift.
+  useEffect(() => {
+    if (!offers || !storeId || !shiftId) return
+    let live = true
+    offers.storeOffers(storeId, { shiftId }).then(
+      (o) => live && setSent(o),
+      () => undefined,
+    )
+    return () => {
+      live = false
+    }
+  }, [offers, storeId, shiftId])
 
   if (panel.state === 'idle') return <p className="text-body text-text-muted">{t('map.panel.none')}</p>
   if (panel.state === 'loading')
@@ -62,7 +99,40 @@ export function StorePanel({ panel, query, departmentName }: { panel: PanelState
       else next.add(id)
       return next
     })
-  const selectedCount = ranked.filter((c) => picked.has(c.staffId)).length
+  const offered = new Set(sent.filter((o) => o.status === 'sent' || o.status === 'accepted').map((o) => o.staffId))
+  const selected = ranked.filter((c) => picked.has(c.staffId) && !offered.has(c.staffId)).map((c) => c.staffId)
+  const selectedCount = selected.length
+  const enabled = canSend && offers !== undefined && shift !== null
+
+  const say = (tone: 'success' | 'danger', text: string) => {
+    setNotice({ tone, text })
+    announce(text)
+  }
+  const sendOffers = async () => {
+    if (!offers || !shift) return
+    setBusy(true)
+    try {
+      setSent(await offers.send(store.storeId, shift.shiftId, { staffIds: selected, mode: query.mode, maxTravelMin: query.maxTravelMin }))
+      setPicked(new Set())
+      say('success', t('map.panel.offerSent', { count: selected.length }))
+    } catch {
+      say('danger', t('map.panel.offerFailed'))
+    } finally {
+      setBusy(false)
+    }
+  }
+  const requestBorrow = async (fromStoreId: string, name: string) => {
+    if (!offers || !shift) return
+    setBusy(true)
+    try {
+      await offers.requestBorrow(store.storeId, { fromStoreId, shiftIds: [shift.shiftId] })
+      say('success', t('map.panel.borrow.requested', { name }))
+    } catch {
+      say('danger', t('map.panel.borrow.failed'))
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
     <Stack gap={4}>
@@ -86,6 +156,7 @@ export function StorePanel({ panel, query, departmentName }: { panel: PanelState
       </Stack>
 
       {travelSource === 'straight_line' && <Alert tone="warning">{t('map.travel.straightLine')}</Alert>}
+      {notice && <Alert tone={notice.tone}>{notice.text}</Alert>}
 
       {shift && (
         <Section title={t('map.panel.borrow.title')} titleAs="h3">
@@ -97,9 +168,8 @@ export function StorePanel({ panel, query, departmentName }: { panel: PanelState
                 <li key={s.storeId}>
                   <Cluster gap={2} justify="between">
                     <span className="text-body-sm text-text">{t('map.panel.borrow.row', { name: s.name, surplus: s.surplus, minutes: s.travelMin })}</span>
-                    {/* TODO(task 17): send a borrow request (store-to-store, lending-manager approval). */}
-                    <Button size="sm" disabled>
-                      {t('map.panel.borrow.request', { count: Math.min(s.surplus, Math.max(0, -store.delta)) })}
+                    <Button size="sm" disabled={!enabled || busy} onClick={() => void requestBorrow(s.storeId, s.name)}>
+                      {t('map.panel.borrow.request', { count: 1 })}
                     </Button>
                   </Cluster>
                 </li>
@@ -130,7 +200,8 @@ export function StorePanel({ panel, query, departmentName }: { panel: PanelState
                         <input
                           type="checkbox"
                           className="size-5 accent-primary"
-                          checked={picked.has(c.staffId)}
+                          checked={picked.has(c.staffId) || offered.has(c.staffId)}
+                          disabled={offered.has(c.staffId)}
                           onChange={() => toggle(c.staffId)}
                           aria-label={t('map.panel.selectCandidate', { id: c.displayId })}
                         />
@@ -161,11 +232,11 @@ export function StorePanel({ panel, query, departmentName }: { panel: PanelState
               </Table>
             </TableWrap>
             {excludedWithoutConsent > 0 && <p className="text-body-sm text-text-muted">{t('map.panel.withoutConsent', { count: excludedWithoutConsent })}</p>}
-            {/* TODO(task 17): broadcast offers to the selected cashiers (30-min expiry, first acceptance wins). */}
-            <Button variant="primary" disabled>
+            <Button variant="primary" disabled={!enabled || busy || selectedCount === 0} onClick={() => void sendOffers()}>
               {t('map.panel.offer', { count: selectedCount })}
             </Button>
             <p className="text-caption text-text-muted">{t('map.panel.offerNote')}</p>
+            <OfferStatusList offers={sent} label={t('map.panel.offersLabel')} />
           </Stack>
         </Section>
       )}

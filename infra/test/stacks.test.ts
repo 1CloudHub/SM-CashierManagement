@@ -366,6 +366,23 @@ describe('API stack', () => {
     );
   });
 
+  it('protects every task 17 offer and borrowing route with the Cognito authorizer', () => {
+    expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
+      expect.arrayContaining([
+        'GET /stores/{storeId}/shifts/{shiftId}/offer-candidates',
+        'POST /stores/{storeId}/shifts/{shiftId}/offers',
+        'GET /stores/{storeId}/offers',
+        'GET /me/offers',
+        'POST /me/offers/{offerId}/accept',
+        'POST /me/offers/{offerId}/decline',
+        'GET /stores/{storeId}/borrow-requests',
+        'POST /stores/{storeId}/borrow-requests',
+        'GET /stores/{storeId}/borrow-requests/{requestId}/candidates',
+        'POST /stores/{storeId}/borrow-requests/{requestId}/decision',
+      ]),
+    );
+  });
+
   it('protects every task 11 scenario route with the Cognito authorizer', () => {
     expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
       expect.arrayContaining([

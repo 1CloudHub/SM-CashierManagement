@@ -25,13 +25,20 @@ describe('routing', () => {
   })
 
   it('renders a placeholder with title, breadcrumb and its spec task', async () => {
-    // SCR-025 My roster is still a placeholder (task 18.1); SCR-026 is built (task 16).
-    const { container } = renderApp({ path: '/my-roster', role: 'STF' })
-    expect(screen.getByRole('heading', { level: 1, name: 'My roster' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Coming in task 18.1' })).toBeInTheDocument()
+    // SCR-040 Notifications is still a placeholder (task 19); SCR-025 shows offers since task 17.
+    const { container } = renderApp({ path: '/notifications', role: 'STF' })
+    expect(screen.getByRole('heading', { level: 1, name: 'Notifications' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Coming in task 19' })).toBeInTheDocument()
     const crumbs = within(screen.getByRole('navigation', { name: 'Breadcrumb' }))
     expect(crumbs.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/')
-    expect(crumbs.getByText('My roster')).toHaveAttribute('aria-current', 'page')
+    expect(crumbs.getByText('Notifications')).toHaveAttribute('aria-current', 'page')
+    expect(await axe(container)).toHaveNoViolations()
+  })
+
+  it('renders SCR-025 My roster with the Staff user’s shift offers (task 17)', async () => {
+    const { container } = renderApp({ path: '/my-roster', role: 'STF' })
+    expect(screen.getByRole('heading', { level: 1, name: 'My roster' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Open shift offers near you' })).toBeInTheDocument()
     expect(within(mainNav()).getByRole('link', { name: 'My roster' })).toHaveAttribute('aria-current', 'page')
     expect(await axe(container)).toHaveNoViolations()
   })

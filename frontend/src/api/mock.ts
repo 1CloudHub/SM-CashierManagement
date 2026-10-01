@@ -14,6 +14,7 @@ import {
 } from '@lanewise/shared'
 import { ACTIVE_ROLE_HEADER, type ApiAdapter, type ApiRequest, type ApiResponse } from './client'
 import { createPlanningStore } from './mock-planning'
+import { createOfferStore } from './mock-offers'
 import { createRosterStore } from './mock-rosters'
 import { createScenarioStore } from './mock-scenarios'
 import { createSavedViewStore, mockContextOptions, mockSearch, type MockResult } from './mock-directory'
@@ -247,6 +248,7 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
   const scenarios = createScenarioStore()
   const planning = createPlanningStore()
   const rosters = createRosterStore()
+  const offerStore = createOfferStore(rosters)
   return async (request) => {
     log?.push(request)
     if (latencyMs > 0) await new Promise((resolve) => setTimeout(resolve, latencyMs))
@@ -277,6 +279,17 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
         viewer: mockViewer(role),
       })
     }
+    // Task 17 offers (/stores/:id/shifts/:id/offers…, /stores/:id/offers, /me/offers…) and borrow requests, see ./mock-offers.
+    const offered = offerStore.handle({
+      method: request.method,
+      pathname,
+      query: new URLSearchParams(search),
+      body: request.body,
+      role,
+      viewer: mockViewer(role),
+      userName: `Demo ${role}`,
+    })
+    if (offered) return offered
     if (/^\/stores\/[^/]+\/rosters(\/|$)/.test(pathname)) {
       // Published rosters carry no ₱ figures (task 13.4), see ./mock-rosters.
       return rosters.handle({ method: request.method, pathname, body: request.body, role, userName: `Demo ${role}` })

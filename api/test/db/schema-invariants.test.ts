@@ -316,7 +316,18 @@ describe('roster overrides and offers (P14, P17)', () => {
     const accept = (id: string): Promise<unknown> =>
       db.pool.query(`UPDATE shift_offer SET status = 'accepted', responded_at = now() WHERE id = $1`, [id]);
     await accept(oa);
-    await expectPgError(accept(ob), UNIQUE);
+    // 0170: accepting withdraws every other sent offer for the shift at that moment, so a
+    // second acceptance is refused by the lifecycle trigger before the unique index is reached.
+    const { rows } = await db.pool.query<{ status: string }>('SELECT status FROM shift_offer WHERE id = $1', [ob]);
+    expect(rows[0]?.status).toBe('withdrawn');
+    await expectPgError(accept(ob), CHECK);
+    // The 0004 partial unique index still backs P17 on its own.
+    await db.pool.query('ALTER TABLE shift_offer DISABLE TRIGGER shift_offer_lifecycle');
+    try {
+      await expectPgError(accept(ob), UNIQUE);
+    } finally {
+      await db.pool.query('ALTER TABLE shift_offer ENABLE TRIGGER shift_offer_lifecycle');
+    }
   });
 });
 

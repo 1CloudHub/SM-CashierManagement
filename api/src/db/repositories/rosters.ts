@@ -158,7 +158,7 @@ function toStoredShift(r: ShiftRow): StoredShift {
   };
 }
 
-interface StaffRow extends pg.QueryResultRow {
+export interface StaffRow extends pg.QueryResultRow {
   id: string;
   store_id: string;
   department_id: string;
@@ -178,9 +178,9 @@ const STAFF_SELECT = `
          coalesce(array(SELECT t.department_id::text FROM staff_training t WHERE t.staff_id = s.id ORDER BY 1), '{}') AS trained
     FROM staff s`;
 
-const contractOf = (s: StaffRow): ContractType => CONTRACT_BY_EMPLOYMENT[s.employment_type] ?? 'FT';
+export const contractOf = (s: StaffRow): ContractType => CONTRACT_BY_EMPLOYMENT[s.employment_type] ?? 'FT';
 
-function toDomainStaff(s: StaffRow): StaffMember {
+export function toDomainStaff(s: StaffRow): StaffMember {
   return {
     id: s.id,
     name: s.name,
@@ -228,7 +228,7 @@ export async function laborRulesFor(db: Queryable, synthetic: boolean): Promise<
 }
 
 /** Scheduled shifts on published rosters for `staffIds` between two local dates (inclusive, ±1 day for overnight). */
-async function staffShifts(db: Queryable, staffIds: readonly string[], from: string, to: string): Promise<StoredShift[]> {
+export async function staffShifts(db: Queryable, staffIds: readonly string[], from: string, to: string): Promise<StoredShift[]> {
   if (staffIds.length === 0) return [];
   const { rows } = await db.query<ShiftRow>(
     `SELECT ${SHIFT_COLUMNS} FROM shift sh JOIN roster r ON r.id = sh.roster_id
@@ -241,7 +241,7 @@ async function staffShifts(db: Queryable, staffIds: readonly string[], from: str
   return rows.map(toStoredShift);
 }
 
-async function loadStaff(db: Queryable, ids: readonly string[], lock = false): Promise<StaffRow[]> {
+export async function loadStaff(db: Queryable, ids: readonly string[], lock = false): Promise<StaffRow[]> {
   if (ids.length === 0) return [];
   const { rows } = await db.query<StaffRow>(
     `${STAFF_SELECT} WHERE s.id = ANY($1::uuid[]) ORDER BY s.id${lock ? ' FOR UPDATE OF s' : ''}`,
@@ -283,7 +283,13 @@ async function overridesOf(db: Queryable, rosterId: string): Promise<ShiftOverri
   }));
 }
 
-function toStaffMember(s: StaffRow, rosterStoreId: string, storeNames: ReadonlyMap<string, string>): RosterStaffMember {
+function toStaffMember(
+  s: StaffRow,
+  rosterStoreId: string,
+  storeNames: ReadonlyMap<string, string>,
+  travel: ReadonlyMap<string, number>,
+): RosterStaffMember {
+  const borrowed = s.store_id !== rosterStoreId;
   return {
     id: s.id,
     employeeNo: s.employee_no,
@@ -291,8 +297,33 @@ function toStaffMember(s: StaffRow, rosterStoreId: string, storeNames: ReadonlyM
     contract: contractOf(s),
     departmentId: s.department_id,
     trainedDepartmentIds: s.trained,
-    borrowedFrom: s.store_id === rosterStoreId ? null : (storeNames.get(s.store_id) ?? s.store_id),
+    borrowedFrom: borrowed ? (storeNames.get(s.store_id) ?? s.store_id) : null,
+    ...(borrowed ? { borrowedTravelMin: travel.get(s.id) ?? null } : {}),
   };
+}
+
+/**
+ * Travel minutes of cashiers who came to this roster through an accepted
+ * offer (home barangay → store) or an applied borrow (store → store), latest
+ * first (task 17; Req 14.3).
+ */
+async function borrowedTravel(db: Queryable, roster: RosterRecord): Promise<Map<string, number>> {
+  const { rows } = await db.query<{ staff_id: string; travel_min: string | null }>(
+    `SELECT staff_id, travel_min::text AS travel_min FROM (
+        SELECT o.staff_id, o.travel_min, o.responded_at AS at
+          FROM shift_offer o JOIN shift sh ON sh.id = o.shift_id
+         WHERE sh.roster_id = $1 AND o.status = 'accepted'
+        UNION ALL
+        SELECT ts.staff_id, t.travel_min, t.decided_at AS at
+          FROM transfer_request_staff ts JOIN transfer_request t ON t.id = ts.transfer_request_id
+          JOIN shift sh ON sh.id = ts.shift_id
+         WHERE sh.roster_id = $1 AND t.status IN ('approved', 'overridden')
+      ) x WHERE travel_min IS NOT NULL ORDER BY at DESC`,
+    [roster.id],
+  );
+  const out = new Map<string, number>();
+  for (const r of rows) if (!out.has(r.staff_id) && r.travel_min !== null) out.set(r.staff_id, Number(r.travel_min));
+  return out;
 }
 
 /** The SCR-022 roster: shifts with ✎ markers, cashiers, overrides and the labor-rule checks for the period. */
@@ -317,6 +348,7 @@ export async function rosterDetail(db: Queryable, roster: RosterRecord, canOverr
     [[...new Set(staffRows.map((s) => s.store_id))]],
   );
   const storeNames = new Map(stores.map((s) => [s.id, s.name]));
+  const travel = staffRows.some((s) => s.store_id !== roster.storeId) ? await borrowedTravel(db, roster) : new Map<string, number>();
 
   const latest = new Map<string, ShiftOverrideDto>();
   for (const o of overrides) latest.set(o.shiftId, o);
@@ -337,7 +369,7 @@ export async function rosterDetail(db: Queryable, roster: RosterRecord, canOverr
     roster: summary(roster),
     departments,
     staff: staffRows
-      .map((s) => toStaffMember(s, roster.storeId, storeNames))
+      .map((s) => toStaffMember(s, roster.storeId, storeNames, travel))
       .sort((a, b) => a.employeeNo.localeCompare(b.employeeNo) || a.id.localeCompare(b.id)),
     shifts: shifts.map((s): RosterShiftDto => {
       const edit = latest.get(s.id);
@@ -515,9 +547,9 @@ export interface RecordedOverride {
 const RULE_OVERRIDE_NOTIFY_ROLES = ['PLN', 'HR'] as const;
 const UNFILLED_NOTIFY_ROLES = ['STM', 'PLN'] as const;
 
-async function notifyInScope(
+export async function notifyInScope(
   tx: AuditedTx,
-  roster: RosterRecord,
+  roster: Pick<RosterRecord, 'storeId' | 'regionId' | 'synthetic'>,
   roles: readonly string[],
   event: string,
   objectId: string,
@@ -680,4 +712,78 @@ export async function recordOverride(tx: AuditedTx, storeId: string, rosterId: s
     synthetic: roster.synthetic,
   });
   return { overrideId, shiftId, check };
+}
+
+// ---------------------------------------------------------------------------
+// Filling an open shift (task 17: accepted offers and borrowed cashiers)
+// ---------------------------------------------------------------------------
+
+/** A scheduled shift with its roster's store, status and provenance. */
+export interface ShiftOnRoster extends StoredShift {
+  readonly storeId: string;
+  readonly regionId: string;
+  readonly rosterStatus: RosterStatus;
+  readonly synthetic: boolean;
+}
+
+/** One shift with its roster; `lock` locks the shift row (serialises fills of the same shift, P17). */
+export async function loadShiftOnRoster(db: Queryable, shiftId: string, lock = false): Promise<ShiftOnRoster | null> {
+  if (!UUID.test(shiftId)) return null;
+  const row = await queryMaybe<ShiftRow & { store_id: string; region_id: string; roster_status: RosterStatus; synthetic: boolean }>(
+    db,
+    `SELECT ${SHIFT_COLUMNS}, r.store_id, st.region_id, r.status AS roster_status, sh.synthetic
+       FROM shift sh JOIN roster r ON r.id = sh.roster_id JOIN store st ON st.id = r.store_id
+      WHERE sh.id = $1${lock ? ' FOR UPDATE OF sh' : ''}`,
+    [shiftId],
+  );
+  return row
+    ? { ...toStoredShift(row), storeId: row.store_id, regionId: row.region_id, rosterStatus: row.roster_status, synthetic: row.synthetic }
+    : null;
+}
+
+/**
+ * P14/P16: the labor-rule check of `staffId` taking the open `shift`, with
+ * their shifts on every published roster (any store) counted. With `lock`
+ * the cashier is locked, so two fills for the same person are checked one
+ * after the other.
+ */
+export async function checkFill(db: Queryable, shift: StoredShift, staffId: string, lock = false): Promise<{ check: OverrideCheck; staff: StaffRow | null }> {
+  const [staff] = await loadStaff(db, [staffId], lock);
+  const plan: PlannedOverride = { fromStaffId: null, toStaffId: staffId, before: shift, after: { ...shift, staffId } };
+  const date = shiftLocalTimes(shift.startsAt, shift.endsAt).date;
+  const shifts = await staffShifts(db, [staffId], addDays(date, -WINDOW_DAYS), addDays(date, WINDOW_DAYS));
+  const rules = await laborRulesFor(db, staff?.synthetic ?? false);
+  const check = checkOverride(plan, { shifts, staff: staff ? [toDomainStaff(staff)] : [], rules });
+  return { check, staff: staff ?? null };
+}
+
+/** Records the ShiftOverride for an open shift filled by an offer or a borrow (P14); call inside the audited transaction. */
+export async function recordFill(
+  tx: AuditedTx,
+  shift: ShiftOnRoster,
+  staffId: string,
+  source: { readonly type: 'offer_fill'; readonly offerId: string } | { readonly type: 'borrow_fill'; readonly transferRequestId: string },
+  reason: string | null,
+): Promise<string> {
+  await tx.query(`UPDATE shift SET staff_id = $2 WHERE id = $1`, [shift.id, staffId]);
+  const before = shiftState(shift);
+  const { rows } = await tx.query<{ id: string }>(
+    `INSERT INTO shift_override (roster_id, shift_id, override_type, from_staff_id, to_staff_id, before_state, after_state,
+                                 reason, shift_offer_id, transfer_request_id, created_by, synthetic)
+     VALUES ($1, $2, $3, NULL, $4, $5::jsonb, $6::jsonb, $7, $8, $9, $10, $11) RETURNING id`,
+    [
+      shift.rosterId,
+      shift.id,
+      source.type,
+      staffId,
+      JSON.stringify(before),
+      JSON.stringify({ ...before, staffId }),
+      reason,
+      source.type === 'offer_fill' ? source.offerId : null,
+      source.type === 'borrow_fill' ? source.transferRequestId : null,
+      tx.actor.userId,
+      shift.synthetic,
+    ],
+  );
+  return rows[0]?.id ?? '';
 }

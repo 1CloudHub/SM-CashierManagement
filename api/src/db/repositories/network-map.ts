@@ -93,7 +93,7 @@ export function localInstant(date: string, hour: number): string {
   return new Date(day.getTime() + hour * 3_600_000).toISOString();
 }
 
-interface LocalShiftRow {
+export interface LocalShiftRow {
   id: string;
   staff_id: string | null;
   store_id: string;
@@ -103,13 +103,13 @@ interface LocalShiftRow {
   hours: string;
 }
 
-const LOCAL_SHIFT_COLUMNS = `s.id, s.staff_id, r.store_id, d.name AS department_name,
+export const LOCAL_SHIFT_COLUMNS = `s.id, s.staff_id, r.store_id, d.name AS department_name,
        to_char(s.starts_at AT TIME ZONE '${STORE_TIME_ZONE}', 'YYYY-MM-DD') AS local_date,
        (extract(hour FROM s.starts_at AT TIME ZONE '${STORE_TIME_ZONE}')
         + extract(minute FROM s.starts_at AT TIME ZONE '${STORE_TIME_ZONE}') / 60.0)::text AS local_hour,
        (extract(epoch FROM s.ends_at - s.starts_at) / 3600.0)::text AS hours`;
 
-function toWorkShift(r: LocalShiftRow): WorkShift {
+export function toWorkShift(r: LocalShiftRow): WorkShift {
   const round2 = (n: number) => Math.round(n * 100) / 100;
   const startHour = round2(Number(r.local_hour));
   return { shiftId: r.id, storeId: r.store_id, date: r.local_date, startHour, endHour: round2(startHour + Number(r.hours)) };
