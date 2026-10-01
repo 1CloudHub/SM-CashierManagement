@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { decodeViewState } from '@lanewise/shared'
 import { useApi } from '@/api'
+import { useActiveRole } from '@/app/active-role'
 import { AppLayout } from '@/app/app-layout'
 import { useRouter } from '@/app/router'
 import { useScreenCrumbs } from '@/app/screen-crumbs'
@@ -9,6 +10,7 @@ import { useMediaQuery } from '@/components/layout/use-media-query'
 import { ContextBar } from '@/features/context/context-bar'
 import { useContextOptions } from '@/features/context/use-context-data'
 import { useI18n } from '@/i18n'
+import { createOffersClient } from '@/features/offers'
 import { createRosterClient } from './api'
 import { RosterScreen } from './roster-screen'
 
@@ -25,6 +27,8 @@ export function RosterPage() {
   const { t } = useI18n()
   const api = useApi()
   const client = useMemo(() => createRosterClient(api), [api])
+  const offers = useMemo(() => createOffersClient(api), [api])
+  const { role } = useActiveRole()
   const { location } = useRouter()
   const crumbs = useScreenCrumbs(SCR_022)
   const options = useContextOptions()
@@ -34,7 +38,15 @@ export function RosterPage() {
   return (
     <AppLayout title={t(SCR_022.titleKey)} crumbs={crumbs} contextBar={<ContextBar screen="SCR-022" />}>
       <h1 className="text-h1 text-text">{t(SCR_022.titleKey)}</h1>
-      <RosterScreen key={storeId ?? ''} client={client} storeId={storeId} departmentId={view.dept ?? null} isPhone={isPhone} />
+      <RosterScreen
+        key={storeId ?? ''}
+        client={client}
+        storeId={storeId}
+        departmentId={view.dept ?? null}
+        isPhone={isPhone}
+        offers={offers}
+        role={role}
+      />
     </AppLayout>
   )
 }

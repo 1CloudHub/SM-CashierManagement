@@ -1,6 +1,9 @@
+import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { CfnOutput, Duration, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
 import type * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as logs from 'aws-cdk-lib/aws-logs';
@@ -18,14 +21,30 @@ export interface JobsStackProps extends StackProps {
   /** Database connection settings from {@link DataStack} (host, name, secret ARN, TLS). */
   readonly dbEnvironment: Record<string, string>;
   /**
-   * Directory with the worker code (`index.mjs`, `handler` export). Defaults
-   * to the skeleton in `infra/lambda/jobs-worker`; task 14.2 points this at
-   * the bundled worker from /api.
+   * Directory with the worker code (`index.mjs`, `handler` export). The app
+   * (bin/infra.ts) deploys the task 14.2 worker bundled from /api
+   * (`API_WORKER_BUNDLE_DIR`); the default is the skeleton in
+   * `infra/lambda/jobs-worker`, which keeps stack unit tests independent of
+   * an API build.
    */
   readonly workerBundleDir?: string;
 }
 
 export const DEFAULT_WORKER_BUNDLE_DIR = path.join(__dirname, '..', 'lambda', 'jobs-worker');
+
+/** The background-job worker bundled by `npm run build` in /api (`api/dist/jobs-worker`, task 14.2). */
+export const API_WORKER_BUNDLE_DIR = path.join(__dirname, '..', '..', 'api', 'dist', 'jobs-worker');
+
+/** Fails synth early (with how to fix it) when the API worker bundle has not been built. */
+export function assertWorkerBundle(dir: string): string {
+  if (!fs.existsSync(path.join(dir, 'index.mjs'))) {
+    throw new Error(
+      `Jobs worker bundle not found at ${dir}/index.mjs. Build it first: ` +
+        '(cd packages/shared && npm ci && npm run build) && (cd packages/domain && npm ci && npm run build) && (cd api && npm ci && npm run build)',
+    );
+  }
+  return dir;
+}
 
 /**
  * Background jobs (spec task 24 for task 14.2, ADR-0002): an encrypted SQS
@@ -37,6 +56,7 @@ export class JobsStack extends Stack {
   public readonly queue: sqs.Queue;
   public readonly deadLetterQueue: sqs.Queue;
   public readonly worker: lambda.Function;
+  public readonly offerExpirySchedule: events.Rule;
 
   constructor(scope: Construct, id: string, props: JobsStackProps) {
     super(scope, id, props);
@@ -94,6 +114,14 @@ export class JobsStack extends Stack {
         maxConcurrency: jobs.maxConcurrency,
       }),
     );
+
+    // Task 17.1: shift offers expire 30 minutes after they are sent (Req 13.2);
+    // the worker's sweep marks due offers expired and notifies the senders.
+    this.offerExpirySchedule = new events.Rule(this, 'OfferExpirySweep', {
+      description: 'Expires LaneWise shift offers past their 30 minutes and notifies the senders (task 17.1).',
+      schedule: events.Schedule.rate(Duration.minutes(1)),
+      targets: [new eventsTargets.LambdaFunction(this.worker, { retryAttempts: 0 })],
+    });
 
     new CfnOutput(this, 'JobsQueueUrl', {
       value: this.queue.queueUrl,

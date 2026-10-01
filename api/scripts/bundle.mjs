@@ -63,3 +63,10 @@ await build({
   entryPoints: { index: join(root, 'src', 'triggers', 'pre-sign-up.ts') },
   outdir: preSignUpOut,
 });
+
+// `dist/jobs-worker/index.mjs` is the background-job worker (task 14.2):
+// hiring plans and long rosters from the SQS jobs queue, deployed by the CDK
+// JobsStack (infra/lib/jobs-stack.ts) with handler `index.handler`.
+const jobsWorkerOut = join(root, 'dist', 'jobs-worker');
+await rm(jobsWorkerOut, { recursive: true, force: true });
+await build({ ...common, entryPoints: { index: join(root, 'src', 'jobs', 'worker.ts') }, outdir: jobsWorkerOut });

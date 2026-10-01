@@ -1,3 +1,4 @@
+import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { App } from 'aws-cdk-lib';
@@ -7,7 +8,7 @@ import { resolveEnvironment, type EnvironmentConfig } from '../config/environmen
 import { ApiStack } from '../lib/api-stack';
 import { AuthStack } from '../lib/auth-stack';
 import { DataStack } from '../lib/data-stack';
-import { JobsStack } from '../lib/jobs-stack';
+import { API_WORKER_BUNDLE_DIR, JobsStack, assertWorkerBundle } from '../lib/jobs-stack';
 import { LocationStack } from '../lib/location-stack';
 import { grantSesSend, sesEnvironment } from '../lib/notifications';
 
@@ -24,7 +25,7 @@ function synth(config: EnvironmentConfig = resolveEnvironment('prod')) {
     dbSecret: data.dbSecret,
     dbEnvironment: data.dbEnvironment,
   });
-  const location = new LocationStack(app, 'Test-Location', { config });
+  const location = new LocationStack(app, 'Test-Location', { config, mapReferers: ['https://lanewise.example.com'] });
   const api = new ApiStack(app, 'Test-Api', {
     config,
     userPool: auth.userPool,
@@ -87,6 +88,11 @@ describe('Data stack — network', () => {
         ServiceName: Match.objectLike({ 'Fn::Join': ['', Match.arrayWith([`.${name}`])] }),
       });
     }
+  });
+
+  it('reaches the SES API through a VPC endpoint so notification email works without NAT (task 19)', () => {
+    expect(prod.data.interfaceEndpoints).toContain('email');
+    expect(prod.data.natGateways).toBe(0);
   });
 
   it('resolves availability zones at deploy time (no synth-time lookup)', () => {
@@ -246,6 +252,15 @@ describe('Jobs stack', () => {
     jobs.hasResourceProperties('AWS::SQS::Queue', { QueueName: 'lanewise-prod-jobs-dlq', SqsManagedSseEnabled: true });
   });
 
+  it('invokes the worker every minute for the shift-offer expiry sweep (task 17.1)', () => {
+    jobs.hasResourceProperties('AWS::Events::Rule', {
+      ScheduleExpression: 'rate(1 minute)',
+      State: 'ENABLED',
+      Targets: Match.arrayWith([Match.objectLike({ Arn: Match.anyValue(), RetryPolicy: { MaximumRetryAttempts: 0 } })]),
+    });
+    jobs.hasResourceProperties('AWS::Lambda::Permission', { Action: 'lambda:InvokeFunction', Principal: 'events.amazonaws.com' });
+  });
+
   it('runs the worker in the VPC with partial batch failures and capped concurrency', () => {
     jobs.hasResourceProperties('AWS::Lambda::Function', {
       FunctionName: 'lanewise-prod-jobs-worker',
@@ -255,6 +270,13 @@ describe('Jobs stack', () => {
       FunctionResponseTypes: ['ReportBatchItemFailures'],
       ScalingConfig: { MaximumConcurrency: prod.jobs.maxConcurrency },
     });
+  });
+
+  it('deploys the task 14.2 worker bundled from /api, and refuses to synth without it', () => {
+    expect(assertWorkerBundle(API_WORKER_BUNDLE_DIR)).toBe(API_WORKER_BUNDLE_DIR);
+    expect(() => assertWorkerBundle('/nonexistent/jobs-worker')).toThrow(/Jobs worker bundle not found/);
+    const source = fs.readFileSync(path.join(__dirname, '..', 'bin', 'infra.ts'), 'utf8');
+    expect(source).toMatch(/workerBundleDir: assertWorkerBundle\(API_WORKER_BUNDLE_DIR\)/);
   });
 });
 
@@ -268,6 +290,25 @@ describe('Location stack', () => {
       CalculatorName: 'lanewise-prod-routes',
       DataSource: prod.location.dataSource,
     });
+  });
+
+  it('creates a browser map key that can only read this map, only from the SPA origins (task 16.1)', () => {
+    location.resourceCountIs('AWS::Location::APIKey', 1);
+    location.hasResourceProperties('AWS::Location::APIKey', {
+      KeyName: 'lanewise-prod-map-key',
+      NoExpiry: true,
+      Restrictions: {
+        AllowActions: ['geo:GetMap*'],
+        AllowResources: [{ 'Fn::GetAtt': [Match.stringLikeRegexp('^Map'), 'Arn'] }],
+        AllowReferers: ['https://lanewise.example.com/*'],
+      },
+    });
+    location.hasOutput('MapApiKeyName', { Value: 'lanewise-prod-map-key' });
+  });
+
+  it('creates no browser map key without SPA origins', () => {
+    const bare = Template.fromStack(new LocationStack(new App(), 'Bare-Location', { config: resolveEnvironment('prod') }));
+    bare.resourceCountIs('AWS::Location::APIKey', 0);
   });
 });
 

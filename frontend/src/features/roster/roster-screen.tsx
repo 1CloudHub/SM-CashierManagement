@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
-import type {
-  IsoDate,
-  LaborBreach,
-  OverrideCheck,
-  ReplacementCandidate,
-  RosterDetail,
-  RosterSummary,
-  ShiftOverrideRequest,
+import {
+  can,
+  type IsoDate,
+  type LaborBreach,
+  type OverrideCheck,
+  type ReplacementCandidate,
+  type RoleCode,
+  type RosterDetail,
+  type RosterSummary,
+  type ShiftOverrideRequest,
 } from '@lanewise/shared'
 import { ApiError } from '@/api'
 import { useAnnouncer } from '@/components/a11y'
@@ -18,6 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { StateBlock } from '@/components/ui/state-block'
 import { STATUS_META } from '@/components/ui/status'
 import { cn } from '@/lib/utils'
+import { BorrowRequests, OpenShiftsBanner, type OffersClient } from '@/features/offers'
 import type { RosterClient } from './api'
 import { checkBreaches, dayRows, gridRows, monthCoverage, rosterTotals, toRosterModel, type RosterModel } from './adapt'
 import { DayTimeline } from './day-timeline'
@@ -39,6 +42,12 @@ export interface RosterScreenProps {
   departmentId?: string | null
   /** Phones: Day/Week become lists and only emergency off / reassign is editable (req. 6.5). */
   isPhone?: boolean
+  /** Task 17: offers and borrowing for the roster's open shifts (omitted → not shown). */
+  offers?: OffersClient
+  /** The active role, for "Send open-shift offers" and "Approve lending own staff". */
+  role?: RoleCode
+  /** Where "Find cover nearby" leads (SCR-026). */
+  mapHref?: string
 }
 
 /** What the shift editor is open on: an existing shift (maybe with dragged times) or a new one. */
@@ -83,7 +92,7 @@ function toReplacements(f: RosterFormat, candidates: readonly ReplacementCandida
  * Only the Store Manager edits (`canOverride` from the API); everyone else
  * reads.
  */
-export function RosterScreen({ client, storeId, departmentId = null, isPhone = false }: RosterScreenProps) {
+export function RosterScreen({ client, storeId, departmentId = null, isPhone = false, offers, role, mapHref = '/plan/map' }: RosterScreenProps) {
   const f = useRosterFormat()
   const uid = useId()
   const { announce } = useAnnouncer()
@@ -100,6 +109,8 @@ export function RosterScreen({ client, storeId, departmentId = null, isPhone = f
   const [draftCheck, setDraftCheck] = useState<OverrideCheck | null>(null)
   const [pendingDraft, setPendingDraft] = useState<ShiftOverrideRequest | null>(null)
   const [replacements, setReplacements] = useState<readonly ReplacementCandidate[] | null>(null)
+  /** Bumped when an offer or borrow may have filled shifts, to reload the roster and its offers. */
+  const [reloadKey, setReloadKey] = useState(0)
 
   // Rosters of the store; pick the context department's (else the first).
   useEffect(() => {
@@ -133,7 +144,7 @@ export function RosterScreen({ client, storeId, departmentId = null, isPhone = f
     return () => {
       live = false
     }
-  }, [client, storeId, rosterId])
+  }, [client, storeId, rosterId, reloadKey])
 
   const model: RosterModel | null = useMemo(() => (detail ? toRosterModel(detail) : null), [detail])
 
@@ -334,10 +345,22 @@ export function RosterScreen({ client, storeId, departmentId = null, isPhone = f
         <Alert tone={notice.tone} title={notice.text} />
       )}
 
+      {offers && role && (
+        <OpenShiftsBanner
+          client={offers}
+          storeId={detail.roster.storeId}
+          rosterId={detail.roster.id}
+          openShifts={model.openShifts}
+          canSend={detail.roster.status === 'published' && can(role, 'shift_offers_send', 'edit')}
+          mapHref={mapHref}
+          refreshKey={reloadKey}
+        />
+      )}
+
       <RosterZoom view={view} onViewChange={setView} anchor={anchor} onAnchorChange={setAnchor} renderView={renderView} />
       <RosterLegend departments={model.departments} />
 
-      <section aria-labelledby={`${uid}-checks`} className="border-2 border-outline bg-surface p-4">
+      <section aria-labelledby={`${uid}-checks`} className="border border-outline bg-surface p-4">
         <h2 id={`${uid}-checks`} className="text-h3 text-text">
           {f.t('roster.screen.laborChecks')}
         </h2>
@@ -360,7 +383,7 @@ export function RosterScreen({ client, storeId, departmentId = null, isPhone = f
         )}
       </section>
 
-      <section aria-labelledby={`${uid}-changes`} className="border-2 border-outline bg-surface p-4">
+      <section aria-labelledby={`${uid}-changes`} className="border border-outline bg-surface p-4">
         <h2 id={`${uid}-changes`} className="text-h3 text-text">
           {f.t('roster.screen.changes')}
         </h2>
@@ -369,7 +392,7 @@ export function RosterScreen({ client, storeId, departmentId = null, isPhone = f
         ) : (
           <ul className="m-0 list-none p-0 text-body-sm">
             {sortedChanges.map((o) => (
-              <li key={o.id} className="border-b-2 border-outline-subtle py-1">
+              <li key={o.id} className="border-b border-outline-subtle py-1">
                 <span aria-hidden="true">✎ </span>
                 {f.t('roster.screen.changeBy', { change: f.t(`roster.override.${o.type}`), by: o.by, at: f.dateTime(o.at) })}
                 {o.reason && <span className="block text-text-muted">{f.t('roster.screen.changeReason', { reason: o.reason })}</span>}
@@ -378,6 +401,17 @@ export function RosterScreen({ client, storeId, departmentId = null, isPhone = f
           </ul>
         )}
       </section>
+
+      {offers && role && (
+        <BorrowRequests
+          client={offers}
+          storeId={detail.roster.storeId}
+          role={role}
+          canLend={can(role, 'staff_lending', 'edit')}
+          refreshKey={reloadKey}
+          onChanged={() => setReloadKey((k) => k + 1)}
+        />
+      )}
 
       {editing && editorCashier && replacements !== null && (
         <ShiftEditor

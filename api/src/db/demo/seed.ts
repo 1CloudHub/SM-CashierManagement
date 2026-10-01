@@ -78,9 +78,10 @@ const LOCK_KEY = 'lanewise.demo_seed';
  */
 async function wipeSyntheticData(tx: Tx): Promise<Record<string, number>> {
   const steps: readonly (readonly [string, string])[] = [
+    // Overrides first: an offer / borrow fill references its offer or request (0170).
+    ['shift_override', 'DELETE FROM shift_override WHERE synthetic'],
     ['shift_offer', 'DELETE FROM shift_offer WHERE synthetic'],
     ['transfer_request', 'DELETE FROM transfer_request WHERE synthetic'],
-    ['shift_override', 'DELETE FROM shift_override WHERE synthetic'],
     ['staff_availability', 'DELETE FROM staff_availability WHERE synthetic'],
     ['staff_request', 'DELETE FROM staff_request WHERE synthetic'],
     ['shift', 'DELETE FROM shift WHERE synthetic'],
