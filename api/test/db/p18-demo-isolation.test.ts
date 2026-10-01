@@ -152,6 +152,10 @@ async function insertRealWorld(tx: Tx, w: RealWorld): Promise<void> {
         );
         if (w.homeAreas) {
           await tx.query(
+            `INSERT INTO staff_consent (staff_id, purpose, text_version, text_locale) VALUES ($1, 'home_area', 1, 'en')`,
+            [staff.id],
+          );
+          await tx.query(
             `INSERT INTO staff_home_area (staff_id, barangay_code, consent_at, max_travel_min) VALUES ($1, $2, now(), 30)`,
             [staff.id, barangay],
           );

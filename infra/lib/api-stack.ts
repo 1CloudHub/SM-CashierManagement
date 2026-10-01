@@ -96,6 +96,15 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'POST', path: '/scenarios/{scenarioId}/run' },
   { method: 'POST', path: '/scenarios/{scenarioId}/submit' },
   { method: 'POST', path: '/scenarios/{scenarioId}/archive' },
+  // Task 15: home-area consent and location privacy.
+  { method: 'GET', path: '/me/consents' },
+  { method: 'POST', path: '/me/consents' },
+  { method: 'DELETE', path: '/me/consents/{purpose}' },
+  { method: 'GET', path: '/me/home-area' },
+  { method: 'PUT', path: '/me/home-area' },
+  { method: 'DELETE', path: '/me/home-area' },
+  { method: 'GET', path: '/me/home-area/barangays' },
+  { method: 'GET', path: '/staff/{staffId}/home-area' },
   // Task 12: approvals — queue, tracker, step decisions, off-system record (SCR-033).
   { method: 'GET', path: '/approvals' },
   { method: 'GET', path: '/approvals/{scenarioId}' },
