@@ -115,7 +115,7 @@ export function JobProgress({ job }: { job: PlanningJob }) {
         aria-valuemax={100}
         aria-valuenow={pct}
         aria-valuetext={t('planning.job.units', { done: formatNumber(job.unitsDone), total: formatNumber(job.unitsTotal) })}
-        className="h-3 w-full border-2 border-outline bg-surface"
+        className="h-3 w-full border border-outline bg-surface"
       >
         <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
       </div>

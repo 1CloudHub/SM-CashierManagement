@@ -123,6 +123,7 @@ export const planningEn: Bundle = {
   // ── SCR-020 Network view ────────────────────────────────────────────────
   'planning.network.title': 'All stores and departments',
   'planning.network.scopeLine': '{stores} stores · {departments} departments',
+  'planning.network.scopeLine.oneStore': '{stores} store · {departments} departments',
   'planning.network.overTitle': 'Over installed lanes',
   'planning.network.overItem': '{store} · {department}: needs {needs}, has {has} ({hours} h)',
   'planning.network.byHour': 'Cashiers needed on lanes by hour',
@@ -330,6 +331,7 @@ export const planningFil: Bundle = {
   // ── SCR-020 Network view ────────────────────────────────────────────────
   'planning.network.title': 'Lahat ng tindahan at departamento',
   'planning.network.scopeLine': '{stores} tindahan · {departments} departamento',
+  'planning.network.scopeLine.oneStore': '{stores} tindahan · {departments} departamento',
   'planning.network.overTitle': 'Lampas sa naka-install na lane',
   'planning.network.overItem': '{store} · {department}: kailangan {needs}, mayroon {has} ({hours} oras)',
   'planning.network.byHour': 'Mga cashier na kailangan sa lane bawat oras',

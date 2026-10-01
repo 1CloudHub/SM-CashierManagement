@@ -252,7 +252,7 @@ function DepartmentBody({ view, client, role, state }: { view: DepartmentDayView
 
       {can(role, 'weekly_roster', 'edit') && <SeasonRoster client={client} view={view} />}
 
-      <details className="border-2 border-outline p-3">
+      <details className="border border-outline p-3">
         <summary className="cursor-pointer text-body text-text font-weight-semibold">{t('planning.howItWorks')}</summary>
         <p className="mt-2 text-body-sm text-text">{t('planning.department.howItWorks', { shrinkage: formatPercent(view.shrinkage) })}</p>
       </details>

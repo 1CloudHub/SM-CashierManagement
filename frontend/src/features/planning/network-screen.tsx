@@ -165,7 +165,7 @@ function NetworkBody({
           <Cluster gap={2}>
             <StatusPill tone={view.dayType === 'regular' ? 'neutral' : 'info'}>{t(`planning.dayType.${view.dayType}`)}</StatusPill>
             <span className="text-body-sm text-text-muted">
-              {t('planning.network.scopeLine', { stores: formatNumber(k.stores), departments: formatNumber(k.departments) })}
+              {t(k.stores === 1 ? 'planning.network.scopeLine.oneStore' : 'planning.network.scopeLine', { stores: formatNumber(k.stores), departments: formatNumber(k.departments) })}
             </span>
           </Cluster>
         </Stack>
