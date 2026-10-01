@@ -25,7 +25,7 @@ function synth(config: EnvironmentConfig = resolveEnvironment('prod')) {
     dbSecret: data.dbSecret,
     dbEnvironment: data.dbEnvironment,
   });
-  const location = new LocationStack(app, 'Test-Location', { config });
+  const location = new LocationStack(app, 'Test-Location', { config, mapReferers: ['https://lanewise.example.com'] });
   const api = new ApiStack(app, 'Test-Api', {
     config,
     userPool: auth.userPool,
@@ -281,6 +281,25 @@ describe('Location stack', () => {
       CalculatorName: 'lanewise-prod-routes',
       DataSource: prod.location.dataSource,
     });
+  });
+
+  it('creates a browser map key that can only read this map, only from the SPA origins (task 16.1)', () => {
+    location.resourceCountIs('AWS::Location::APIKey', 1);
+    location.hasResourceProperties('AWS::Location::APIKey', {
+      KeyName: 'lanewise-prod-map-key',
+      NoExpiry: true,
+      Restrictions: {
+        AllowActions: ['geo:GetMap*'],
+        AllowResources: [{ 'Fn::GetAtt': [Match.stringLikeRegexp('^Map'), 'Arn'] }],
+        AllowReferers: ['https://lanewise.example.com/*'],
+      },
+    });
+    location.hasOutput('MapApiKeyName', { Value: 'lanewise-prod-map-key' });
+  });
+
+  it('creates no browser map key without SPA origins', () => {
+    const bare = Template.fromStack(new LocationStack(new App(), 'Bare-Location', { config: resolveEnvironment('prod') }));
+    bare.resourceCountIs('AWS::Location::APIKey', 0);
   });
 });
 

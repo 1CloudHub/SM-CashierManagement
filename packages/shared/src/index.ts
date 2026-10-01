@@ -9,6 +9,8 @@ export * from './auth.js';
 export * from './cost.js';
 export * from './entities.js';
 export * from './ingestion.js';
+export * from './location-privacy.js';
+export * from './network-map.js';
 export * from './provenance.js';
 export * from './rbac.js';
 export * from './roles.js';
