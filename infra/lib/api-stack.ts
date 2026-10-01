@@ -94,6 +94,10 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'DELETE', path: '/me/home-area' },
   { method: 'GET', path: '/me/home-area/barangays' },
   { method: 'GET', path: '/staff/{staffId}/home-area' },
+  // Task 16: network map and auto-match (SCR-026).
+  { method: 'GET', path: '/network-map' },
+  { method: 'GET', path: '/network-map/stores/{storeId}/candidates' },
+  { method: 'GET', path: '/network-map/auto-match' },
 ];
 
 /** Request headers the SPA sends: the defaults plus the demo role switcher's `X-Active-Role`. */

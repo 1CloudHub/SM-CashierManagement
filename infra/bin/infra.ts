@@ -64,6 +64,8 @@ const jobs = new JobsStack(app, `${prefix}-Jobs`, {
 const location = new LocationStack(app, `${prefix}-Location`, {
   env,
   config,
+  // Browser map key for the SPA's network map (task 16.1), restricted to the SPA origins.
+  mapReferers: spa.spaOrigins,
   description: `LaneWise Amazon Location Service (map + route calculator) — ${config.envName}.`,
 });
 

@@ -9,8 +9,9 @@ version: 0.2
 #   1. `cdk deploy` all LaneWise-prod stacks (SPA hosting, API/Lambda + API
 #      Gateway, and supporting stacks). CloudFormation reconciles infra changes.
 #   2. Write the SPA runtime config (frontend/dist/runtime-config.json: Cognito
-#      user pool + app client ids, region, API URL) from the Auth/Api stack
-#      outputs, so the same SPA build works in any environment.
+#      user pool + app client ids, region, API URL, and the network map's
+#      Amazon Location map name + browser map key) from the Auth/Api/Location
+#      stack outputs, so the same SPA build works in any environment.
 #   3. Upload the freshly built SPA (frontend/dist) to the SPA S3 bucket.
 #   4. Invalidate the CloudFront distribution so the new SPA is served
 #      immediately.
@@ -31,6 +32,7 @@ env:
     SPA_STACK_NAME: LaneWise-prod-SpaHosting
     AUTH_STACK_NAME: LaneWise-prod-Auth
     API_STACK_NAME: LaneWise-prod-Api
+    LOCATION_STACK_NAME: LaneWise-prod-Location
 
 phases:
   install:
@@ -82,7 +84,16 @@ phases:
         export USER_POOL_CLIENT_ID=$(stack_output "$AUTH_STACK_NAME" UserPoolClientId)
         export SELF_SIGN_UP_ENABLED=$(stack_output "$AUTH_STACK_NAME" SelfSignUpEnabled)
         export API_URL=$(stack_output "$API_STACK_NAME" ApiUrl)
-        node -e 'const e=process.env; const region=e.USER_POOL_ID.split("_")[0]; require("fs").writeFileSync(process.argv[1], JSON.stringify({region, userPoolId:e.USER_POOL_ID, userPoolClientId:e.USER_POOL_CLIENT_ID, selfSignUp:e.SELF_SIGN_UP_ENABLED==="true", apiUrl:e.API_URL}, null, 2));' "$CODEBUILD_SRC_DIR/frontend/dist/runtime-config.json"
+        # Network map (task 16.1): map name + the referer-restricted, read-only
+        # browser map key. Best-effort: without them the SPA shows its
+        # schematic map, so a lookup failure must not fail the deploy.
+        export MAP_NAME=$(stack_output "$LOCATION_STACK_NAME" MapName || true)
+        MAP_KEY_NAME=$(stack_output "$LOCATION_STACK_NAME" MapApiKeyName || true)
+        export MAP_API_KEY=""
+        if [ -n "$MAP_KEY_NAME" ] && [ "$MAP_KEY_NAME" != "None" ]; then
+          MAP_API_KEY=$(aws location describe-key --key-name "$MAP_KEY_NAME" --query Key --output text || true)
+        fi
+        node -e 'const e=process.env; const region=e.USER_POOL_ID.split("_")[0]; const ok=(v)=>v&&v!=="None"; const map=ok(e.MAP_NAME)&&ok(e.MAP_API_KEY)?{map:{region, mapName:e.MAP_NAME, apiKey:e.MAP_API_KEY}}:{}; require("fs").writeFileSync(process.argv[1], JSON.stringify({region, userPoolId:e.USER_POOL_ID, userPoolClientId:e.USER_POOL_CLIENT_ID, selfSignUp:e.SELF_SIGN_UP_ENABLED==="true", apiUrl:e.API_URL, ...map}, null, 2));' "$CODEBUILD_SRC_DIR/frontend/dist/runtime-config.json"
         cat "$CODEBUILD_SRC_DIR/frontend/dist/runtime-config.json"
       # Upload the built SPA. --delete removes stale assets no longer in dist.
       - aws s3 sync "$CODEBUILD_SRC_DIR/frontend/dist" "s3://$SPA_BUCKET" --delete

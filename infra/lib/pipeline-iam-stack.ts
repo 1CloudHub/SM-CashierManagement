@@ -208,6 +208,16 @@ export class PipelineIamStack extends Stack {
       }),
     );
 
+    // Read the SPA map key (task 16.1) to write it into runtime-config.json.
+    // Scoped to LaneWise map keys; the key itself only reads one map's tiles.
+    this.codeBuildRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'ReadLaneWiseMapKey',
+        actions: ['geo:DescribeKey'],
+        resources: [`arn:${Aws.PARTITION}:geo:${Aws.REGION}:${Aws.ACCOUNT_ID}:api-key/lanewise-*`],
+      }),
+    );
+
     // Invalidate the CloudFront distribution so the new SPA is served
     // immediately. CreateInvalidation does not support resource-level scoping in
     // IAM, so it is granted on `*` (the only unavoidable wildcard-resource
