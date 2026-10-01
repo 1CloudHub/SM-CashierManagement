@@ -2,6 +2,7 @@ import { UserRound } from 'lucide-react'
 import { AppLink } from '@/app/router'
 import { AppShell, Stack } from '@/components/layout'
 import { Button, buttonVariants } from '@/components/ui'
+import { ProfileHomeArea } from '@/features/location-privacy'
 import { LanguageSwitcher, useI18n } from '@/i18n'
 import { useAuth } from './auth-context'
 import { useDocumentTitle } from './use-document-title'
@@ -33,8 +34,9 @@ export function AccountMenu() {
 
 /**
  * SCR-080 Profile and preferences — the passkeys section (task 7.1,
- * requirement 1.9). The remaining SCR-080 sections (default scope, home area,
- * notification preferences) land with their features.
+ * requirement 1.9) and, for Staff, home area and shift offers (task 15). The
+ * remaining SCR-080 sections (default scope, notification preferences) land
+ * with their features.
  */
 export function ProfileScreen() {
   const { t } = useI18n()
@@ -68,6 +70,7 @@ export function ProfileScreen() {
           {user && <p className="mt-1 text-body text-text-muted">{t('profile.signedInAs', { email: user.email })}</p>}
         </div>
         <PasskeyManager />
+        <ProfileHomeArea />
       </Stack>
     </AppShell>
   )
