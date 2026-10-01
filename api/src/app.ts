@@ -14,6 +14,7 @@ import { registerNetworkMapRoutes } from './routes/network-map.js';
 import { registerSavedViewRoutes } from './routes/saved-views.js';
 import { registerSearchRoutes } from './routes/search.js';
 import { registerRuleRoutes } from './routes/rules.js';
+import { registerScenarioRoutes } from './routes/scenarios.js';
 import { registerStoreRoutes } from './routes/stores.js';
 
 export interface AppDeps {
@@ -67,6 +68,7 @@ export function createApp(deps: AppDeps = depsFromEnv()): Router {
   registerSavedViewRoutes(router, deps);
   registerIngestionRoutes(router, deps);
   registerRuleRoutes(router, deps);
+  registerScenarioRoutes(router, deps);
   registerLocationPrivacyRoutes(router, deps);
   registerNetworkMapRoutes(router, deps);
   return router.assertGuarded();

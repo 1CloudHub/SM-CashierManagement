@@ -35,8 +35,9 @@ import { dataEn, dataFil } from './data-messages'
 import { locationPrivacyEn, locationPrivacyFil } from './location-privacy-messages'
 import { networkMapEn, networkMapFil } from './network-map-messages'
 import { rosterEn, rosterFil } from './roster-messages'
-import { searchEn, searchFil } from './search-messages'
 import { rulesEn, rulesFil } from './rules-messages'
+import { scenariosEn, scenariosFil } from './scenarios-messages'
+import { searchEn, searchFil } from './search-messages'
 import type { Bundle, Locale } from './types'
 
 const en: Bundle = {
@@ -311,6 +312,6 @@ const fil: Bundle = {
 
 /** All bundles, keyed by locale. English is the canonical key set. */
 export const BUNDLES: Record<Locale, Bundle> = {
-  en: { ...en, ...authEn, ...appEn, ...rosterEn, ...searchEn, ...dataEn, ...rulesEn, ...locationPrivacyEn, ...networkMapEn },
-  fil: { ...fil, ...authFil, ...appFil, ...rosterFil, ...searchFil, ...dataFil, ...rulesFil, ...locationPrivacyFil, ...networkMapFil },
+  en: { ...en, ...authEn, ...appEn, ...rosterEn, ...searchEn, ...dataEn, ...rulesEn, ...scenariosEn, ...locationPrivacyEn, ...networkMapEn },
+  fil: { ...fil, ...authFil, ...appFil, ...rosterFil, ...searchFil, ...dataFil, ...rulesFil, ...scenariosFil, ...locationPrivacyFil, ...networkMapFil },
 }

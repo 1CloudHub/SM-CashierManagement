@@ -221,8 +221,8 @@ async function insertStaff(tx: Tx, data: DemoDataset): Promise<void> {
          id uuid, "staffId" uuid, "startsAt" timestamptz, "endsAt" timestamptz, reason text)`,
     data.availability,
   );
-  // A home area needs an active home-area consent (task 15, migration 0150):
-  // seeded demo grants to consent text v1, with no granting user.
+  // A home area may exist only under an active home-area consent (task 15);
+  // seeded consents have no granting user.
   await insertJson(
     tx,
     `INSERT INTO staff_consent (id, staff_id, purpose, text_version, text_locale, granted_at, synthetic)
