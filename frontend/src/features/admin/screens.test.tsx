@@ -1,6 +1,6 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { configure, getConfig, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { axe } from 'vitest-axe'
 import { render } from '@testing-library/react'
 import { RBAC_RESOURCES, type FileDownload } from '@lanewise/shared'
@@ -10,13 +10,23 @@ import { renderApp, useLaptopViewport } from '@/test/app'
 import { createAdminClient } from './api'
 import { AuditScreen } from './audit-screen'
 
+// axe scans of a full screen (the SCR-072 matrix is 34 rows × 9 columns) take
+// seconds on Node 20 CI under a full parallel run — more than vitest's 5 s default.
+const AXE_TIMEOUT = 30_000
+
+// findBy*/waitFor wait up to 4 s here (default 1 s): these screens load, then
+// re-render after each mock call, which can take longer on a loaded CI runner.
+const defaultAsyncTimeout = getConfig().asyncUtilTimeout
+beforeAll(() => configure({ asyncUtilTimeout: 4000 }))
+afterAll(() => configure({ asyncUtilTimeout: defaultAsyncTimeout }))
+
 beforeEach(() => useLaptopViewport())
 afterEach(() => vi.unstubAllGlobals())
 
 const row = (name: string) => screen.getByRole('rowheader', { name }).closest('tr')!
 
 describe('SCR-070 Users', () => {
-  it('lists users with roles, scope and status, the demo banner, and passes axe', async () => {
+  it('lists users with roles, scope and status, the demo banner, and passes axe', { timeout: AXE_TIMEOUT }, async () => {
     const { container, log } = renderApp({ path: '/admin/users', role: 'ADM' })
     expect(await screen.findByRole('rowheader', { name: 'Ana Reyes' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1, name: 'Users' })).toBeInTheDocument()
@@ -64,7 +74,7 @@ describe('SCR-070 Users', () => {
 })
 
 describe('SCR-071 Invite / edit user', () => {
-  it('validates the work email against the allowlist and needs a role; passes axe', async () => {
+  it('validates the work email against the allowlist and needs a role; passes axe', { timeout: AXE_TIMEOUT }, async () => {
     const user = userEvent.setup()
     const { container, log } = renderApp({ path: '/admin/users/invite', role: 'ADM' })
     const email = await screen.findByRole('textbox', { name: /Work email/ })
@@ -125,7 +135,7 @@ describe('SCR-071 Invite / edit user', () => {
 })
 
 describe('SCR-072 Roles and permissions', () => {
-  it('renders every matrix row with letters and a text legend; passes axe', async () => {
+  it('renders every matrix row with letters and a text legend; passes axe', { timeout: AXE_TIMEOUT }, async () => {
     const { container } = renderApp({ path: '/admin/roles', role: 'ADM' })
     expect(screen.getByRole('heading', { level: 1, name: 'Roles and permissions' })).toBeInTheDocument()
     const table = screen.getByRole('table', { name: 'Permission matrix: capabilities by role' })
@@ -142,7 +152,7 @@ describe('SCR-072 Roles and permissions', () => {
 })
 
 describe('SCR-073 Audit log', () => {
-  it('lists events newest first with filters, exports CSV (recorded), and passes axe', async () => {
+  it('lists events newest first with filters, exports CSV (recorded), and passes axe', { timeout: AXE_TIMEOUT }, async () => {
     const user = userEvent.setup()
     const { container } = renderApp({ path: '/admin/audit', role: 'ADM' })
     const first = await screen.findAllByRole('rowheader')
