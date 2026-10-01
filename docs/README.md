@@ -14,6 +14,7 @@ Start with `00-governance/00-conventions.md` for naming, IDs and versioning.
 | 07 | Tech stack and testing | [07-tech-stack](07-tech-stack/) | Draft |
 | 08 | Deployment (git, CI/CD, AWS, CDK, environments) | [08-deployment](08-deployment/) | Draft |
 | 09 | Day 2 operations | [09-operations](09-operations/) | Draft |
+| 09 | Verification reports | [09-verification](09-verification/) | Draft |
 | 10 | Security and compliance | [10-security-compliance](10-security-compliance/) | Draft |
 | 11 | Planning and execution | [11-planning](11-planning/) | Draft |
 | — | Reference material (prototype v3) | [references](references/) | Read-only |

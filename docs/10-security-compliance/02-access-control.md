@@ -1,7 +1,7 @@
 ---
 id: SEC-002
 title: Access control
-version: 0.5.0
+version: 0.5.1
 status: Draft
 owner: TBD
 last_updated: 2026-10-01
@@ -35,7 +35,7 @@ and 3, properties P1, P11, P12. The matrix itself is design.md › RBAC matrix.
   role. Anything else is 403. No other client-supplied identity is read.
 - **Scope:** global, region(s), store(s) or self. An assigned role uses its
   assignment's scope; a demo role uses the demo scope (Store Manager = the demo QC
-  store, Staff = demo cashier PT-02, others global). List endpoints filter in SQL and
+  store `DEMO-SMSM-QC`, Staff = the seeded demo cashier `DEMO-MAIN-FT-001`, others global). List endpoints filter in SQL and
   re-check in code. A deep link to an object that is out of scope, missing or
   malformed returns the identical 404 ("This item doesn't exist or you don't have
   access to it."), so existence is never revealed. Self scope sees no store-wide data.
@@ -115,3 +115,4 @@ Implemented in task 7 (`infra/lib/auth-stack.ts`, `api/src/triggers/pre-sign-up.
 | 0.3.0 | 2026-10-01 | Claude | Permission matrix section (task 8.1: RBAC as data, route guards, active role, scope, no-leak 404) |
 | 0.4.0 | 2026-10-01 | Claude | SES sender for email one-time codes, custom-domain relying party, CORS allowlist |
 | 0.5.0 | 2026-10-01 | Claude | Cost visibility section (task 21: shared policy, server-side removal, CostValue) |
+| 0.5.1 | 2026-10-01 | Claude | Demo scopes name the seeded store and cashier (task 25 fix) |

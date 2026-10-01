@@ -32,7 +32,7 @@ const ALLOWED_STATUS = ['Draft', 'In Review', 'Approved', 'Superseded'];
 // ADRs follow the standard ADR lifecycle in addition to the doc workflow states.
 const ALLOWED_ADR_STATUS = ['Proposed', 'Accepted', 'Rejected', 'Deprecated', 'Superseded', ...ALLOWED_STATUS];
 const ALLOWED_ID_PREFIXES = [
-  'GOV', 'PRD', 'FS', 'DOM', 'NFR', 'SG', 'UX', 'TS', 'DEP', 'OPS', 'SEC', 'PLN', 'ADR',
+  'GOV', 'PRD', 'FS', 'DOM', 'NFR', 'SG', 'UX', 'TS', 'DEP', 'OPS', 'SEC', 'PLN', 'ADR', 'VER',
 ];
 const SEMVER_RE = /^\d+\.\d+\.\d+$/;
 const FILE_NAME_RE = /^\d{2}-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/;
