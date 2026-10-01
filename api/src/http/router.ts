@@ -1,6 +1,7 @@
 import type { Enforcer, RouteGuard } from '../auth/guards.js';
 import { shapeResponseCost } from './cost.js';
 import { errors } from './errors.js';
+import type { RequestContext } from '../context.js';
 import type { RouteHandler } from './types.js';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -57,6 +58,12 @@ function decodeSegment(raw: string): string {
 export interface RouterOptions {
   /** Runs non-public guards (api/src/auth/enforcer.ts). Required to register one. */
   readonly enforcer?: Enforcer;
+  /**
+   * Runs after every successful (2xx) non-GET request, before the response is
+   * returned — the app dispatches notification emails here (task 19). Errors
+   * are logged and never change the response.
+   */
+  readonly afterWrite?: (context: RequestContext) => Promise<void>;
 }
 
 type RouteArgs = [handler: RouteHandler] | [guard: RouteGuard, handler: RouteHandler];
@@ -77,9 +84,11 @@ type RouteArgs = [handler: RouteHandler] | [guard: RouteGuard, handler: RouteHan
 export class Router {
   private readonly table: Route[] = [];
   private readonly enforcer: Enforcer | undefined;
+  private readonly afterWrite: RouterOptions['afterWrite'];
 
   constructor(options: RouterOptions = {}) {
     this.enforcer = options.enforcer;
+    this.afterWrite = options.afterWrite;
   }
 
   add(method: HttpMethod, pattern: string, ...args: RouteArgs): this {
@@ -90,6 +99,7 @@ export class Router {
       throw new Error(`Duplicate route: ${method} ${pattern}`);
     }
     const enforcer = this.enforcer;
+    const afterWrite = this.afterWrite;
     if (guard !== null && guard.kind !== 'public' && !enforcer) {
       throw new Error(`Route ${method} ${pattern} needs an enforcer for its ${guard.kind} guard`);
     }
@@ -98,7 +108,15 @@ export class Router {
     const guarded: RouteHandler = async (request, context) => {
       const authorised =
         enforcer && guard !== null && guard.kind !== 'public' ? await enforcer(guard, request, context) : context;
-      return shapeResponseCost(await handler(request, authorised), authorised.principal);
+      const response = await handler(request, authorised);
+      if (afterWrite && method !== 'GET' && response.statusCode >= 200 && response.statusCode < 300) {
+        try {
+          await afterWrite(authorised);
+        } catch (err) {
+          authorised.logger.warn('after-write hook failed', { err });
+        }
+      }
+      return shapeResponseCost(response, authorised.principal);
     };
     this.table.push({ method, pattern: `/${splitPath(pattern).join('/')}`, segments, handler: guarded, guard });
     return this;

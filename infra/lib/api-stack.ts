@@ -133,6 +133,12 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'GET', path: '/scenarios/{scenarioId}/rosters/jobs/{jobId}' },
   { method: 'GET', path: '/scenarios/{scenarioId}/summary' },
   { method: 'GET', path: '/scenarios/{scenarioId}/summary/export' },
+  // Task 19: notifications — the bell, SCR-040 and per-user preferences (own records only).
+  { method: 'GET', path: '/notifications' },
+  { method: 'POST', path: '/notifications/read-all' },
+  { method: 'POST', path: '/notifications/{notificationId}/read' },
+  { method: 'GET', path: '/notification-preferences' },
+  { method: 'PUT', path: '/notification-preferences' },
 ];
 
 /** Request headers the SPA sends: the defaults plus the demo role switcher's `X-Active-Role`. */
