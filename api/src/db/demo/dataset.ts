@@ -301,8 +301,17 @@ function nextDay(date: string): string {
 function ruleVersions(): DemoRuleVersionRow[] {
   const holidays = dateRange('2026-01-01', '2026-12-31').flatMap((date) => {
     const h = holidayOn(date);
-    return h ? [{ date, id: h.id, name: h.name, dayType: h.dayType }] : [];
+    return h ? [{ date, name: h.name, dayType: h.dayType }] : [];
   });
+  // Payloads hold only the rule values, in the shape the rule API validates
+  // (`validateRulePayload`): a version's id and effective date live on the row,
+  // so "New draft" from a seeded version passes validation (J6).
+  const values = (rule: Readonly<Record<string, unknown>>): Record<string, unknown> => {
+    const out = { ...rule };
+    delete out.id;
+    delete out.effectiveFrom;
+    return out;
+  };
   const note = 'Demo assumption (DOM-003 scaffold); synthetic, not SM policy.';
   const v = (
     type: DemoRuleSetType,
@@ -319,20 +328,19 @@ function ruleVersions(): DemoRuleVersionRow[] {
     changeNote: note,
   });
   return [
-    v('holidays', 'Holidays', false, { calendarYear: 2026, holidays }),
-    v('wages', 'Wages', true, { ...DEMO_WAGE_RULES }),
-    v('premiums', 'Premiums', true, { ...DEMO_PREMIUM_RULES }),
-    v('lead_times', 'Lead times', false, { ...DEMO_HIRING_RULES }),
-    v('labor', 'Labor rules', false, { ...DEMO_LABOR_RULES }),
-    v('service_levels', 'Service levels', false, { ...DEMO_STAFFING_RULES }),
+    v('holidays', 'Holidays', false, { holidays }),
+    v('wages', 'Wages', true, values({ ...DEMO_WAGE_RULES })),
+    v('premiums', 'Premiums', true, values({ ...DEMO_PREMIUM_RULES })),
+    v('lead_times', 'Lead times', false, values({ ...DEMO_HIRING_RULES })),
+    v('labor', 'Labor rules', false, values({ ...DEMO_LABOR_RULES })),
+    v('service_levels', 'Service levels', false, values({ ...DEMO_STAFFING_RULES })),
     v('transport_allowance', 'Transport allowance', true, {
-      id: 'transport-allowance-demo-2026.1',
       // Flat allowance by travel band (Q23); demo values.
       bands: [
-        { maxTravelMin: 15, allowancePhp: 0 },
-        { maxTravelMin: 30, allowancePhp: 50 },
-        { maxTravelMin: 45, allowancePhp: 80 },
-        { maxTravelMin: 60, allowancePhp: 120 },
+        { upToMinutes: 15, amount: 0 },
+        { upToMinutes: 30, amount: 50 },
+        { upToMinutes: 45, amount: 80 },
+        { upToMinutes: 60, amount: 120 },
       ],
     }),
   ];
