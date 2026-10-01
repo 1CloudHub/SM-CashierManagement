@@ -2,39 +2,49 @@
  * Pure presentation helpers shared by SCR-050 and SCR-051: API error -> copy,
  * plural selection, dataset/run status -> tone + message, ISO-date handling.
  */
-import type { DatasetSummary, IngestionRunDto, IngestionStatus } from '@lanewise/shared'
+import type { DatasetSummary, IngestionIssue, IngestionRunDto, IngestionStatus } from '@lanewise/shared'
 import type { StatusTone } from '@/components/ui'
 import type { MessageValues } from '@/i18n'
-import { isApiRequestError } from './api'
+import { isApiRequestError, type ApiRequestErrorCode } from './api'
 
 type T = (id: string, values?: MessageValues) => string
 
-/** Error codes with their own copy; everything else is `data.error.generic`. */
-const ERROR_KEY: Record<string, string> = {
-  forbidden: 'data.error.forbidden',
-  conflict: 'data.error.conflict',
+/**
+ * API error code -> message key. Typed as an exhaustive `Record` over every
+ * `ApiErrorCode` (plus the client-side `network_error`), so adding a code to
+ * the shared contract fails the build until it has copy here.
+ */
+export const ERROR_KEY: Readonly<Record<ApiRequestErrorCode, string>> = {
+  bad_request: 'data.error.validation',
   validation_failed: 'data.error.validation',
-  service_unavailable: 'data.error.unavailable',
-  network_error: 'data.error.network',
   unauthenticated: 'data.error.unauthenticated',
+  forbidden: 'data.error.forbidden',
+  not_found: 'data.error.notFound',
+  method_not_allowed: 'data.error.generic',
+  conflict: 'data.error.conflict',
   payload_too_large: 'data.error.tooLarge',
   unsupported_media_type: 'data.error.notCsv',
-  not_found: 'data.error.notFound',
+  internal_error: 'data.error.generic',
+  service_unavailable: 'data.error.unavailable',
+  network_error: 'data.error.network',
 }
+
+/** Per-call message keys that replace `ERROR_KEY` for specific codes. */
+export type ErrorKeyOverrides = Partial<Record<ApiRequestErrorCode, string>>
 
 export interface ErrorCopy {
   readonly message: string
   readonly requestId: string | null
-  readonly code: string | null
+  readonly code: ApiRequestErrorCode | null
 }
 
 /**
  * Localised copy for a failed request. `overrides` replaces the message key
  * for specific codes (e.g. a 409 on load has its own explanation).
  */
-export function errorCopy(t: T, err: unknown, overrides: Record<string, string> = {}, values?: MessageValues): ErrorCopy {
+export function errorCopy(t: T, err: unknown, overrides: ErrorKeyOverrides = {}, values?: MessageValues): ErrorCopy {
   if (!isApiRequestError(err)) return { message: t('data.error.generic'), requestId: null, code: null }
-  const key = overrides[err.code] ?? ERROR_KEY[err.code] ?? 'data.error.generic'
+  const key = overrides[err.code] ?? ERROR_KEY[err.code]
   return { message: t(key, values), requestId: err.requestId, code: err.code }
 }
 
@@ -84,4 +94,11 @@ export const ISO_DATE_OPTIONS: Intl.DateTimeFormatOptions = { dateStyle: 'medium
 /** `YYYY-MM-DD` -> a Date at UTC midnight (format with `ISO_DATE_OPTIONS`). */
 export function isoDate(value: string): Date {
   return new Date(`${value}T00:00:00Z`)
+}
+
+const SEVERITY_ORDER: Readonly<Record<IngestionIssue['severity'], number>> = { error: 0, warning: 1 }
+
+/** Errors before warnings; otherwise the server's (row) order is kept (stable sort). */
+export function sortIssues(issues: readonly IngestionIssue[]): IngestionIssue[] {
+  return [...issues].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity])
 }

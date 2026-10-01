@@ -86,6 +86,13 @@ describe('SCR-050 Data sources and ingestion', () => {
     expect(onUpload).toHaveBeenCalled()
   })
 
+  it('keeps the Upload button in place (disabled) while datasets load', async () => {
+    renderData(<DataSourcesScreen api={fakeDataApi()} role="RST" />)
+    expect(screen.getByRole('button', { name: 'Upload file' })).toBeDisabled()
+    await screen.findByRole('table', { name: 'Datasets' })
+    expect(screen.getByRole('button', { name: 'Upload file' })).toBeEnabled()
+  })
+
   it('hides Upload and Change for roles other than Rules Steward', async () => {
     renderData(<DataSourcesScreen api={fakeDataApi()} role="PLN" />)
     await screen.findByRole('table', { name: 'Datasets' })
@@ -239,11 +246,109 @@ describe('SCR-051 Upload and validation', () => {
     await toValidation(user)
     expect(screen.getByText('This file can’t be loaded')).toBeInTheDocument()
     expect(screen.getByText(/The current POS hourly transactions data stays active/)).toBeInTheDocument()
-    const load = screen.getByRole('button', { name: 'Load data' })
-    expect(load).toBeDisabled()
-    expect(load).toHaveAccessibleDescription(/Fix the 112 errors/)
-    expect(screen.queryByRole('button', { name: 'Continue' })).toBeNull()
+    // The step's primary button keeps its label; it is disabled and explains why.
+    const next = screen.getByRole('button', { name: 'Continue' })
+    expect(next).toBeDisabled()
+    expect(next).toHaveAccessibleDescription(/Fix the 112 errors/)
+    expect(screen.queryByRole('button', { name: 'Load data' })).toBeNull()
     expect(api.loadIngestion).not.toHaveBeenCalled()
+  })
+
+  it('offers “Choose another file” from a rejected file, back to file selection', async () => {
+    const user = userEvent.setup()
+    const api = fakeDataApi({
+      createIngestion: vi.fn().mockResolvedValue(detail({ status: 'blocked', errorCount: 3 })),
+    })
+    renderData(<UploadScreen api={api} onDone={vi.fn()} />)
+    await toValidation(user)
+    await user.click(screen.getByRole('button', { name: 'Choose another file' }))
+    expect(await screen.findByRole('heading', { name: 'Choose the dataset and file' })).toHaveFocus()
+    expect(api.cancelIngestion).toHaveBeenCalledWith('run-new')
+    expect(screen.getByText('No file chosen')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    expect(await screen.findByText('Choose a CSV file to upload.')).toBeInTheDocument()
+  })
+
+  it('offers “Choose another file” from a failed validation request', async () => {
+    const user = userEvent.setup()
+    const api = fakeDataApi({
+      createIngestion: vi.fn().mockRejectedValue(new ApiRequestError('unsupported_media_type', 415, 'x', 'req-415')),
+    })
+    renderData(<UploadScreen api={api} onDone={vi.fn()} />)
+    await toMapping(user)
+    await user.click(screen.getByRole('button', { name: 'Upload and validate' }))
+    const message = await screen.findByText('Only CSV files can be uploaded.')
+    const alert = message.closest<HTMLElement>('[role="alert"]')
+    expect(alert).not.toBeNull()
+    await user.click(within(alert as HTMLElement).getByRole('button', { name: 'Choose another file' }))
+    expect(await screen.findByRole('heading', { name: 'Choose the dataset and file' })).toBeInTheDocument()
+  })
+
+  it('keeps the step 3 button label stable and busy while validating', async () => {
+    const user = userEvent.setup()
+    let finish: (value: ReturnType<typeof detail>) => void = () => undefined
+    const api = fakeDataApi({
+      createIngestion: vi.fn().mockImplementation(() => new Promise((resolve) => (finish = resolve))),
+    })
+    renderData(<UploadScreen api={api} onDone={vi.fn()} />)
+    await toMapping(user)
+    await user.click(screen.getByRole('button', { name: 'Upload and validate' }))
+    const next = await screen.findByRole('button', { name: /Continue/ })
+    await waitFor(() => expect(next).toHaveAttribute('aria-busy', 'true'))
+    expect(next).toBeDisabled()
+    finish(detail())
+    await screen.findByRole('heading', { name: /Validation results/ })
+    // Same element, same label — no swap.
+    expect(screen.getByRole('button', { name: 'Continue' })).toBe(next)
+    expect(next).toBeEnabled()
+    expect(next).not.toHaveAttribute('aria-busy')
+  })
+
+  it('lists issues under a visible heading, errors before warnings, with translated columns', async () => {
+    const user = userEvent.setup()
+    const api = fakeDataApi({
+      createIngestion: vi.fn().mockResolvedValue(
+        detail(
+          { status: 'blocked', errorCount: 1, warningCount: 1 },
+          {
+            issues: [
+              { row: 3, column: 'lanes_open', severity: 'warning', code: 'lanes_over_installed', message: 'Too many lanes.' },
+              { row: 9, column: 'hour', severity: 'error', code: 'invalid_number', message: 'Bad hour.' },
+            ],
+          },
+        ),
+      ),
+    })
+    renderData(<UploadScreen api={api} onDone={vi.fn()} />)
+    await toValidation(user)
+    expect(screen.getByRole('heading', { level: 3, name: 'Validation issues' })).toBeInTheDocument()
+    const table = screen.getByRole('table', { name: 'Validation issues' })
+    expect(table).toHaveAccessibleDescription('Errors are listed first, then warnings.')
+    const rows = within(table).getAllByRole('row').slice(1)
+    expect(rows[0]).toHaveTextContent('Bad hour.')
+    expect(within(rows[0]).getByText('Hour')).toBeInTheDocument()
+    expect(rows[1]).toHaveTextContent('Too many lanes.')
+    expect(within(rows[1]).getByText('Lanes open')).toBeInTheDocument()
+  })
+
+  it('shows the chosen file’s name and size in the file input', async () => {
+    const user = userEvent.setup()
+    renderData(<UploadScreen api={fakeDataApi()} onDone={vi.fn()} />)
+    expect(screen.getByText('No file chosen')).toBeInTheDocument()
+    const file = csv('a'.repeat(2048))
+    await user.upload(screen.getByLabelText(/CSV file/), file)
+    expect(screen.getByText('pos_hourly_2025.csv')).toBeInTheDocument()
+    expect(screen.getByText('2 kB')).toBeInTheDocument()
+    expect(screen.getByLabelText(/CSV file/)).toHaveAccessibleDescription(/pos_hourly_2025\.csv/)
+  })
+
+  it('shows translated hints, not raw field codes, on the mapping step', async () => {
+    const user = userEvent.setup()
+    renderData(<UploadScreen api={fakeDataApi()} onDone={vi.fn()} />)
+    await toMapping(user)
+    expect(screen.queryByText('store_code')).toBeNull()
+    expect(screen.queryByText('avg_handle_time_min')).toBeNull()
+    expect(screen.getByLabelText(/^Date/)).toHaveAccessibleDescription('A date as YYYY-MM-DD, for example 2025-08-01.')
   })
 
   it('requires explicit confirmation of warnings before loading', async () => {

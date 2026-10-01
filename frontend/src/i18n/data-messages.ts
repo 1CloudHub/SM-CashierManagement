@@ -125,6 +125,9 @@ export const dataEn: Bundle = {
   'data.upload.file.tooLarge': 'This file is larger than {size} MB. Split it into smaller files.',
   'data.upload.file.noHeader': 'We couldn’t find a header row. The first row must list the column names.',
   'data.upload.file.unreadable': 'We couldn’t read this file. Check it opens, then choose it again.',
+  'data.upload.file.choose': 'Choose file',
+  'data.upload.file.none': 'No file chosen',
+  'data.upload.chooseAnother': 'Choose another file',
   'data.upload.flags': 'Dataset flags',
   'data.upload.synthetic': 'This dataset is synthetic / sample data',
   'data.upload.synthetic.hint':
@@ -152,6 +155,7 @@ export const dataEn: Bundle = {
   'data.upload.errors.other': '{n} errors',
   'data.upload.report': 'Download full report',
   'data.upload.issues': 'Validation issues',
+  'data.upload.issues.caption': 'Errors are listed first, then warnings.',
   'data.upload.wholeFile': 'File',
   'data.upload.truncated': 'Showing the first {count} issues. Download the full report for the rest.',
   'data.upload.impact.one': '{n} scenario will be marked stale; its owner will be notified.',
@@ -200,6 +204,15 @@ export const dataEn: Bundle = {
   'data.field.employment_type': 'Employment type',
   'data.field.preferred_rest_day': 'Preferred rest day',
   'data.field.email': 'Email',
+  'data.field.date.hint': 'A date as YYYY-MM-DD, for example 2025-08-01.',
+  'data.field.hour.hint': 'The hour of the day, from 0 to 23.',
+  'data.field.avg_handle_time_min.hint': 'Minutes per transaction, for example 1.5.',
+  'data.field.handle_time_min.hint': 'Minutes per transaction, for example 1.5.',
+  'data.field.format.hint': 'SM Supermarket, SM Hypermarket, SaveMore or SM Store.',
+  'data.field.open.hint': 'A 24-hour time as HH:MM, for example 10:00.',
+  'data.field.close.hint': 'A 24-hour time as HH:MM, for example 22:00.',
+  'data.field.employment_type.hint': 'Regular, seasonal or part time.',
+  'data.field.preferred_rest_day.hint': 'A weekday name (such as Monday or Mon), or 0 for Sunday to 6 for Saturday.',
 }
 
 export const dataFil: Bundle = {
@@ -321,6 +334,9 @@ export const dataFil: Bundle = {
   'data.upload.file.noHeader':
     'Hindi namin makita ang header row. Dapat nakalista sa unang row ang mga pangalan ng column.',
   'data.upload.file.unreadable': 'Hindi namin mabasa ang file na ito. Tiyaking nabubuksan ito, saka piliin muli.',
+  'data.upload.file.choose': 'Pumili ng file',
+  'data.upload.file.none': 'Walang napiling file',
+  'data.upload.chooseAnother': 'Pumili ng ibang file',
   'data.upload.flags': 'Mga flag ng dataset',
   'data.upload.synthetic': 'Synthetic / sample data ang dataset na ito',
   'data.upload.synthetic.hint':
@@ -348,6 +364,7 @@ export const dataFil: Bundle = {
   'data.upload.errors.other': '{n} error',
   'data.upload.report': 'I-download ang buong ulat',
   'data.upload.issues': 'Mga isyu sa validation',
+  'data.upload.issues.caption': 'Nauuna ang mga error, saka ang mga babala.',
   'data.upload.wholeFile': 'File',
   'data.upload.truncated':
     'Ipinapakita ang unang {count} isyu. I-download ang buong ulat para sa iba pa.',
@@ -400,4 +417,13 @@ export const dataFil: Bundle = {
   'data.field.employment_type': 'Uri ng trabaho',
   'data.field.preferred_rest_day': 'Gustong araw ng pahinga',
   'data.field.email': 'Email',
+  'data.field.date.hint': 'Petsa bilang YYYY-MM-DD, halimbawa 2025-08-01.',
+  'data.field.hour.hint': 'Oras ng araw, mula 0 hanggang 23.',
+  'data.field.avg_handle_time_min.hint': 'Minuto bawat transaksyon, halimbawa 1.5.',
+  'data.field.handle_time_min.hint': 'Minuto bawat transaksyon, halimbawa 1.5.',
+  'data.field.format.hint': 'SM Supermarket, SM Hypermarket, SaveMore o SM Store.',
+  'data.field.open.hint': 'Oras sa 24-oras na format bilang HH:MM, halimbawa 10:00.',
+  'data.field.close.hint': 'Oras sa 24-oras na format bilang HH:MM, halimbawa 22:00.',
+  'data.field.employment_type.hint': 'Regular, seasonal o part time.',
+  'data.field.preferred_rest_day.hint': 'Pangalan ng araw (gaya ng Monday o Mon), o 0 para sa Linggo hanggang 6 para sa Sabado.',
 }
