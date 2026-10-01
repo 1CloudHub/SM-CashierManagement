@@ -224,7 +224,7 @@ export const STAFF_LIST_LIMIT = 500;
 export const STAFF_LIMITS = { employeeNoMax: 40, nameMax: 120, reasonMax: 200, queryMax: 80 } as const;
 
 /** `POST /staff` request body (HR: staff records manage). */
-export interface CreateStaffRequest {
+export interface CreateStaffRecordRequest {
   readonly storeId: string;
   readonly departmentId: string;
   readonly employeeNo: string;

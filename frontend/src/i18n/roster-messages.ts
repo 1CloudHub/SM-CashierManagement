@@ -159,6 +159,7 @@ export const rosterEn: Bundle = {
   'roster.my.hours': '{hours} h paid',
   'roster.my.empty': 'No shifts this week.',
   'roster.my.addToCalendar': 'Add to calendar',
+  'roster.my.pending': 'Request pending',
 
   // ── Shift editor ────────────────────────────────────────────────────────
   'roster.editor.description': '{date} · {hours} h paid · {department}',
@@ -223,6 +224,8 @@ export const rosterEn: Bundle = {
   'roster.override.remove': 'Shift removed',
   'roster.override.offer_fill': 'Filled by an accepted offer',
   'roster.override.borrow_fill': 'Filled by a borrowed cashier',
+  'roster.override.swap': 'Swapped (staff request)',
+  'roster.override.time_off': 'Left open by approved time off',
   'roster.rule.CONSECUTIVE_DAYS': '{who}: more consecutive working days than policy allows ({date})',
   'roster.rule.WEEKLY_HOURS': '{who}: over the weekly paid-hours cap (week of {date})',
   'roster.rule.MIN_REST': '{who}: less than the minimum rest between shifts ({date})',
@@ -382,6 +385,7 @@ export const rosterFil: Bundle = {
   'roster.my.hours': '{hours} oras na bayad',
   'roster.my.empty': 'Walang shift ngayong linggo.',
   'roster.my.addToCalendar': 'Idagdag sa calendar',
+  'roster.my.pending': 'May nakabinbing hiling',
 
   // ── Shift editor ────────────────────────────────────────────────────────
   'roster.editor.description': '{date} · {hours} oras na bayad · {department}',
@@ -446,6 +450,8 @@ export const rosterFil: Bundle = {
   'roster.override.remove': 'Inalis na shift',
   'roster.override.offer_fill': 'Napunan ng tinanggap na alok',
   'roster.override.borrow_fill': 'Napunan ng hiniram na kahera',
+  'roster.override.swap': 'Pinalitan (hiling ng staff)',
+  'roster.override.time_off': 'Nabakante dahil sa inaprubahang day off',
   'roster.rule.CONSECUTIVE_DAYS': '{who}: sobra sa pinapayagang sunud-sunod na araw ng trabaho ({date})',
   'roster.rule.WEEKLY_HOURS': '{who}: lampas sa limitasyon ng bayad na oras bawat linggo (linggo ng {date})',
   'roster.rule.MIN_REST': '{who}: kulang sa pinakamababang pahinga sa pagitan ng mga shift ({date})',

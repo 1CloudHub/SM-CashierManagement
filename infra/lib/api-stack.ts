@@ -158,6 +158,14 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'POST', path: '/stores/{storeId}/borrow-requests' },
   { method: 'GET', path: '/stores/{storeId}/borrow-requests/{requestId}/candidates' },
   { method: 'POST', path: '/stores/{storeId}/borrow-requests/{requestId}/decision' },
+  // Task 18: staff self-service — My roster (own shifts only) and time-off / swap requests (SCR-025, SCR-022).
+  { method: 'GET', path: '/me/roster' },
+  { method: 'GET', path: '/me/requests' },
+  { method: 'POST', path: '/me/requests' },
+  { method: 'GET', path: '/me/requests/swap-options' },
+  { method: 'POST', path: '/me/requests/{requestId}/cancel' },
+  { method: 'GET', path: '/stores/{storeId}/staff-requests' },
+  { method: 'POST', path: '/stores/{storeId}/staff-requests/{requestId}/decision' },
   // Users and roles, audit log (SCR-070..073).
   { method: 'GET', path: '/admin/scope-options' },
   { method: 'GET', path: '/admin/users' },
