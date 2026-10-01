@@ -15,6 +15,11 @@
  *  - open-shift offer sent       → the selected cashier
  *  - offer accepted / declined / expired → the sender
  *  - borrow requested / decided  → lending store manager / requester + planners
+ *  - staff request raised        → the store manager(s) of the affected store
+ *  - staff request decided       → the cashier who raised it (an approved swap
+ *                                  also raises `shift.changed` for both
+ *                                  cashiers; shifts left open by approved time
+ *                                  off go to that store's managers/planners)
  *
  * Staleness, ingestion outcomes and rule publication are raised where those
  * changes happen (ingestion workflow, rules repository, migration 0120).
@@ -301,5 +306,77 @@ export async function notifyBorrowDecided(tx: AuditedTx, transferId: string): Pr
       storeIds: [t.to_store_id],
       excludeUserIds: exceptActor(tx),
     },
+  });
+}
+
+interface StaffRequestRow extends pg.QueryResultRow {
+  id: string;
+  request_type: string;
+  status: string;
+  store_id: string;
+  store_name: string;
+  staff_user: string | null;
+  employee_no: string;
+  date_from: string | null;
+  date_to: string | null;
+  synthetic: boolean;
+}
+
+async function loadStaffRequest(tx: AuditedTx, id: string): Promise<StaffRequestRow | null> {
+  return queryMaybe<StaffRequestRow>(
+    tx,
+    `SELECT r.id, r.request_type, r.status, r.store_id, s.name AS store_name, st.user_id AS staff_user, st.employee_no,
+            r.date_from::text AS date_from, r.date_to::text AS date_to, r.synthetic
+       FROM staff_request r
+       JOIN staff st ON st.id = r.staff_id
+       JOIN store s ON s.id = r.store_id
+      WHERE r.id = $1`,
+    [id],
+  );
+}
+
+/** A cashier raised a time-off or swap request: the store's manager decides it (Req 15.4). */
+export async function notifyStaffRequestSubmitted(tx: AuditedTx, requestId: string): Promise<string[]> {
+  const r = await loadStaffRequest(tx, requestId);
+  if (!r) return [];
+  return notify(tx, {
+    event: 'staff_request.submitted',
+    objectType: 'staff_request',
+    objectId: r.id,
+    params: { type: r.request_type, employeeNo: r.employee_no, storeName: r.store_name, dateFrom: r.date_from, dateTo: r.date_to },
+    synthetic: r.synthetic,
+    recipients: { roles: ['STM'], storeIds: [r.store_id], excludeUserIds: exceptActor(tx) },
+  });
+}
+
+/** A request was approved or declined: the cashier who raised it hears about their own request (P11). */
+export async function notifyStaffRequestDecided(tx: AuditedTx, requestId: string): Promise<string[]> {
+  const r = await loadStaffRequest(tx, requestId);
+  if (!r || r.staff_user === null || !['approved', 'declined'].includes(r.status)) return [];
+  return notify(tx, {
+    event: 'staff_request.decided',
+    objectType: 'staff_request',
+    objectId: r.id,
+    params: { type: r.request_type, outcome: r.status, storeName: r.store_name, dateFrom: r.date_from, dateTo: r.date_to },
+    synthetic: r.synthetic,
+    recipients: { userIds: [r.staff_user], excludeUserIds: exceptActor(tx) },
+  });
+}
+
+/** Shifts left open on a published roster (approved time off): the store's managers and planners. */
+export async function notifyShiftsLeftOpen(
+  tx: AuditedTx,
+  store: { readonly id: string; readonly name: string },
+  shiftIds: readonly string[],
+  synthetic: boolean,
+): Promise<string[]> {
+  if (shiftIds.length === 0) return [];
+  return notify(tx, {
+    event: 'roster.unfilled_shifts',
+    objectType: 'store',
+    objectId: store.id,
+    params: { name: store.name, count: shiftIds.length, shiftIds: [...shiftIds] },
+    synthetic,
+    recipients: { roles: ['STM', 'PLN'], storeIds: [store.id], excludeUserIds: exceptActor(tx) },
   });
 }

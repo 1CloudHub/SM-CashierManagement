@@ -16,6 +16,7 @@ import { ACTIVE_ROLE_HEADER, type ApiAdapter, type ApiRequest, type ApiResponse 
 import { createPlanningStore } from './mock-planning'
 import { createOfferStore } from './mock-offers'
 import { createNotificationStore } from './mock-notifications'
+import { createSelfServiceStore } from './mock-self-service'
 import { createRosterStore } from './mock-rosters'
 import { createAdminStore } from './mock-admin'
 import { createScenarioStore } from './mock-scenarios'
@@ -252,6 +253,7 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
   const planning = createPlanningStore()
   const rosters = createRosterStore()
   const offerStore = createOfferStore(rosters)
+  const selfService = createSelfServiceStore(rosters)
   const admin = createAdminStore()
   return async (request) => {
     log?.push(request)
@@ -298,6 +300,9 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
       userName: `Demo ${role}`,
     })
     if (offered) return offered
+    // Task 18 staff self-service (/me/roster, /me/requests…, /stores/:id/staff-requests…), see ./mock-self-service.
+    const served = selfService.handle({ method: request.method, pathname, query: new URLSearchParams(search), body: request.body, role, userName: `Demo ${role}` })
+    if (served) return served
     if (/^\/stores\/[^/]+\/rosters(\/|$)/.test(pathname)) {
       // Published rosters carry no ₱ figures (task 13.4), see ./mock-rosters.
       return rosters.handle({ method: request.method, pathname, body: request.body, role, userName: `Demo ${role}` })

@@ -23,6 +23,8 @@ export function notificationTitle(item: NotificationItem, { t, formatDateTime }:
     outcome: str(p.outcome) ? t(`notifications.outcome.${String(p.outcome)}`) : '',
     store: str(p.storeName) ?? '',
     fromStore: str(p.fromStore) ?? '',
+    request: t(`notifications.requestType.${p.type === 'time_off' || p.type === 'swap' ? p.type : 'other'}`),
+    employeeNo: str(p.employeeNo) ?? '',
     when: startsAt ? formatDateTime(startsAt, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '',
   }
   const key = isNotificationEvent(item.event) ? `notifications.event.${item.event}` : 'notifications.event.other'

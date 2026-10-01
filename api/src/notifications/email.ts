@@ -97,6 +97,7 @@ interface Copy {
   readonly step: Readonly<Record<string, string>>;
   readonly decision: Readonly<Record<string, string>>;
   readonly outcome: Readonly<Record<string, string>>;
+  readonly requestType: Readonly<Record<string, string>>;
   readonly greeting: (name: string) => string;
   readonly open: string;
   readonly footer: string;
@@ -126,6 +127,8 @@ const EN: Copy = {
     'offer.resolved': (_n, p) => `Offer ${EN.outcome[text(p.outcome)] ?? 'updated'} — ${text(p.storeName)}`,
     'borrow.requested': (_n, p) => `Request to borrow cashiers from ${text(p.fromStore)}`,
     'borrow.decided': (_n, p) => `Borrow request ${EN.outcome[text(p.outcome)] ?? 'decided'} — ${text(p.fromStore)}`,
+    'staff_request.submitted': (_n, p) => `${EN.requestType[text(p.type)] ?? 'Staff request'} from ${text(p.employeeNo)} — ${text(p.storeName)}`,
+    'staff_request.decided': (_n, p) => `Your ${(EN.requestType[text(p.type)] ?? 'request').toLowerCase()} was ${EN.outcome[text(p.outcome)] ?? 'decided'}`,
     'ingestion.succeeded': (n) => `Data load succeeded — ${n}`,
     'ingestion.failed': (n) => `Data load failed — ${n}`,
     'rule_version.published': (n) => `Rule version published — ${n}`,
@@ -135,6 +138,7 @@ const EN: Copy = {
   step: { headcount: 'Headcount', budget: 'Budget', plan: 'Plan' },
   decision: { approved: 'approved', changes_requested: 'sent back for changes', rejected: 'rejected' },
   outcome: { accepted: 'accepted', declined: 'declined', expired: 'expired', approved: 'approved', overridden: 'overridden' },
+  requestType: { time_off: 'Time-off request', swap: 'Swap request' },
   greeting: (name) => `Hi ${name},`,
   open: 'Open in LaneWise',
   footer: 'You get this email because of your LaneWise notification preferences. Change them under Notifications › Preferences.',
@@ -164,6 +168,8 @@ const FIL: Copy = {
     'offer.resolved': (_n, p) => `Ang alok ay ${FIL.outcome[text(p.outcome)] ?? 'na-update'} — ${text(p.storeName)}`,
     'borrow.requested': (_n, p) => `Hiling na humiram ng cashier mula sa ${text(p.fromStore)}`,
     'borrow.decided': (_n, p) => `Ang hiling na manghiram ay ${FIL.outcome[text(p.outcome)] ?? 'napagpasyahan'} — ${text(p.fromStore)}`,
+    'staff_request.submitted': (_n, p) => `${FIL.requestType[text(p.type)] ?? 'Hiling ng staff'} mula kay ${text(p.employeeNo)} — ${text(p.storeName)}`,
+    'staff_request.decided': (_n, p) => `Ang iyong ${(FIL.requestType[text(p.type)] ?? 'hiling').toLowerCase()} ay ${FIL.outcome[text(p.outcome)] ?? 'napagpasyahan'}`,
     'ingestion.succeeded': (n) => `Matagumpay ang pag-load ng data — ${n}`,
     'ingestion.failed': (n) => `Pumalya ang pag-load ng data — ${n}`,
     'rule_version.published': (n) => `Nai-publish ang bersyon ng rule — ${n}`,
@@ -173,6 +179,7 @@ const FIL: Copy = {
   step: { headcount: 'Headcount', budget: 'Budget', plan: 'Plano' },
   decision: { approved: 'inaprubahan', changes_requested: 'ibinalik para baguhin', rejected: 'tinanggihan' },
   outcome: { accepted: 'tinanggap', declined: 'tinanggihan', expired: 'nag-expire', approved: 'inaprubahan', overridden: 'na-override' },
+  requestType: { time_off: 'Hiling na day off', swap: 'Hiling na palitan ng shift' },
   greeting: (name) => `Kumusta ${name},`,
   open: 'Buksan sa LaneWise',
   footer: 'Natanggap mo ang email na ito dahil sa iyong mga setting ng abiso sa LaneWise. Baguhin ang mga ito sa Mga Abiso › Mga Kagustuhan.',

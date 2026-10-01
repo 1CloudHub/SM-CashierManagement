@@ -27,6 +27,7 @@ import { registerRosterRoutes } from './routes/rosters.js';
 import { registerOfferRoutes } from './routes/offers.js';
 import { registerRuleRoutes } from './routes/rules.js';
 import { registerScenarioRoutes } from './routes/scenarios.js';
+import { registerStaffSelfServiceRoutes } from './routes/staff-self-service.js';
 import { registerStoreRoutes } from './routes/stores.js';
 
 export interface AppDeps {
@@ -146,6 +147,7 @@ export function createApp(deps: AppDeps = depsFromEnv()): Router {
   registerNetworkMapRoutes(router, deps);
   registerRosterRoutes(router, deps);
   registerOfferRoutes(router, deps);
+  registerStaffSelfServiceRoutes(router, deps);
   registerAdminUserRoutes(router, deps);
   registerAuditLogRoutes(router, deps);
   return router.assertGuarded();

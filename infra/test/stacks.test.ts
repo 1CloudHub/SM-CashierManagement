@@ -400,6 +400,20 @@ describe('API stack', () => {
     );
   });
 
+  it('protects every task 18 staff self-service route with the Cognito authorizer', () => {
+    expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
+      expect.arrayContaining([
+        'GET /me/roster',
+        'GET /me/requests',
+        'POST /me/requests',
+        'GET /me/requests/swap-options',
+        'POST /me/requests/{requestId}/cancel',
+        'GET /stores/{storeId}/staff-requests',
+        'POST /stores/{storeId}/staff-requests/{requestId}/decision',
+      ]),
+    );
+  });
+
   it('protects every task 19 notification route with the Cognito authorizer', () => {
     expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
       expect.arrayContaining([
