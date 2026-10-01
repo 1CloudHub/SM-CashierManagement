@@ -15,7 +15,8 @@ export type IsoDate = string;
 export const LANGUAGES = ['en', 'fil'] as const;
 export type Language = (typeof LANGUAGES)[number];
 
-export const USER_STATUSES = ['active', 'disabled'] as const;
+/** `invited` until the first sign-in (SCR-071); `disabled` once deactivated (SCR-070). */
+export const USER_STATUSES = ['invited', 'active', 'disabled'] as const;
 export type UserStatus = (typeof USER_STATUSES)[number];
 
 export interface User {
