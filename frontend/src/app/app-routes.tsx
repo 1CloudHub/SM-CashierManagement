@@ -7,6 +7,7 @@ import { DataSourcesPage, UploadPage } from '@/features/data/pages'
 import { HomeScreen } from '@/features/home/home-screen'
 import { SearchResultsScreen } from '@/features/search/search-results-screen'
 import { RuleSetsPage, RuleVersionEditorPage } from '@/features/rules/pages'
+import { ScenarioComparePage, ScenarioListPage, ScenarioSettingsPage } from '@/features/scenarios/pages'
 import { SCREEN_BY_ID, SCREENS, type ScreenDef, type ScreenId } from './screens'
 import { GLOBAL_SEARCH_ID, useShellSlots } from './app-layout'
 import { useRouter } from './router'
@@ -21,6 +22,9 @@ import { Guarded, HelpScreen, NotFoundScreen, PlaceholderScreen, StatusScreen } 
  */
 const BUILT: Partial<Record<ScreenId, () => React.ReactNode>> = {
   'SCR-010': () => <HomeScreen />,
+  'SCR-030': () => <ScenarioListPage />,
+  'SCR-031': () => <ScenarioSettingsPage />,
+  'SCR-032': () => <ScenarioComparePage />,
   'SCR-041': () => <SearchResultsScreen />,
   'SCR-060': () => <RuleSetsPage />,
   'SCR-061': () => <RuleVersionEditorPage />,
