@@ -9,9 +9,14 @@
 import type { ApprovalStep, ApprovalStepKind, ApprovalStepStatus, DatasetType, RoleCode, ScenarioStatus } from '@lanewise/shared';
 import type pg from 'pg';
 import { audit, type AuditedTx } from '../audit.js';
+import {
+  notifyApprovalDecided,
+  notifyApprovalRequested,
+  notifyApprovalSecured,
+  notifyPlanPublished,
+} from '../../notifications/events.js';
 import type { Queryable } from '../pool.js';
 import { isoOrNull, queryMaybe, queryOne } from '../rows.js';
-import { notifyApprovalRequested } from './approval-notifications.js';
 
 export interface Scenario {
   readonly id: string;
@@ -194,7 +199,7 @@ export async function submitScenario(tx: AuditedTx, id: string): Promise<Scenari
      SELECT $1, $2, step FROM unnest(ARRAY['headcount', 'budget', 'plan']) AS step`,
     [id, after.currentSubmissionNo],
   );
-  await notifyApprovalRequested(tx, { id, name: after.name, synthetic: after.synthetic, submissionNo: after.currentSubmissionNo });
+  await notifyApprovalRequested(tx, after);
   await audit.record(tx, {
     action: 'submit',
     event: 'scenario.submitted',
@@ -306,6 +311,11 @@ export async function decideApprovalStep(
   if (input.decision !== 'approved') {
     await tx.query(`UPDATE scenario SET status = 'draft' WHERE id = $1`, [scenario.id]);
   }
+  if (input.decision === 'approved' && input.step !== 'plan') {
+    await notifyApprovalSecured(tx, scenario, input.step, false, scenario.currentSubmissionNo);
+  } else {
+    await notifyApprovalDecided(tx, scenario, input.step, input.decision);
+  }
   await audit.record(tx, {
     action: 'decision',
     event: `approval.${input.step}_${input.decision}`,
@@ -328,6 +338,7 @@ export async function recordSecuredOutside(
     reference: input.reference,
     note: input.note,
   });
+  await notifyApprovalSecured(tx, scenario, input.step, true, scenario.currentSubmissionNo);
   await audit.record(tx, {
     action: 'decision',
     event: `approval.${input.step}_secured_outside`,
@@ -357,6 +368,7 @@ export async function approvePlanAndPublish(tx: AuditedTx, scenarioId: string, c
   );
   await tx.query(`UPDATE scenario SET status = 'published', published_at = now() WHERE id = $1`, [scenarioId]);
   const after = await loadScenario(tx, scenarioId);
+  await notifyPlanPublished(tx, after);
   await audit.record(tx, {
     action: 'publish',
     event: 'scenario.published',

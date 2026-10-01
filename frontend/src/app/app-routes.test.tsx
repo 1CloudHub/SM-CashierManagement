@@ -25,13 +25,13 @@ describe('routing', () => {
   })
 
   it('renders a placeholder with title, breadcrumb and its spec task', async () => {
-    // SCR-040 Notifications is still a placeholder (task 19); SCR-025 shows offers since task 17.
-    const { container } = renderApp({ path: '/notifications', role: 'STF' })
-    expect(screen.getByRole('heading', { level: 1, name: 'Notifications' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Coming in task 19' })).toBeInTheDocument()
+    // SCR-052 Stores and lanes is still a placeholder (task 9.1).
+    const { container } = renderApp({ path: '/data/stores', role: 'PLN' })
+    expect(screen.getByRole('heading', { level: 1, name: 'Stores and lanes' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Coming in task 9.1' })).toBeInTheDocument()
     const crumbs = within(screen.getByRole('navigation', { name: 'Breadcrumb' }))
     expect(crumbs.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/')
-    expect(crumbs.getByText('Notifications')).toHaveAttribute('aria-current', 'page')
+    expect(crumbs.getByText('Stores and lanes')).toHaveAttribute('aria-current', 'page')
     expect(await axe(container)).toHaveNoViolations()
   })
 
@@ -105,7 +105,8 @@ describe('no access (requirement 2.4)', () => {
     expect(container).not.toHaveTextContent('scn-secret-42')
     expect(container).not.toHaveTextContent('Scenario settings')
     expect(document.title).toBe('No access — LaneWise')
-    expect(log).toHaveLength(0)
+    // Only the shell's own bell (the caller's notifications, task 19) may load; nothing for the denied screen.
+    expect(log.filter((r) => !r.path.startsWith('/notifications'))).toHaveLength(0)
     expect(await axe(container)).toHaveNoViolations()
   })
 

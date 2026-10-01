@@ -94,8 +94,8 @@ function expectedScope(role: RoleCode, assignments: readonly { role: RoleCode; s
 
 function inScope(scope: Scope, guard: Extract<RouteGuard, { kind: 'authorize' }>, id: string): boolean {
   if (!guard.scopeTarget) return true;
-  // No saved view is seeded here, so every id addresses someone else's or a missing one.
-  if (guard.scopeTarget.kind === 'saved_view') return false;
+  // No saved view or notification is seeded here, so every id addresses someone else's or a missing one.
+  if (guard.scopeTarget.kind === 'saved_view' || guard.scopeTarget.kind === 'notification') return false;
   if (guard.scopeTarget.kind === 'store') {
     const store = storeOf(id);
     return store !== undefined && isStoreInScope(scope, store);

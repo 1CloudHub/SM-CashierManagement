@@ -20,6 +20,7 @@ export * from './rules.js';
 export * from './scenario.js';
 export * from './scenario-planning.js';
 export * from './planning-views.js';
+export * from './notifications.js';
 export * from './search.js';
 export * from './view-state.js';
 export * from './location-privacy.js';

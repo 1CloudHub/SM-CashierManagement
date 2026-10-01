@@ -10,6 +10,7 @@ import { HomeScreen } from '@/features/home/home-screen'
 import { NetworkMapPage } from '@/features/network-map/pages'
 import { MyRosterPage } from '@/features/offers/pages'
 import { RosterPage } from '@/features/roster/pages'
+import { NotificationsPage } from '@/features/notifications/pages'
 import { SearchResultsScreen } from '@/features/search/search-results-screen'
 import { RuleSetsPage, RuleVersionEditorPage } from '@/features/rules/pages'
 import { ScenarioComparePage, ScenarioListPage, ScenarioSettingsPage } from '@/features/scenarios/pages'
@@ -38,6 +39,7 @@ const BUILT: Partial<Record<ScreenId, () => React.ReactNode>> = {
   'SCR-031': () => <ScenarioSettingsPage />,
   'SCR-032': () => <ScenarioComparePage />,
   'SCR-033': () => <ApprovalsPage />,
+  'SCR-040': () => <NotificationsPage />,
   'SCR-041': () => <SearchResultsScreen />,
   'SCR-060': () => <RuleSetsPage />,
   'SCR-061': () => <RuleVersionEditorPage />,
@@ -57,8 +59,8 @@ function screenElement(screen: ScreenDef) {
 const NAV_TARGETS = { home: '/', roster: '/plan/roster', map: '/plan/map' } as const
 
 /**
- * Persistent layout for app screens: global shortcuts (`?`, `/`, g h / g r /
- * g m), the help dialog, and focus to <main> on route change (screens remount
+ * Persistent layout for app screens: global shortcuts (`?`, `/`, `n`, g h /
+ * g r / g m), the help dialog, and focus to <main> on route change (screens remount
  * their AppLayout per route, so this must live above them).
  */
 function WithHelp() {
@@ -68,6 +70,7 @@ function WithHelp() {
     <HelpProvider
       onNavigate={(target) => navigate(NAV_TARGETS[target])}
       onFocusSearch={() => document.getElementById(GLOBAL_SEARCH_ID)?.focus()}
+      onOpenNotifications={() => navigate('/notifications')}
     >
       <Outlet />
     </HelpProvider>

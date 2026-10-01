@@ -15,6 +15,7 @@ import {
 import { ACTIVE_ROLE_HEADER, type ApiAdapter, type ApiRequest, type ApiResponse } from './client'
 import { createPlanningStore } from './mock-planning'
 import { createOfferStore } from './mock-offers'
+import { createNotificationStore } from './mock-notifications'
 import { createRosterStore } from './mock-rosters'
 import { createScenarioStore } from './mock-scenarios'
 import { createSavedViewStore, mockContextOptions, mockSearch, type MockResult } from './mock-directory'
@@ -246,6 +247,7 @@ export interface MockAdapterOptions {
 export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {}): ApiAdapter {
   const savedViews = createSavedViewStore()
   const scenarios = createScenarioStore()
+  const notifications = createNotificationStore()
   const planning = createPlanningStore()
   const rosters = createRosterStore()
   const offerStore = createOfferStore(rosters)
@@ -278,6 +280,10 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
         role,
         viewer: mockViewer(role),
       })
+    }
+    if (pathname === '/notifications' || pathname.startsWith('/notifications/') || pathname === '/notification-preferences') {
+      // The role's own inbox only (P11); no ₱ figures in notifications.
+      return notifications.handle({ method: request.method, pathname, query: new URLSearchParams(search), body: request.body, role })
     }
     // Task 17 offers (/stores/:id/shifts/:id/offers…, /stores/:id/offers, /me/offers…) and borrow requests, see ./mock-offers.
     const offered = offerStore.handle({

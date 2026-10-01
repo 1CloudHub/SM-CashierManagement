@@ -137,6 +137,15 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'GET', path: '/stores/{storeId}/rosters/{rosterId}/shifts/{shiftId}/replacements' },
   { method: 'POST', path: '/stores/{storeId}/rosters/{rosterId}/overrides/check' },
   { method: 'POST', path: '/stores/{storeId}/rosters/{rosterId}/overrides' },
+  // Task 14: network view, department day plan, hiring plan and long-roster
+  // background jobs, leadership summary (SCR-020/021/023/024).
+  // Task 19: notifications — the bell, SCR-040 and per-user preferences (own records only).
+  { method: 'GET', path: '/notifications' },
+  { method: 'POST', path: '/notifications/read-all' },
+  { method: 'POST', path: '/notifications/{notificationId}/read' },
+  { method: 'GET', path: '/notification-preferences' },
+  { method: 'PUT', path: '/notification-preferences' },
+  // Task 16: network map and auto-match (SCR-026).
   // Task 17: shift offers (SCR-022/025/026) and store-to-store borrowing.
   { method: 'GET', path: '/stores/{storeId}/shifts/{shiftId}/offer-candidates' },
   { method: 'POST', path: '/stores/{storeId}/shifts/{shiftId}/offers' },
