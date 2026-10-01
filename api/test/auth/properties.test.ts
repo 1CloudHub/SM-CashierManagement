@@ -40,7 +40,7 @@ let org: Awaited<ReturnType<typeof seedOrg>>;
 const MISSING_ID = '6f1c7a52-0b8e-4d5e-9a41-5e2b1c9d7f00';
 const RUNS = 60;
 /** Feature resources whose handlers may answer 201/404/409 to random ids and bodies. */
-const LENIENT_RESOURCES = new Set<string>(['data_ingestion', 'scenario']);
+const LENIENT_RESOURCES = new Set<string>(['data_ingestion', 'scenarios', 'scenario_settings', 'scenario_submit']);
 
 beforeAll(async () => {
   db = await createTestDatabase();

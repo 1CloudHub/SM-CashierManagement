@@ -24,6 +24,7 @@ import { createLambdaHandler, type LambdaHandler } from '../../src/lambda.js';
 import { RULE_ROUTES } from '../../src/routes/rules.js';
 import { createTestDatabase, type TestDatabase } from '../support/db.js';
 import { insertScenario } from '../support/fixtures.js';
+import { MemoryStorage } from '../support/memory-storage.js';
 import { insertAppUser, seedOrg, setAssignments, uniq } from '../support/rbac.js';
 
 let db: TestDatabase;
@@ -94,7 +95,7 @@ const WAGES = {
 
 beforeAll(async () => {
   db = await createTestDatabase();
-  handler = lambdaFor(createApp({ db: () => db.pool, rbac: { ...DEFAULT_RBAC_CONFIG, demoRoleSwitcher: false } }));
+  handler = lambdaFor(createApp({ db: () => db.pool, rbac: { ...DEFAULT_RBAC_CONFIG, demoRoleSwitcher: false }, storage: () => new MemoryStorage() }));
   const org = await seedOrg(db.pool);
   for (const role of ROLE_CODES) {
     emails[role] = `${role.toLowerCase()}.${uniq()}@smretail.com`;
@@ -129,7 +130,7 @@ describe('route permissions (declared once per route; P12)', () => {
         expect(route.guard.scopeTarget).toBeUndefined();
       }
       const sample = route.path.replace(/:[A-Za-z]+/g, '00000000-0000-4000-8000-000000000000');
-      const app = createApp({ db: () => db.pool, rbac: DEFAULT_RBAC_CONFIG });
+      const app = createApp({ db: () => db.pool, rbac: DEFAULT_RBAC_CONFIG, storage: () => new MemoryStorage() });
       expect(app.resolve(route.method, sample).kind, `${route.method} ${route.path}`).toBe('matched');
     }
   });
@@ -313,6 +314,7 @@ describe('reads', () => {
           throw new ApiError('service_unavailable', 'unavailable');
         },
         rbac: DEFAULT_RBAC_CONFIG,
+        storage: () => new MemoryStorage(),
       }),
     );
     expect((await call('PLN', 'GET', '/rule-sets', { via: noDb })).statusCode).toBe(503);
