@@ -3,6 +3,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { CfnOutput, Duration, Fn, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as rds from 'aws-cdk-lib/aws-rds';
@@ -22,6 +23,11 @@ export interface DataStackProps extends StackProps {
   /** Browser origins allowed to PUT/GET upload objects via pre-signed URLs. */
   readonly uploadCorsOrigins: readonly string[];
 }
+
+/** Uploads-bucket key prefix for raw ingestion files (browser → presigned PUT; task 9). */
+export const UPLOADS_PREFIX = 'uploads/';
+/** Uploads-bucket key prefix for normalised, immutable snapshot data pinned by scenarios (task 9). */
+export const SNAPSHOTS_PREFIX = 'snapshots/';
 
 /** Default location of the migrate CLI bundle produced by `api/scripts/bundle.mjs`. */
 export const DEFAULT_MIGRATE_BUNDLE_DIR = path.join(__dirname, '..', '..', 'api', 'dist', 'migrate');
@@ -269,7 +275,10 @@ export class DataStack extends Stack {
       lifecycleRules: [
         { id: 'abort-incomplete-uploads', abortIncompleteMultipartUploadAfter: Duration.days(1) },
         {
+          // Raw uploads only: snapshot data under snapshots/ is pinned by
+          // scenarios and must never expire (task 9, P18).
           id: 'expire-uploads',
+          prefix: UPLOADS_PREFIX,
           expiration: Duration.days(data.uploadRetentionDays),
           noncurrentVersionExpiration: Duration.days(30),
         },
@@ -297,6 +306,29 @@ export class DataStack extends Stack {
     new CfnOutput(this, 'MigrateFunctionName', {
       value: migrateFn.functionName,
       description: 'Lambda that applies database migrations (runs automatically on deploy).',
+    });
+  }
+
+  /**
+   * Least-privilege uploads-bucket access for the API (task 9): Put/Get only
+   * under `uploads/` (PutObject is what lets it sign presigned PUT URLs for
+   * the browser) and `snapshots/` (normalised snapshot data), and ListBucket
+   * limited to `uploads/` so a missing upload is a 404, not a 403. No delete.
+   */
+  grantIngestionAccess(grantee: iam.IGrantable): void {
+    iam.Grant.addToPrincipal({
+      grantee,
+      actions: ['s3:PutObject', 's3:GetObject'],
+      resourceArns: [
+        this.uploadsBucket.arnForObjects(`${UPLOADS_PREFIX}*`),
+        this.uploadsBucket.arnForObjects(`${SNAPSHOTS_PREFIX}*`),
+      ],
+    });
+    iam.Grant.addToPrincipal({
+      grantee,
+      actions: ['s3:ListBucket'],
+      resourceArns: [this.uploadsBucket.bucketArn],
+      conditions: { StringLike: { 's3:prefix': [`${UPLOADS_PREFIX}*`] } },
     });
   }
 }

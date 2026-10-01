@@ -9,6 +9,7 @@ export * from './rows.js';
 export * as demoData from './demo/index.js';
 export * as exportsRepo from './repositories/exports.js';
 export * as ingestionRepo from './repositories/ingestion.js';
+export * as ingestionWorkflowRepo from './repositories/ingestion-workflow.js';
 export * as orgRepo from './repositories/org.js';
 export * as rulesRepo from './repositories/rules.js';
 export * as savedViewsRepo from './repositories/saved-views.js';

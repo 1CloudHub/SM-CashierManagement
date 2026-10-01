@@ -88,8 +88,7 @@ const api = new ApiStack(app, `${prefix}-Api`, {
 // Least-privilege grants for the feature services, each scoped to the one
 // resource it uses (policies land on the function roles in Api/Jobs stacks).
 data.dbSecret.grantRead(api.apiFunction);
-data.uploadsBucket.grantPut(api.apiFunction);
-data.uploadsBucket.grantRead(api.apiFunction);
+data.grantIngestionAccess(api.apiFunction);
 jobs.queue.grantSendMessages(api.apiFunction);
 location.grantMap(api.apiFunction);
 location.grantRoutes(api.apiFunction);

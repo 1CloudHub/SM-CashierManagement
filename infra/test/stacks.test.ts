@@ -289,6 +289,20 @@ describe('API stack', () => {
         'POST /saved-views',
         'PATCH /saved-views/{viewId}',
         'DELETE /saved-views/{viewId}',
+        // Task 9 (data ingestion, snapshots, provenance).
+        'GET /datasets',
+        'GET /datasets/provenance',
+        'POST /ingestions/uploads',
+        'POST /ingestions',
+        'GET /ingestions',
+        'GET /ingestions/export',
+        'GET /ingestions/{ingestionId}',
+        'GET /ingestions/{ingestionId}/report',
+        'POST /ingestions/{ingestionId}/load',
+        'POST /ingestions/{ingestionId}/cancel',
+        'GET /snapshots',
+        'GET /snapshots/{snapshotId}',
+        'PATCH /snapshots/{snapshotId}',
       ]),
     );
     for (const route of PROTECTED_ROUTES) {

@@ -60,6 +60,20 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'POST', path: '/saved-views' },
   { method: 'PATCH', path: '/saved-views/{viewId}' },
   { method: 'DELETE', path: '/saved-views/{viewId}' },
+  // Data ingestion, snapshots and provenance (task 9; SCR-050/051).
+  { method: 'GET', path: '/datasets' },
+  { method: 'GET', path: '/datasets/provenance' },
+  { method: 'POST', path: '/ingestions/uploads' },
+  { method: 'POST', path: '/ingestions' },
+  { method: 'GET', path: '/ingestions' },
+  { method: 'GET', path: '/ingestions/export' },
+  { method: 'GET', path: '/ingestions/{ingestionId}' },
+  { method: 'GET', path: '/ingestions/{ingestionId}/report' },
+  { method: 'POST', path: '/ingestions/{ingestionId}/load' },
+  { method: 'POST', path: '/ingestions/{ingestionId}/cancel' },
+  { method: 'GET', path: '/snapshots' },
+  { method: 'GET', path: '/snapshots/{snapshotId}' },
+  { method: 'PATCH', path: '/snapshots/{snapshotId}' },
 ];
 
 /** Request headers the SPA sends: the defaults plus the demo role switcher's `X-Active-Role`. */
