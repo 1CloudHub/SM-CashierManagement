@@ -9,7 +9,9 @@
  * `rules_cost_approval`) and non-cost rules (Rules Steward,
  * `rules_noncost_publish`), which depends on the version addressed, so the
  * publish route is guarded by `rules: view` and its handler checks the
- * kind-specific matrix cell with `can`.
+ * kind-specific matrix cell with `can`. `approve-and-publish` is Finance's
+ * one-step approval + publish of a cost rule in a single transaction.
+ * Approving or publishing refuses a version with an empty change note.
  */
 import {
   can,
@@ -241,6 +243,8 @@ export const RULE_ROUTES: readonly RuleRoute[] = [
     handler: async ({ request, context, principal, pool }) => {
       const id = idParam(request, 'versionId');
       const body = parseInput(approveBody, request.body ?? {}, 'body');
+      // An approved version is publishable, so it needs its change note too.
+      requireChangeNote(await loadVersion(pool, id));
       await mutate(pool, principal, context, (tx) => rulesRepo.decideRuleVersion(tx, id, 'approve', body.comment));
       return versionResponse(pool, id);
     },
@@ -277,6 +281,33 @@ export const RULE_ROUTES: readonly RuleRoute[] = [
         );
       }
       const result = await mutate(pool, principal, context, (tx) => rulesRepo.publishRuleVersion(tx, version.id));
+      return {
+        statusCode: 200,
+        body: {
+          version: await loadVersion(pool, version.id),
+          supersededVersionId: result.supersededVersionId,
+          staleScenarioIds: result.staleScenarioIds,
+        },
+      };
+    },
+  },
+  {
+    method: 'POST',
+    path: '/rule-versions/:versionId/approve-and-publish',
+    // Finance's single gesture on a submitted cost rule (Q6): approve and
+    // publish in one transaction, so it never stops half-way.
+    guard: authorize('rules_cost_approval', 'approve'),
+    handler: async ({ request, context, principal, pool }) => {
+      const version = await loadVersion(pool, idParam(request, 'versionId'));
+      const body = parseInput(approveBody, request.body ?? {}, 'body');
+      requireChangeNote(version);
+      payloadErrors(version.ruleSetType, version.payload, 'payload');
+      if (!version.isCostRule || version.status !== 'submitted') {
+        throw errors.conflict(`A ${version.status} version cannot be approved and published.`);
+      }
+      const result = await mutate(pool, principal, context, (tx) =>
+        rulesRepo.approveAndPublishRuleVersion(tx, version.id, body.comment),
+      );
       return {
         statusCode: 200,
         body: {

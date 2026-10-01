@@ -6,6 +6,7 @@
  *   POST /stores/:storeId/shifts/:shiftId/offers            broadcast offers       shift_offers_send: edit (store)
  *   GET  /stores/:storeId/offers                            offer status           weekly_roster: view (store)
  *   GET  /me/offers                                         own offers (Staff)     shift_offers_respond: view
+ *        (task 18: only offers within the cashier's own travel limit; one beyond it cannot be accepted)
  *   POST /me/offers/:offerId/accept                         first one wins (P17)   shift_offers_respond: edit
  *   POST /me/offers/:offerId/decline                                               shift_offers_respond: edit
  *   GET  /stores/:storeId/borrow-requests                   both directions        weekly_roster: view (store)
@@ -29,6 +30,7 @@ import { requirePrincipal, type Principal, type RequestContext } from '../contex
 import { actorFromPrincipal, withAuditedTransaction } from '../db/audit.js';
 import * as borrowing from '../db/repositories/borrowing.js';
 import * as offers from '../db/repositories/offers.js';
+import * as selfService from '../db/repositories/staff-self-service.js';
 import { PG_ERRORS, pgErrorCode } from '../db/rows.js';
 import { ApiError, errors } from '../http/errors.js';
 import type { HttpMethod, Router } from '../http/router.js';
@@ -151,7 +153,9 @@ export const OFFER_ROUTES: readonly OfferRoute[] = [
     handler: async ({ principal, pool, now }) => {
       const staffId = ownStaffId(principal);
       await offers.expireDueOffers(pool, now);
-      return { statusCode: 200, body: { offers: await offers.listMyOffers(pool, staffId, now) } };
+      // Task 18 (Req 15.2): only offers within the cashier's own travel limit.
+      const outside = await selfService.offersOutsideTravelLimit(pool, staffId);
+      return { statusCode: 200, body: { offers: (await offers.listMyOffers(pool, staffId, now)).filter((o) => !outside.has(o.id)) } };
     },
   },
   {
@@ -161,6 +165,8 @@ export const OFFER_ROUTES: readonly OfferRoute[] = [
     handler: async (args) => {
       const staffId = ownStaffId(args.principal);
       const offerId = param(args.request, 'offerId');
+      // Task 18 (Req 15.2): an offer beyond the cashier's own travel limit is not theirs to take.
+      if ((await selfService.offersOutsideTravelLimit(args.pool, staffId)).has(offerId)) throw errors.notFoundOrNoAccess();
       await offers.expireDueOffers(args.pool, args.now);
       await audited(args, (tx) => offers.acceptOffer(tx, staffId, offerId, args.now));
       return { statusCode: 200, body: { offer: await offers.myOffer(args.pool, staffId, offerId) } };

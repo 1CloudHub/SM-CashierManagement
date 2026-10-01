@@ -349,6 +349,7 @@ describe('API stack', () => {
         'POST /rule-versions/{versionId}/approve',
         'POST /rule-versions/{versionId}/request-changes',
         'POST /rule-versions/{versionId}/publish',
+        'POST /rule-versions/{versionId}/approve-and-publish',
         'GET /rule-versions/{versionId}/diff',
       ]),
     );
@@ -400,6 +401,20 @@ describe('API stack', () => {
     );
   });
 
+  it('protects every task 18 staff self-service route with the Cognito authorizer', () => {
+    expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
+      expect.arrayContaining([
+        'GET /me/roster',
+        'GET /me/requests',
+        'POST /me/requests',
+        'GET /me/requests/swap-options',
+        'POST /me/requests/{requestId}/cancel',
+        'GET /stores/{storeId}/staff-requests',
+        'POST /stores/{storeId}/staff-requests/{requestId}/decision',
+      ]),
+    );
+  });
+
   it('protects every task 19 notification route with the Cognito authorizer', () => {
     expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
       expect.arrayContaining([
@@ -441,6 +456,32 @@ describe('API stack', () => {
         'POST /approvals/{scenarioId}/plan',
         'POST /approvals/{scenarioId}/secured-outside',
       ]),
+    );
+  });
+
+  it('protects every master data route (stores, departments, staff and availability; SCR-052/053) with the Cognito authorizer', () => {
+    const expected = [
+      'GET /stores',
+      'GET /stores/{storeId}',
+      'POST /stores',
+      'PATCH /stores/{storeId}',
+      'PATCH /departments/{departmentId}',
+      'GET /staff',
+      'POST /staff',
+      'GET /staff/{staffId}',
+      'PATCH /staff/{staffId}',
+      'PUT /staff/{staffId}/availability',
+      'POST /staff/{staffId}/unavailable-dates',
+      'DELETE /staff/{staffId}/unavailable-dates/{entryId}',
+      'GET /staff/{staffId}/home-area',
+    ];
+    expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(expect.arrayContaining(expected));
+    const methods = Object.values(api.findResources('AWS::ApiGateway::Method')).map(
+      (m) => (m as { Properties: { HttpMethod: string; AuthorizationType: string } }).Properties,
+    );
+    // Every protected method (these included) sits behind the Cognito authorizer.
+    expect(methods.filter((p) => p.AuthorizationType === 'COGNITO_USER_POOLS').length).toBeGreaterThanOrEqual(
+      PROTECTED_ROUTES.length,
     );
   });
 

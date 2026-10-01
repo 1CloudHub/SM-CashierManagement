@@ -183,12 +183,49 @@ export interface MockRosterStore {
   openShift(shiftId: string): MockOpenShift | null
   /** Fills an open shift (accepted offer / borrow, P14): records the change, adding a borrowed cashier to the roster. */
   fill(shiftId: string, cashier: RosterStaffMember, type: 'offer_fill' | 'borrow_fill', by: string, reason?: string | null): boolean
+  /** Task 18: the roster as the self-service mock reads and changes it (approved staff requests). */
+  readonly selfService: MockSelfServiceRoster
+}
+
+/** A shift's local times before a change. */
+export interface MockShiftTimes {
+  readonly date: IsoDate
+  readonly startMin: number
+  readonly endMin: number
+}
+
+export interface MockSelfServiceRoster {
+  readonly storeId: string
+  readonly storeName: string
+  readonly period: { readonly start: IsoDate; readonly end: IsoDate }
+  departmentName(departmentId: string): string
+  staff(): readonly RosterStaffMember[]
+  shifts(): readonly RosterShiftDto[]
+  /** Every recorded change with the shift's times before it. */
+  history(): readonly { readonly override: ShiftOverrideDto; readonly before: MockShiftTimes | null }[]
+  /** The labor-rule check of reassigning shifts (`staffId` null = left open). */
+  check(changes: readonly { readonly shiftId: string; readonly staffId: string | null }[]): OverrideCheck
+  /** Applies an approved request's changes as ShiftOverrides. */
+  apply(
+    changes: readonly { readonly shiftId: string; readonly staffId: string | null }[],
+    type: 'swap' | 'time_off',
+    by: string,
+    reason: string | null,
+    ruleBreaches: readonly LaborBreach[],
+  ): void
 }
 
 export function createRosterStore(now: () => string = () => new Date().toISOString()): MockRosterStore {
   let shifts = seedShifts()
   const overrides: ShiftOverrideDto[] = []
+  const befores = new Map<string, MockShiftTimes>()
   const staff: RosterStaffMember[] = [...STAFF]
+  const timesOf = (x: Shift): MockShiftTimes => ({ date: x.date, startMin: x.startMin, endMin: x.endMin })
+  const reassigned = (changes: readonly { shiftId: string; staffId: string | null }[]) =>
+    shifts.map((x) => {
+      const c = changes.find((y) => y.shiftId === x.id)
+      return c ? { ...x, staffId: c.staffId } : x
+    })
 
   const summary = (): RosterSummary => ({
     id: ROSTER_ID,
@@ -294,7 +331,36 @@ export function createRosterStore(now: () => string = () => new Date().toISOStri
       shifts = shifts.map((x) => (x.id === shiftId ? { ...x, staffId: cashier.id, edited: { type, by, at } } : x))
       seq += 1
       overrides.push({ id: `ovr-${seq}`, shiftId, type, fromStaffId: null, toStaffId: cashier.id, reason, offReason: null, ruleBreaches: [], by, at })
+      befores.set(`ovr-${seq}`, timesOf(target))
       return true
+    },
+    selfService: {
+      storeId: STORE_ID,
+      storeName: MOCK_STORES.find((s) => s.id === STORE_ID)?.name ?? '',
+      period: { start: PERIOD_START, end: PERIOD_END },
+      departmentName: (id) => MOCK_DEPARTMENTS.find((d) => d.id === id)?.name ?? '',
+      staff: () => [...staff],
+      shifts: () => shifts.map((x) => ({ ...x })),
+      history: () => overrides.map((o) => ({ override: o, before: befores.get(o.id) ?? null })),
+      check(changes) {
+        const affected = [
+          ...new Set(
+            changes.flatMap((c) => [shifts.find((x) => x.id === c.shiftId)?.staffId ?? null, c.staffId]).filter((x): x is string => x !== null),
+          ),
+        ]
+        return evaluate(shifts, reassigned(changes), affected)
+      },
+      apply(changes, type, by, reason, ruleBreaches) {
+        const at = now()
+        for (const c of changes) {
+          const target = shifts.find((x) => x.id === c.shiftId)
+          if (!target) continue
+          seq += 1
+          overrides.push({ id: `ovr-${seq}`, shiftId: c.shiftId, type, fromStaffId: target.staffId, toStaffId: c.staffId, reason, offReason: null, ruleBreaches, by, at })
+          befores.set(`ovr-${seq}`, timesOf(target))
+        }
+        shifts = reassigned(changes).map((x) => (changes.some((c) => c.shiftId === x.id) ? { ...x, edited: { type, by, at } } : x))
+      },
     },
     handle({ method, pathname, body, role, userName }) {
       // ['stores', storeId, 'rosters', rosterId?, ...rest]
@@ -374,6 +440,7 @@ export function createRosterStore(now: () => string = () => new Date().toISOStri
         at,
       }
       overrides.push(override)
+      if (applied.target) befores.set(override.id, timesOf(applied.target))
       return { status: 201, body: { override, check, roster: detail(role) } }
     },
   }

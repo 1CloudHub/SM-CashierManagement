@@ -27,6 +27,8 @@ import { registerRosterRoutes } from './routes/rosters.js';
 import { registerOfferRoutes } from './routes/offers.js';
 import { registerRuleRoutes } from './routes/rules.js';
 import { registerScenarioRoutes } from './routes/scenarios.js';
+import { registerStaffRoutes } from './routes/staff.js';
+import { registerStaffSelfServiceRoutes } from './routes/staff-self-service.js';
 import { registerStoreRoutes } from './routes/stores.js';
 
 export interface AppDeps {
@@ -133,6 +135,7 @@ export function createApp(deps: AppDeps = depsFromEnv()): Router {
   const router = new Router({ enforcer: createEnforcer(deps), afterWrite }).get('/health', publicRoute(), healthHandler);
   registerMeRoutes(router, deps);
   registerStoreRoutes(router, deps);
+  registerStaffRoutes(router, deps);
   registerSearchRoutes(router, deps);
   registerSavedViewRoutes(router, deps);
   registerIngestionRoutes(router, deps);
@@ -146,6 +149,7 @@ export function createApp(deps: AppDeps = depsFromEnv()): Router {
   registerNetworkMapRoutes(router, deps);
   registerRosterRoutes(router, deps);
   registerOfferRoutes(router, deps);
+  registerStaffSelfServiceRoutes(router, deps);
   registerAdminUserRoutes(router, deps);
   registerAuditLogRoutes(router, deps);
   return router.assertGuarded();
