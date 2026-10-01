@@ -7,6 +7,7 @@
  */
 import { isStoreInScope, type RoleAssignment, type RoleCode, type Scope } from '@lanewise/shared';
 import type pg from 'pg';
+import type { Principal } from '../context.js';
 import type { Queryable } from '../db/pool.js';
 import type { RbacConfig } from './config.js';
 import type { ScopeTarget } from './guards.js';
@@ -63,13 +64,28 @@ export async function resolveScope(
 }
 
 /**
- * Whether the object a deep link addresses exists **and** is in scope. The
- * caller answers `false` with the same 404 whether the object is missing or
- * out of scope, so nothing about it is revealed (requirement 2.4).
+ * Whether the object a deep link addresses exists **and** is in scope (for a
+ * saved view: belongs to the caller). The caller answers `false` with the
+ * same 404 whether the object is missing or out of scope, so nothing about it
+ * is revealed (requirement 2.4).
  */
-export async function isTargetInScope(db: Queryable, scope: Scope, target: ScopeTarget, id: string): Promise<boolean> {
+export async function isTargetInScope(
+  db: Queryable,
+  principal: Pick<Principal, 'userId' | 'scope'>,
+  target: ScopeTarget,
+  id: string,
+): Promise<boolean> {
   if (!isUuid(id)) return false;
+  const scope = principal.scope;
+  if (scope === null) return false;
   switch (target.kind) {
+    case 'saved_view': {
+      const { rows } = await db.query<{ id: string } & pg.QueryResultRow>(
+        'SELECT id FROM saved_view WHERE id = $1 AND user_id = $2',
+        [id, principal.userId],
+      );
+      return rows.length === 1;
+    }
     case 'store': {
       const { rows } = await db.query<{ id: string; region_id: string } & pg.QueryResultRow>(
         'SELECT id, region_id FROM store WHERE id = $1',

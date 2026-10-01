@@ -92,3 +92,26 @@ describe('mock /home is shaped by the active role', () => {
     )
   })
 })
+
+describe('search and saved-view endpoints (task 20)', () => {
+  it('calls the documented paths and methods', async () => {
+    const log: ApiRequest[] = []
+    const api = createApiClient({ adapter: createMockAdapter({ log }), getActiveRole: () => 'PLN' })
+    await api.search('cebu city', 5)
+    const view = await api.createSavedView({ screen: 'SCR-020', name: 'Visayas', query: 'region=reg-visayas&junk=1' })
+    expect(view.query).toBe('region=reg-visayas')
+    expect((await api.listSavedViews('SCR-020')).views.map((v) => v.id)).toEqual([view.id])
+    await api.updateSavedView(view.id, { isDefault: true })
+    await api.deleteSavedView(view.id)
+    expect(log.map((r) => `${r.method} ${r.path}`)).toEqual([
+      'GET /search?q=cebu+city&limit=5',
+      'POST /saved-views',
+      'GET /saved-views?screen=SCR-020',
+      `PATCH /saved-views/${view.id}`,
+      `DELETE /saved-views/${view.id}`,
+    ])
+    const err = await api.deleteSavedView(view.id).catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(ApiError)
+    expect((err as ApiError).status).toBe(404)
+  })
+})

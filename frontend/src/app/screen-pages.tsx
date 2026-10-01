@@ -3,6 +3,8 @@ import { ErrorPage, type ErrorKind } from '@/components/errors'
 import { ShortcutReference } from '@/components/help'
 import { Section, Stack } from '@/components/layout'
 import { Pill } from '@/components/ui/pill'
+import { ContextBar } from '@/features/context/context-bar'
+import { isContextScreen } from '@/features/context/context-view'
 import { useI18n } from '@/i18n'
 import { canAccess } from './access'
 import { useActiveRole } from './active-role'
@@ -50,14 +52,19 @@ export function NotFoundScreen() {
   )
 }
 
-/** A screen from the map that its feature task hasn't built yet. */
+/**
+ * A screen from the map that its feature task hasn't built yet. Planning
+ * screens already get their context bar (task 20), so filters, the URL
+ * state and saved views work before the screen body lands.
+ */
 export function PlaceholderScreen({ screen }: { screen: ScreenDef }) {
   const { t } = useI18n()
   const crumbs = useScreenCrumbs(screen)
   const title = t(screen.titleKey)
   const task = screen.task ?? ''
+  const contextBar = isContextScreen(screen.id) ? <ContextBar screen={screen.id} /> : undefined
   return (
-    <AppLayout title={title} crumbs={crumbs}>
+    <AppLayout title={title} crumbs={crumbs} contextBar={contextBar}>
       <Stack gap={4}>
         <h1 className="text-h1 text-text">{title}</h1>
         <Section
@@ -95,8 +102,9 @@ export function HelpScreen() {
   const screen = SCREEN_BY_ID['SCR-091']
   const crumbs = useScreenCrumbs(screen)
   const title = t(screen.titleKey)
+  const contextBar = isContextScreen(screen.id) ? <ContextBar screen={screen.id} /> : undefined
   return (
-    <AppLayout title={title} crumbs={crumbs}>
+    <AppLayout title={title} crumbs={crumbs} contextBar={contextBar}>
       <Stack gap={4}>
         <h1 className="text-h1 text-text">{title}</h1>
         <Section title={t('help.guideHeading')}>

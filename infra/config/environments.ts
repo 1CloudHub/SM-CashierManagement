@@ -191,10 +191,13 @@ export const environments: Record<EnvName, EnvironmentConfig> = {
     envName: 'prod',
     account: process.env.CDK_DEFAULT_ACCOUNT,
     region: process.env.CDK_DEFAULT_REGION,
-    // SPA custom domain (ACM + CloudFront alias + Route 53) in the existing
-    // prototypes.1cloudhub.com public zone (account 675379425271).
-    domainName: 'lanewise.prototypes.1cloudhub.com',
-    hostedZone: { id: 'Z10306162UR77DOLJD1L3', name: 'prototypes.1cloudhub.com' },
+    // SPA custom domain: PAUSED. The prototypes.1cloudhub.com zone in this
+    // account (Z10306162UR77DOLJD1L3) is not the one public DNS delegates to,
+    // so the ACM DNS validation never completed and blocked the deploy. Re-enable
+    // (domainName: 'lanewise.prototypes.1cloudhub.com', hostedZone: { id, name })
+    // once the domain's records live in the authoritative zone.
+    domainName: undefined,
+    hostedZone: undefined,
     retainData: true,
     github: {
       owner: '1CloudHub',
@@ -205,9 +208,10 @@ export const environments: Record<EnvName, EnvironmentConfig> = {
     auth: {
       // Demo deployment: self sign-up on for the allowlisted domains (Q15).
       selfSignUp: true,
-      // Passkeys are bound to the custom domain. Set before any passkey was
-      // registered; changing it later invalidates every registered passkey.
-      relyingPartyId: 'lanewise.prototypes.1cloudhub.com',
+      // Passkeys bind to the SPA's CloudFront domain while the custom domain is
+      // paused. Switch to the custom domain BEFORE real users register passkeys;
+      // changing it later invalidates every registered passkey.
+      relyingPartyId: undefined,
       // One-time codes via SES (us-east-1): the 1cloudhub.com domain identity is
       // verified (DKIM) and the account is out of the SES sandbox.
       email: {

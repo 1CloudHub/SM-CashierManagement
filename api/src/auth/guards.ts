@@ -14,10 +14,14 @@ import type { PermissionAction, RbacResource } from '@lanewise/shared';
 import type { RequestContext } from '../context.js';
 import type { RoutedRequest } from '../http/types.js';
 
-/** Which path parameter names the object a deep link addresses, and its kind. */
+/**
+ * Which path parameter names the object a deep link addresses, and its kind.
+ * `saved_view` is owner-scoped: only the user who saved it may address it.
+ */
 export type ScopeTarget =
   | { readonly kind: 'store'; readonly param: string }
-  | { readonly kind: 'staff'; readonly param: string };
+  | { readonly kind: 'staff'; readonly param: string }
+  | { readonly kind: 'saved_view'; readonly param: string };
 
 export type RouteGuard =
   | { readonly kind: 'public' }

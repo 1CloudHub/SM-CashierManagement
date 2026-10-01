@@ -39,6 +39,8 @@ let db: TestDatabase;
 let org: Awaited<ReturnType<typeof seedOrg>>;
 const MISSING_ID = '6f1c7a52-0b8e-4d5e-9a41-5e2b1c9d7f00';
 const RUNS = 60;
+/** Feature resources whose handlers may answer 201/404/409 to random ids and bodies. */
+const LENIENT_RESOURCES = new Set<string>(['data_ingestion', 'scenarios', 'scenario_settings', 'scenario_submit']);
 
 beforeAll(async () => {
   db = await createTestDatabase();
@@ -84,6 +86,8 @@ function expectedScope(role: RoleCode, assignments: readonly { role: RoleCode; s
 
 function inScope(scope: Scope, guard: Extract<RouteGuard, { kind: 'authorize' }>, id: string): boolean {
   if (!guard.scopeTarget) return true;
+  // No saved view is seeded here, so every id addresses someone else's or a missing one.
+  if (guard.scopeTarget.kind === 'saved_view') return false;
   if (guard.scopeTarget.kind === 'store') {
     const store = storeOf(id);
     return store !== undefined && isStoreInScope(scope, store);
@@ -228,10 +232,22 @@ describe('P12 active-role enforcement', () => {
             expect(after).toEqual(before);
             return;
           }
-          // 409: e.g. removing a home area the Staff user never shared (task 15).
-          const ok = [200, 422, ...(OWN_STAFF_RECORD.test(request.pattern) ? [409] : [])];
-          expect(ok.includes(res.status), `${request.method} ${request.path}: ${res.raw}`).toBe(true);
-          if (request.method === 'GET') {
+          // Authorised: the handler ran. Feature routes addressed with random
+          // ids/bodies legitimately answer 201/404/409 too — never 401/403/5xx.
+          // Past the guard, a handler may still answer 404 for an unknown object on a
+          // route whose path parameter is not a scope target (e.g. a rule version id),
+          // or 409 when removing a home area the Staff user never shared (task 15).
+          const unscopedParam = request.targetId !== null && request.guard.kind === 'authorize' && !request.guard.scopeTarget;
+          const lenient =
+            request.guard.kind === 'authorize' && LENIENT_RESOURCES.has(request.guard.resource);
+          const featureOutcome = lenient
+            ? res.status < 500 && res.status !== 401 && res.status !== 403
+            : [200, 422, ...(unscopedParam ? [404] : []), ...(OWN_STAFF_RECORD.test(request.pattern) ? [409] : [])].includes(res.status);
+          expect(featureOutcome, `${request.method} ${request.path}: ${res.raw}`).toBe(true);
+          if (res.status === 404 && !lenient) expect(after).toEqual(before);
+          // CSV downloads record one export audit event (P7), so only they may write on GET.
+          const isExport = /\/(export|report)$/.test(request.pattern);
+          if (request.method === 'GET' && !isExport) {
             expect(after).toEqual(before);
           } else if (request.pattern === '/me/active-role') {
             const role = (request.body as { role: RoleCode }).role;
