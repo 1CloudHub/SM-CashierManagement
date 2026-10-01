@@ -1,3 +1,4 @@
+import { DemoCredit } from '@/components/brand'
 import { useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { buttonVariants } from '@/components/ui/button-variants'
@@ -202,7 +203,10 @@ export function ErrorPage({
           className,
         )}
       >
-        <div className="w-full max-w-md">{block}</div>
+        <div className="flex w-full max-w-md flex-col items-center gap-8">
+          <div className="w-full">{block}</div>
+          <DemoCredit />
+        </div>
       </main>
     )
   }

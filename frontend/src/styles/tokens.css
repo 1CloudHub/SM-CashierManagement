@@ -126,6 +126,9 @@
 
   --lw-primary: var(--lw-blue-600);
   --lw-on-primary: var(--lw-slate-0);
+  /* Partner (1CloudHub) logo chip: the raster logo has a white ground, so the
+     chip stays white in both themes (not redefined in the dark blocks). */
+  --lw-partner-chip: var(--lw-slate-0);
   --lw-primary-soft: var(--lw-blue-100);
   --lw-on-primary-soft: var(--lw-blue-700);
   --lw-primary-hover: var(--lw-blue-700); /* hover step of the solid fill */

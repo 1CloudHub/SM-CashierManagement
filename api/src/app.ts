@@ -149,8 +149,8 @@ export function createApp(deps: AppDeps = depsFromEnv()): Router {
   registerNetworkMapRoutes(router, deps);
   registerRosterRoutes(router, deps);
   registerOfferRoutes(router, deps);
+  registerStaffSelfServiceRoutes(router, deps);
   registerAdminUserRoutes(router, deps);
   registerAuditLogRoutes(router, deps);
-  registerStaffSelfServiceRoutes(router, deps);
   return router.assertGuarded();
 }
