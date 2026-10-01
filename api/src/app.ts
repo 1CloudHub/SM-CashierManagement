@@ -9,8 +9,8 @@ import { Router } from './http/router.js';
 import { createS3Storage, type IngestionStorage } from './ingestion/storage.js';
 import { dispatchPendingEmails } from './notifications/dispatch.js';
 import { createSesSender, type EmailSender } from './notifications/email.js';
-import { registerApprovalRoutes } from './routes/approvals.js';
 import { createInProcessQueue, createSqsQueue, type JobQueue } from './jobs/queue.js';
+import { registerApprovalRoutes } from './routes/approvals.js';
 import { healthHandler } from './routes/health.js';
 import { registerIngestionRoutes } from './routes/ingestion.js';
 import { registerLocationPrivacyRoutes } from './routes/location-privacy.js';
@@ -62,6 +62,7 @@ export function appBaseUrlFromEnv(env: NodeJS.ProcessEnv): string {
  * RBAC env flags, the uploads bucket `UPLOADS_BUCKET` (infra/lib/data-stack.ts)
  * the jobs queue `JOBS_QUEUE_URL` (infra/lib/jobs-stack.ts) and the SES sender
  * `SES_FROM_ADDRESS` / `SES_REGION` (infra/lib/notifications.ts).
+ * and the jobs queue `JOBS_QUEUE_URL` (infra/lib/jobs-stack.ts).
  */
 export function depsFromEnv(env: NodeJS.ProcessEnv = process.env): AppDeps {
   let pool: pg.Pool | null = null;

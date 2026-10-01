@@ -13,9 +13,9 @@ import {
   type RoleCode,
 } from '@lanewise/shared'
 import { ACTIVE_ROLE_HEADER, type ApiAdapter, type ApiRequest, type ApiResponse } from './client'
-import { createNotificationStore } from './mock-notifications'
 import { createPlanningStore } from './mock-planning'
 import { createOfferStore } from './mock-offers'
+import { createNotificationStore } from './mock-notifications'
 import { createSelfServiceStore } from './mock-self-service'
 import { createRosterStore } from './mock-rosters'
 import { createScenarioStore } from './mock-scenarios'
@@ -249,8 +249,8 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
   const savedViews = createSavedViewStore()
   const scenarios = createScenarioStore()
   const notifications = createNotificationStore()
-  const rosters = createRosterStore()
   const planning = createPlanningStore()
+  const rosters = createRosterStore()
   const offerStore = createOfferStore(rosters)
   const selfService = createSelfServiceStore(rosters)
   return async (request) => {
