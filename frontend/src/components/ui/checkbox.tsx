@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
+import { forwardRef, useCallback, useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
 
 /**
@@ -68,8 +68,16 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
     },
     ref,
   ) {
-    const inner = useRef<HTMLInputElement>(null)
-    useImperativeHandle(ref, () => inner.current as HTMLInputElement)
+    const inner = useRef<HTMLInputElement | null>(null)
+    // Keep a local handle (for `indeterminate`) and forward the node.
+    const setRef = useCallback(
+      (node: HTMLInputElement | null) => {
+        inner.current = node
+        if (typeof ref === 'function') ref(node)
+        else if (ref) ref.current = node
+      },
+      [ref],
+    )
     // `indeterminate` is a DOM property only (no attribute).
     useEffect(() => {
       if (inner.current) inner.current.indeterminate = indeterminate
@@ -78,7 +86,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
     return (
       <label className={cn(labelBase, hideLabel && 'justify-center', className)}>
         <input
-          ref={inner}
+          ref={setRef}
           type="checkbox"
           className={cn(inputBase, inputClassName)}
           {...props}

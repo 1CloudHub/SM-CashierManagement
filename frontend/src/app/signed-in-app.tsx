@@ -17,7 +17,9 @@ export function SignedInApp({ apiBaseUrl }: { apiBaseUrl?: string | null }) {
   const getAuthToken = useCallback(() => client.idToken(), [client])
   const slots = useMemo(
     () => ({
-      account: user ? { email: user.email, onSignOut: () => void signOut() } : undefined,
+      account: user
+        ? { email: user.email, name: user.name, onSignOut: () => void signOut() }
+        : undefined,
     }),
     [user, signOut],
   )

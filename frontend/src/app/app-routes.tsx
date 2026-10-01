@@ -11,7 +11,7 @@ import { RuleSetsPage, RuleVersionEditorPage } from '@/features/rules/pages'
 import { ScenarioComparePage, ScenarioListPage, ScenarioSettingsPage } from '@/features/scenarios/pages'
 import { SCREEN_BY_ID, SCREENS, type ScreenDef, type ScreenId } from './screens'
 import { AppUserMenu, GLOBAL_SEARCH_ID } from './app-layout'
-import { useRouter } from './router'
+import { Redirect, useRouter } from './router'
 import { Guarded, HelpScreen, NotFoundScreen, PlaceholderScreen, StatusScreen } from './screen-pages'
 
 /**
@@ -30,7 +30,6 @@ const BUILT: Partial<Record<ScreenId, () => React.ReactNode>> = {
   'SCR-041': () => <SearchResultsScreen />,
   'SCR-060': () => <RuleSetsPage />,
   'SCR-061': () => <RuleVersionEditorPage />,
-  // SCR-080 keeps its own shell from task 7 until it moves into AppLayout.
   'SCR-050': () => <DataSourcesPage />,
   'SCR-051': () => <UploadPage />,
   'SCR-080': () => <ProfileScreen />,
@@ -46,8 +45,8 @@ function screenElement(screen: ScreenDef) {
 const NAV_TARGETS = { home: '/', roster: '/plan/roster', map: '/plan/map' } as const
 
 /**
- * Persistent layout for app screens: global shortcuts (`?`, `/`, g h / g r /
- * g m), the help dialog, and focus to <main> on route change (screens remount
+ * Persistent layout for app screens: global shortcuts (`?`, `/`, `n`, g h /
+ * g r / g m), the help dialog, and focus to <main> on route change (screens remount
  * their AppLayout per route, so this must live above them).
  */
 function WithHelp() {
@@ -57,6 +56,9 @@ function WithHelp() {
     <HelpProvider
       onNavigate={(target) => navigate(NAV_TARGETS[target])}
       onFocusSearch={() => document.getElementById(GLOBAL_SEARCH_ID)?.focus()}
+      onOpenNotifications={() => navigate('/notifications')}
+      methodologyHref="/help#methodology"
+      supportHref="/help#support"
     >
       <Outlet />
     </HelpProvider>
@@ -75,6 +77,8 @@ export function AppRoutes() {
         {/* SCR-071 also edits an existing user. */}
         <Route path="/admin/users/:userId" element={screenElement(SCREEN_BY_ID['SCR-071'])} />
         <Route path="/index.html" element={screenElement(SCREEN_BY_ID['SCR-010'])} />
+        {/* SCR-090 without a kind: the generic status page is "not found". */}
+        <Route path="/status" element={<Redirect to="/status/404" />} />
         <Route path="*" element={<NotFoundScreen />} />
       </Route>
     </Routes>

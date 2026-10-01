@@ -1,8 +1,9 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
-import { ROLE_CODES, isAllowedEmail, normaliseEmailInput, parseEmail, type RoleCode } from '@lanewise/shared'
+import { Check } from 'lucide-react'
+import { ROLE_CODES, isAllowedEmail, isRoleCode, normaliseEmailInput, parseEmail, type RoleCode } from '@lanewise/shared'
 import { Redirect, useRouter } from '@/app/router'
 import { Cluster, Stack } from '@/components/layout'
-import { Alert, Button, Field, Input, Select } from '@/components/ui'
+import { Alert, Button, Checkbox, Field, Input, Select } from '@/components/ui'
 import { useI18n } from '@/i18n'
 import { cn } from '@/lib/utils'
 import { isAuthFailure, isPasskeySupported, type AuthFailureCode } from './auth-client'
@@ -67,28 +68,32 @@ export function FirstSignInScreen({ passkeySupported = isPasskeySupported() }: {
         <Stack gap={3}>
           <h1 className="text-h2 text-text">{t('auth.first.title')}</h1>
           <ol aria-label={t('auth.first.stepsLabel')} className="flex flex-wrap gap-3">
-            {([1, 2, 3] as const).map((n) => (
-              <li
-                key={n}
-                aria-current={n === step ? 'step' : undefined}
-                className={cn(
-                  'flex items-center gap-2 text-body-sm',
-                  n === step ? 'font-weight-semibold text-text' : 'text-text-muted',
-                )}
-              >
-                <span
-                  aria-hidden="true"
+            {([1, 2, 3] as const).map((n) => {
+              const completed = n < step
+              return (
+                <li
+                  key={n}
+                  aria-current={n === step ? 'step' : undefined}
                   className={cn(
-                    'lw-numeric inline-flex size-6 items-center justify-center border',
-                    n === step ? 'border-primary bg-primary text-on-primary' : 'border-outline',
+                    'flex items-center gap-2 text-body-sm',
+                    n === step ? 'font-weight-semibold text-text' : completed ? 'text-text' : 'text-text-muted',
                   )}
                 >
-                  {n}
-                </span>
-                <span className="sr-only">{t('auth.first.stepOf', { step: n, total: TOTAL_STEPS })}: </span>
-                {stepTitles[n]}
-              </li>
-            ))}
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      'lw-numeric inline-flex size-6 items-center justify-center border',
+                      n === step ? 'border-primary bg-primary text-on-primary' : 'border-outline',
+                    )}
+                  >
+                    {completed ? <Check className="size-4" /> : n}
+                  </span>
+                  <span className="sr-only">{t('auth.first.stepOf', { step: n, total: TOTAL_STEPS })}: </span>
+                  {stepTitles[n]}
+                  {completed && <span className="sr-only"> ({t('auth.first.stepDone')})</span>}
+                </li>
+              )
+            })}
           </ol>
         </Stack>
 
@@ -140,6 +145,13 @@ function VerifyEmailStep({
   const [codeError, setCodeError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const codeRef = useRef<HTMLInputElement>(null)
+
+  // Once the code is sent, the code field replaces the email form: move focus
+  // into it so keyboard and screen-reader users land where they type next.
+  useEffect(() => {
+    if (sentTo) codeRef.current?.focus()
+  }, [sentTo])
 
   async function sendCode(e: FormEvent) {
     e.preventDefault()
@@ -233,6 +245,7 @@ function VerifyEmailStep({
           {(aria) => (
             <Input
               {...aria}
+              ref={codeRef}
               name="code"
               inputMode="numeric"
               autoComplete="one-time-code"
@@ -348,7 +361,14 @@ function GetStartedStep({ headingRef }: { headingRef: React.RefObject<HTMLHeadin
         </Alert>
         <Field label={t('auth.first.startAs')}>
           {(aria) => (
-            <Select {...aria} value={role} onChange={(e) => setRole(e.target.value as RoleCode)}>
+            <Select
+              {...aria}
+              value={role}
+              onChange={(e) => {
+                const next = e.target.value
+                if (isRoleCode(next)) setRole(next)
+              }}
+            >
               {ROLE_CODES.map((code) => (
                 <option key={code} value={code}>
                   {t(`role.${code}`)}
@@ -359,26 +379,18 @@ function GetStartedStep({ headingRef }: { headingRef: React.RefObject<HTMLHeadin
         </Field>
         <fieldset className="flex flex-col gap-2">
           <legend className="text-label text-text">{t('auth.first.notifications')}</legend>
-          <Cluster gap={2} as="label" htmlFor={inAppId} className="min-h-tap text-body text-text">
-            <input
-              id={inAppId}
-              type="checkbox"
-              className="size-5 accent-primary"
-              checked={inApp}
-              onChange={(e) => setInApp(e.target.checked)}
-            />
-            {t('auth.first.notifyInApp')}
-          </Cluster>
-          <Cluster gap={2} as="label" htmlFor={emailId} className="min-h-tap text-body text-text">
-            <input
-              id={emailId}
-              type="checkbox"
-              className="size-5 accent-primary"
-              checked={emailNotify}
-              onChange={(e) => setEmailNotify(e.target.checked)}
-            />
-            {t('auth.first.notifyEmail')}
-          </Cluster>
+          <Checkbox
+            id={inAppId}
+            label={t('auth.first.notifyInApp')}
+            checked={inApp}
+            onChange={(e) => setInApp(e.target.checked)}
+          />
+          <Checkbox
+            id={emailId}
+            label={t('auth.first.notifyEmail')}
+            checked={emailNotify}
+            onChange={(e) => setEmailNotify(e.target.checked)}
+          />
         </fieldset>
         <Button type="submit" variant="primary">
           {t('auth.first.continue')}
