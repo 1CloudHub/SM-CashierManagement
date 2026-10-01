@@ -253,6 +253,17 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
       // Published rosters carry no ₱ figures (task 13.4), see ./mock-rosters.
       return rosters.handle({ method: request.method, pathname, body: request.body, role, userName: `Demo ${role}` })
     }
+    if (pathname === '/approvals' || pathname.startsWith('/approvals/')) {
+      // Shares the scenario rows; results are shaped for the role like /scenarios.
+      return scenarios.approvals.handle({
+        method: request.method,
+        pathname,
+        query: new URLSearchParams(search),
+        body: request.body,
+        role,
+        viewer: mockViewer(role),
+      })
+    }
     const { key, id } = routeOf(request.method, pathname)
     const handler = ROUTES[key]
     if (!handler) return fail('not_found', 'We couldn’t find that.')

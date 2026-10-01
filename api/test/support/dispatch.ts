@@ -49,7 +49,10 @@ export async function dispatch(router: Router, method: string, path: string, opt
     );
     return { status: response.statusCode, body: response.body };
   } catch (error) {
-    if (error instanceof ApiError) return { status: error.status, body: { error: { code: error.code, message: error.message } } };
+    if (error instanceof ApiError) {
+      const details = error.details.length > 0 ? { details: error.details } : {};
+      return { status: error.status, body: { error: { code: error.code, message: error.message, ...details } } };
+    }
     throw error;
   }
 }

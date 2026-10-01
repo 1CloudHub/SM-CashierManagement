@@ -19,6 +19,7 @@ import {
   type ScenarioStoreResult,
 } from '@lanewise/shared'
 import type { ApiResponse } from './client'
+import { createApprovalBook, type MockApprovalBook } from './mock-approvals'
 
 /**
  * In-memory `/scenarios` for the mock API (task 11). Scenarios live per
@@ -225,6 +226,8 @@ function stripResults(r: ScenarioRunResults | null, viewer: CostViewer): Scenari
 
 export interface MockScenarioStore {
   handle(input: { method: string; pathname: string; query: URLSearchParams; body: unknown; role: RoleCode; viewer: CostViewer }): ApiResponse
+  /** `/approvals` over the same scenarios (task 12, ./mock-approvals). */
+  readonly approvals: MockApprovalBook
 }
 
 export function createScenarioStore(now: () => string = () => new Date().toISOString()): MockScenarioStore {
@@ -288,7 +291,10 @@ export function createScenarioStore(now: () => string = () => new Date().toISOSt
     return row
   }
 
+  const approvals = createApprovalBook({ rows: () => rows, detail: view, listItem, now })
+
   return {
+    approvals,
     handle({ method, pathname, query, body, role, viewer }) {
       const visible = (r: Row) => (role === 'STM' ? r.status === 'published' : role !== 'STF' && role !== 'ADM')
       const planner = role === 'PLN'
@@ -418,6 +424,7 @@ export function createScenarioStore(now: () => string = () => new Date().toISOSt
           const blocker = scenarioSubmitBlocker({ status: row.status, stale: row.stale, hasSucceededRun: row.latestRun?.status === 'succeeded' })
           if (blocker) return fail('conflict', `This scenario can’t be submitted (${blocker}).`)
           setStatus('submitted')
+          approvals.submit(row.id, role)
           return reply(row)
         }
         case 'archive':
