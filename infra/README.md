@@ -34,11 +34,16 @@ the deployment topology from **ADR-0004** and docs **DEP-003 / DEP-004 / DEP-005
 One CDK app with **per-environment configuration**. Only `prod` is active today;
 `staging` and a promotion gate can be added without reworking the stacks.
 
+**Regions (prod):** SPA hosting and the CI/CD stacks run in **us-east-1**; the
+application stacks (Auth, Data, Jobs, Location, Api) run in **us-east-2**; SES
+stays in us-east-1. See [Application region](#application-region-us-east-2).
+
 ## Layout
 
 ```
 infra/
   bin/infra.ts                 # app entry — resolves env config, instantiates stacks
+  lib/lanewise-app.ts          # stack wiring per environment (regions, cross-region refs, grants)
   config/environments.ts       # per-environment config map (prod now; staging template)
   lib/spa-hosting-stack.ts     # S3 + CloudFront (OAC) SPA hosting
   lib/api-stack.ts             # Lambda + API Gateway (+ Cognito authorizer)
@@ -50,7 +55,9 @@ infra/
   lib/pipeline-iam-stack.ts    # CodeStar (GitHub) connection + pipeline/CodeBuild IAM roles
   lambda/migrate-runner/       # deploy-time wrapper around api/dist/migrate
   lambda/jobs-worker/          # worker skeleton (replaced in task 14.2)
+  scripts/stack-region.mjs     # stack -> region from cdk.out (used by the deploy buildspec)
   test/stacks.test.ts          # CDK assertion smoke tests
+  test/app-regions.test.ts     # region split, cross-region references, SES region
 ```
 
 ## Commands
@@ -76,9 +83,76 @@ npx cdk synth -c env=prod
 LANEWISE_ENV=prod npx cdk synth
 ```
 
-The stacks are `LaneWise-prod-SpaHosting`, `LaneWise-prod-Auth`,
-`LaneWise-prod-Api`, `LaneWise-prod-PipelineIam`, `LaneWise-prod-PipelinePrChecks`
-and `LaneWise-prod-DeployPipeline`.
+The stacks are `LaneWise-prod-SpaHosting`, `-PipelineIam`,
+`-PipelinePrChecks`, `-DeployPipeline` (us-east-1) and `LaneWise-prod-Auth`,
+`-Data`, `-Jobs`, `-Location`, `-Api` (us-east-2).
+
+## Application region (us-east-2)
+
+The first deploy of `LaneWise-prod-Data` (VPC + Aurora) failed in us-east-1:
+the account had reached its VPC limit there. The VPC-bound application stacks
+therefore run in **us-east-2** (spare VPC capacity, already CDK-bootstrapped),
+set by config in `config/environments.ts`:
+
+| Config | Prod | Stacks |
+|---|---|---|
+| `region` | `us-east-1` | `SpaHosting`, `PipelineIam`, `PipelinePrChecks`, `DeployPipeline` |
+| `appRegion` | `us-east-2` | `Auth`, `Data`, `Jobs`, `Location`, `Api` |
+| `auth.email.sesRegion`, `notifications.sesRegion` | `us-east-1` | SES (the verified `1cloudhub.com` identity only exists there) |
+
+- **SPA hosting is unchanged** (same bucket, same CloudFront distribution, same
+  URL); it only gains the cross-region export writer below.
+- **Cross-region references** (`crossRegionReferences: true` on the app stacks
+  when `appRegion` differs from `region`): the API CORS allowlist, the uploads
+  bucket CORS and the passkey relying party (CloudFront domain while the custom
+  domain is paused) come from the us-east-1 SpaHosting stack. CDK writes the
+  value to SSM parameters `/cdk/exports/LaneWise-prod-<Stack>/…` in us-east-2
+  (custom resource in SpaHosting) and the Auth, Data and Api stacks read them
+  there. Both regions must be explicit in the config for this.
+- **SES**: the us-east-2 user pool sends one-time codes through the us-east-1
+  identity (`SourceArn` `arn:aws:ses:us-east-1:…:identity/1cloudhub.com`), and
+  `SES_REGION=us-east-1` plus the SES send grants of the API and worker point
+  at the same identity.
+- **Deploy stage** (`buildspec-cdk-deploy.yml`): reads each stack's outputs in
+  its own region (`--region`, taken from `cdk.out/manifest.json` via
+  `scripts/stack-region.mjs`) and writes `runtime-config.json` with the
+  us-east-2 user pool, client id, API URL and `region: us-east-2`. The CodeBuild
+  role may describe `LaneWise-*` stacks and read the CDK bootstrap version in
+  both regions.
+- Stack names stay `LaneWise-prod-<X>`; only the region changed.
+
+### ⚠️ Manual cleanup in us-east-1 (after the first us-east-2 deploy)
+
+The pre-move copies of the application stacks are left in us-east-1 and are no
+longer managed by the pipeline. Delete them **by hand** once the pipeline has
+deployed the us-east-2 stacks and the SPA works against them (sign-in and
+`GET /health` on the new API URL in `runtime-config.json`):
+
+1. Confirm the new stacks are healthy:
+   `aws cloudformation describe-stacks --region us-east-2 --query "Stacks[?starts_with(StackName,'LaneWise-prod-')].[StackName,StackStatus]"`.
+2. Delete the old API, then the old Auth and Location stacks (Api imports
+   Auth, so it goes first):
+   `aws cloudformation delete-stack --region us-east-1 --stack-name LaneWise-prod-Api`
+   (wait for `DELETE_COMPLETE` with `aws cloudformation wait stack-delete-complete --region us-east-1 --stack-name LaneWise-prod-Api`), then the same for
+   `LaneWise-prod-Auth` and `LaneWise-prod-Location`.
+3. Delete the failed `LaneWise-prod-Data` stack in us-east-1 if it is still
+   there (e.g. `ROLLBACK_COMPLETE`), and `LaneWise-prod-Jobs` if it exists.
+4. Retained resources survive stack deletion (prod uses `RETAIN`); delete
+   them in us-east-1 too:
+   - the old user pool `lanewise-prod-users` (it has deletion protection:
+     Cognito console → the pool → Settings → turn deletion protection off, then
+     delete it). Users registered on it sign up again on the us-east-2 pool
+     (passkeys are bound to a pool);
+   - the retained log groups of the old Api/Auth functions
+     (`LaneWise-prod-Api-ApiFunctionLogs…`, `LaneWise-prod-Auth-PreSignUpLogs…`);
+   - anything the failed Data stack retained: the `lanewise/prod/db-master`
+     secret, the `MigrateFunctionLogs` log group and an uploads bucket, if they
+     exist.
+5. Set `legacyAppStacksInHomeRegion: false` in `config/environments.ts` and
+   merge: this drops the SpaHosting export
+   (`LaneWise-prod-SpaHosting:ExportsOutputFnGetAttSpaDistribution…DomainName…`)
+   that the old us-east-1 Auth/Api stacks imported (CloudFormation refuses to
+   remove an export that is still imported, which is why it is kept until then).
 
 ## Custom domain (SPA)
 
@@ -153,7 +227,9 @@ if the org/repo/connection name differs.
   with it set the pool sends through SES (`EmailSendingAccount: DEVELOPER`) and
   `EMAIL_OTP` is an allowed first factor. Prod sends as
   `LaneWise <noreply@1cloudhub.com>` from the verified `1cloudhub.com` domain
-  identity in us-east-1 (DKIM verified; account out of the SES sandbox). Cognito
+  identity in us-east-1 (DKIM verified; account out of the SES sandbox) — a
+  cross-region SES configuration, since the user pool is in us-east-2 (Cognito
+  in us-east-2 may use SES in us-east-1 or us-east-2). Cognito
   sends through its `AWSServiceRoleForAmazonCognitoIdpEmailService`
   service-linked role (created automatically on deploy; same-account identity,
   so no SES sending-authorization policy is needed). With `auth.email` unset,
@@ -164,8 +240,8 @@ if the org/repo/connection name differs.
 - **No hosted UI.** The app client has OAuth disabled, so there are no
   callback/logout URLs to maintain for the domain.
 - **SPA config.** The deploy stage writes `runtime-config.json` (pool id,
-  client id, region, self sign-up flag, API URL) into the SPA bucket from the
-  stack outputs. None of it depends on the SPA origin, so it is the same for
+  client id, region — us-east-2 in prod —, self sign-up flag, API URL) into the
+  SPA bucket from the stack outputs. None of it depends on the SPA origin, so it is the same for
   the custom and CloudFront domains.
 
 ## Data services (task 24)
@@ -173,7 +249,7 @@ if the org/repo/connection name differs.
 All settings live in `config/environments.ts` (`data`, `jobs`, `location`,
 `notifications`). Stacks: `LaneWise-<env>-Data`, `-Jobs`, `-Location`; the API
 stack consumes them (VPC placement, environment, scoped IAM grants in
-`bin/infra.ts`).
+`lib/lanewise-app.ts`).
 
 - **Database.** Aurora PostgreSQL 16 Serverless v2, encrypted, `rds.force_ssl`
   on, deletion protection + snapshot on delete + retained secret in prod.
@@ -210,7 +286,8 @@ stack consumes them (VPC placement, environment, scoped IAM grants in
 ### ⚠️ Manual steps / decisions
 
 1. **SES.** The `1cloudhub.com` identity must be verified (and out of the SES
-   sandbox) in the deploy region, or set `notifications.sesRegion`. The SES
+   sandbox) in `notifications.sesRegion` (prod: us-east-1, while the
+   functions run in us-east-2). The SES
    *API* has no PrivateLink endpoint, so functions in the isolated VPC cannot
    reach it: before task 19 sends email, either set `data.natGateways: 1`
    (~USD 33/month + data) or send from a function outside the VPC.
@@ -223,7 +300,8 @@ Per ADR-0004 / DEP-005 this is a configuration + wiring change only:
 
 1. Add `'staging'` to the `EnvName` union in `config/environments.ts`.
 2. Populate the commented `staging` entry in the `environments` map.
-3. Instantiate the stacks for `staging` in `bin/infra.ts` and insert a manual
+   Set `region` / `appRegion` like prod (or the same region for both).
+3. Instantiate the stacks for `staging` (`createLaneWiseStacks` in `bin/infra.ts`) and insert a manual
    approval (promotion gate) stage before the prod deploy in the pipeline stack
    (tasks 3.2–3.4).
 

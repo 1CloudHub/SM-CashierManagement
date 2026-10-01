@@ -2,7 +2,7 @@ import { Aws, CfnOutput, Stack, StackProps } from 'aws-cdk-lib';
 import * as codestarconnections from 'aws-cdk-lib/aws-codestarconnections';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
-import type { EnvironmentConfig } from '../config/environments';
+import { appRegionOf, type EnvironmentConfig } from '../config/environments';
 
 export interface PipelineIamStackProps extends StackProps {
   readonly config: EnvironmentConfig;
@@ -48,6 +48,10 @@ export class PipelineIamStack extends Stack {
 
     const { config } = props;
     const { github } = config;
+    // Regions `cdk deploy --all` targets: SPA hosting + CI/CD (`region`) and
+    // the application stacks (`appRegion`, prod: us-east-2). Unset => this
+    // stack's region (resolved at deploy).
+    const deployRegions = [...new Set([config.region ?? Aws.REGION, appRegionOf(config) ?? Aws.REGION])];
 
     // ── 1. CodeStar (GitHub) Connection ────────────────────────────────────
     // Created PENDING; authorised once via the console GitHub App handshake.
@@ -160,7 +164,9 @@ export class PipelineIamStack extends Stack {
       new iam.PolicyStatement({
         sid: 'ReadCdkBootstrapVersion',
         actions: ['ssm:GetParameter', 'ssm:GetParameters'],
-        resources: [`arn:${Aws.PARTITION}:ssm:${Aws.REGION}:${Aws.ACCOUNT_ID}:parameter/cdk-bootstrap/*`],
+        resources: deployRegions.map(
+          (region) => `arn:${Aws.PARTITION}:ssm:${region}:${Aws.ACCOUNT_ID}:parameter/cdk-bootstrap/*`,
+        ),
       }),
     );
 
@@ -172,13 +178,16 @@ export class PipelineIamStack extends Stack {
     // Those three post-deploy actions are the extra surface below.
 
     // Read CloudFormation stack outputs to resolve the SPA bucket name and the
-    // CloudFront distribution id at deploy time (no hardcoded names). Scoped to
-    // LaneWise-named stacks in this account/region.
+    // CloudFront distribution id at deploy time (no hardcoded names), and the
+    // Auth/Api outputs for runtime-config.json from the application region.
+    // Scoped to LaneWise-named stacks in this account, in the deploy regions.
     this.codeBuildRole.addToPolicy(
       new iam.PolicyStatement({
         sid: 'ReadLaneWiseStackOutputs',
         actions: ['cloudformation:DescribeStacks'],
-        resources: [`arn:${Aws.PARTITION}:cloudformation:${Aws.REGION}:${Aws.ACCOUNT_ID}:stack/LaneWise-*/*`],
+        resources: deployRegions.map(
+          (region) => `arn:${Aws.PARTITION}:cloudformation:${region}:${Aws.ACCOUNT_ID}:stack/LaneWise-*/*`,
+        ),
       }),
     );
 

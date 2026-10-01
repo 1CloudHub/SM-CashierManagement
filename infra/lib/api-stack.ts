@@ -88,7 +88,7 @@ function assertApiBundle(dir: string): void {
  * the verified claims (identity + domain allowlist, api/src/context.ts). The
  * data services (Aurora, S3, SQS, SES, Location Service) live in their own
  * stacks (task 24); `network` + `serviceEnvironment` place the function in the
- * data VPC and pass their settings, and bin/infra.ts adds the scoped grants.
+ * data VPC and pass their settings, and lib/lanewise-app.ts adds the scoped grants.
  */
 export class ApiStack extends Stack {
   /** The invoke URL of the deployed REST API (e.g. https://xxxx.execute-api.../prod/). */
@@ -97,7 +97,7 @@ export class ApiStack extends Stack {
   public readonly authorizer: apigateway.CognitoUserPoolsAuthorizer;
   /** Method options that protect a route with the Cognito authorizer. */
   public readonly protectedMethodOptions: apigateway.MethodOptions;
-  /** The API function (grants for data services are added in bin/infra.ts). */
+  /** The API function (grants for data services are added in lib/lanewise-app.ts). */
   public readonly apiFunction: lambda.Function;
 
   constructor(scope: Construct, id: string, props: ApiStackProps) {

@@ -11,6 +11,10 @@ version: 0.2
 #   2. Write the SPA runtime config (frontend/dist/runtime-config.json: Cognito
 #      user pool + app client ids, region, API URL) from the Auth/Api stack
 #      outputs, so the same SPA build works in any environment.
+#
+# Regions: SpaHosting + the CI/CD stacks deploy to us-east-1, the application
+# stacks (Auth, Data, Jobs, Location, Api) to us-east-2 (config/environments.ts
+# `region` / `appRegion`). Stack outputs are read with `--region` per stack.
 #   3. Upload the freshly built SPA (frontend/dist) to the SPA S3 bucket.
 #   4. Invalidate the CloudFront distribution so the new SPA is served
 #      immediately.
@@ -59,32 +63,35 @@ phases:
           echo "cdk deploy failed — skipping SPA publish"; exit 1
         fi
       - echo "publish SPA — sync frontend/dist to S3 + invalidate CloudFront"
-      # Resolve the SPA bucket + distribution id from the stack outputs.
+      # Each stack is queried in its own region, read from the cloud assembly
+      # `cdk deploy` just produced (cdk.out/manifest.json): SpaHosting in the
+      # home region (us-east-1), Auth/Api in the app region (prod: us-east-2).
+      # The SPA runtime config (task 7) carries the app region and the Cognito
+      # ids + API URL the SPA needs at start-up. Public identifiers only — no
+      # secrets (the app client has none).
       - |
-        SPA_BUCKET=$(aws cloudformation describe-stacks \
-          --stack-name "$SPA_STACK_NAME" \
-          --query "Stacks[0].Outputs[?OutputKey=='SpaBucketName'].OutputValue" \
-          --output text)
-      - |
-        DISTRIBUTION_ID=$(aws cloudformation describe-stacks \
-          --stack-name "$SPA_STACK_NAME" \
-          --query "Stacks[0].Outputs[?OutputKey=='DistributionId'].OutputValue" \
-          --output text)
-      - echo "SPA bucket=$SPA_BUCKET distribution=$DISTRIBUTION_ID"
-      # SPA runtime config (task 7): the Cognito ids + API URL the SPA needs at
-      # start-up. Public identifiers only — no secrets (the app client has none).
-      - |
+        set -eu
+        cd "$CODEBUILD_SRC_DIR/infra"
+        SPA_REGION=$(node scripts/stack-region.mjs "$SPA_STACK_NAME")
+        AUTH_REGION=$(node scripts/stack-region.mjs "$AUTH_STACK_NAME")
+        API_REGION=$(node scripts/stack-region.mjs "$API_STACK_NAME")
+        echo "regions: SPA=$SPA_REGION Auth=$AUTH_REGION Api=$API_REGION"
         stack_output() {
-          aws cloudformation describe-stacks --stack-name "$1" \
-            --query "Stacks[0].Outputs[?OutputKey=='$2'].OutputValue" --output text
+          aws cloudformation describe-stacks --region "$1" --stack-name "$2" \
+            --query "Stacks[0].Outputs[?OutputKey=='$3'].OutputValue" --output text
         }
-        export USER_POOL_ID=$(stack_output "$AUTH_STACK_NAME" UserPoolId)
-        export USER_POOL_CLIENT_ID=$(stack_output "$AUTH_STACK_NAME" UserPoolClientId)
-        export SELF_SIGN_UP_ENABLED=$(stack_output "$AUTH_STACK_NAME" SelfSignUpEnabled)
-        export API_URL=$(stack_output "$API_STACK_NAME" ApiUrl)
-        node -e 'const e=process.env; const region=e.USER_POOL_ID.split("_")[0]; require("fs").writeFileSync(process.argv[1], JSON.stringify({region, userPoolId:e.USER_POOL_ID, userPoolClientId:e.USER_POOL_CLIENT_ID, selfSignUp:e.SELF_SIGN_UP_ENABLED==="true", apiUrl:e.API_URL}, null, 2));' "$CODEBUILD_SRC_DIR/frontend/dist/runtime-config.json"
+        SPA_BUCKET=$(stack_output "$SPA_REGION" "$SPA_STACK_NAME" SpaBucketName)
+        DISTRIBUTION_ID=$(stack_output "$SPA_REGION" "$SPA_STACK_NAME" DistributionId)
+        echo "SPA bucket=$SPA_BUCKET distribution=$DISTRIBUTION_ID"
+        APP_REGION="$AUTH_REGION"
+        USER_POOL_ID=$(stack_output "$AUTH_REGION" "$AUTH_STACK_NAME" UserPoolId)
+        USER_POOL_CLIENT_ID=$(stack_output "$AUTH_REGION" "$AUTH_STACK_NAME" UserPoolClientId)
+        SELF_SIGN_UP_ENABLED=$(stack_output "$AUTH_REGION" "$AUTH_STACK_NAME" SelfSignUpEnabled)
+        API_URL=$(stack_output "$API_REGION" "$API_STACK_NAME" ApiUrl)
+        export APP_REGION USER_POOL_ID USER_POOL_CLIENT_ID SELF_SIGN_UP_ENABLED API_URL
+        node -e 'const e=process.env; if (!e.USER_POOL_ID.startsWith(e.APP_REGION + "_")) { console.error("user pool " + e.USER_POOL_ID + " is not in " + e.APP_REGION); process.exit(1); } require("fs").writeFileSync(process.argv[1], JSON.stringify({region:e.APP_REGION, userPoolId:e.USER_POOL_ID, userPoolClientId:e.USER_POOL_CLIENT_ID, selfSignUp:e.SELF_SIGN_UP_ENABLED==="true", apiUrl:e.API_URL}, null, 2));' "$CODEBUILD_SRC_DIR/frontend/dist/runtime-config.json"
         cat "$CODEBUILD_SRC_DIR/frontend/dist/runtime-config.json"
-      # Upload the built SPA. --delete removes stale assets no longer in dist.
-      - aws s3 sync "$CODEBUILD_SRC_DIR/frontend/dist" "s3://$SPA_BUCKET" --delete
-      # Invalidate the CloudFront cache so the new SPA is served immediately.
-      - aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths "/*"
+        # Upload the built SPA. --delete removes stale assets no longer in dist.
+        aws s3 sync "$CODEBUILD_SRC_DIR/frontend/dist" "s3://$SPA_BUCKET" --delete --region "$SPA_REGION"
+        # Invalidate the CloudFront cache so the new SPA is served immediately.
+        aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths "/*"

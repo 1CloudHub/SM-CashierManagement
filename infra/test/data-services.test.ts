@@ -11,7 +11,7 @@ import { JobsStack } from '../lib/jobs-stack';
 import { LocationStack } from '../lib/location-stack';
 import { grantSesSend, sesEnvironment } from '../lib/notifications';
 
-/** Mirrors the task-24 wiring in bin/infra.ts. */
+/** Mirrors the task-24 wiring in lib/lanewise-app.ts. */
 function synth(config: EnvironmentConfig = resolveEnvironment('prod')) {
   const app = new App();
   const auth = new AuthStack(app, 'Test-Auth', { config, relyingPartyId: 'example.cloudfront.net' });

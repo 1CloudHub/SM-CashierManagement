@@ -16,7 +16,7 @@ function synth() {
   const app = new App();
   const config = withDomain();
   const spa = new SpaHostingStack(app, 'Test-SpaHosting', { config });
-  // Mirrors bin/infra.ts.
+  // Mirrors lib/lanewise-app.ts.
   const auth = new AuthStack(app, 'Test-Auth', {
     config,
     relyingPartyId: config.auth.relyingPartyId ?? config.domainName ?? spa.distribution.distributionDomainName,

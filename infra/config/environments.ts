@@ -19,8 +19,28 @@ export interface EnvironmentConfig {
    * (CDK_DEFAULT_ACCOUNT / CDK_DEFAULT_REGION) unless overridden here.
    */
   readonly account?: string;
-  /** Target AWS region. Undefined => resolved from deploy credentials. */
+  /**
+   * Home region: SPA hosting (S3 + CloudFront) and the CI/CD stacks
+   * (PipelineIam, PipelinePrChecks, DeployPipeline). Must be us-east-1 when a
+   * custom domain is set (CloudFront certificate). Undefined => resolved from
+   * the deploy credentials (only allowed when `appRegion` is unset too).
+   */
   readonly region?: string;
+  /**
+   * Application region: the VPC-bound application stacks (Auth, Data, Jobs,
+   * Location, Api). Undefined => `region`. When it differs from `region`, both
+   * must be explicit: the app stacks consume the SPA's CloudFront domain
+   * (CORS, passkey relying party) through CDK cross-region references.
+   */
+  readonly appRegion?: string;
+  /**
+   * True while copies of the application stacks from before a move to
+   * `appRegion` still exist in `region` and import the SpaHosting stack's
+   * CloudFront-domain export. Keeps that export so the SpaHosting update does
+   * not fail with "export in use"; set false once those copies are deleted
+   * (infra/README.md › Application region).
+   */
+  readonly legacyAppStacksInHomeRegion?: boolean;
   /**
    * Custom domain for the SPA, e.g. `lanewise.prototypes.1cloudhub.com`.
    * When set (with `hostedZone`), SpaHostingStack issues a DNS-validated ACM
@@ -176,8 +196,11 @@ export interface NotificationsConfig {
   readonly sesIdentity: string;
   /** Default From address (must be within `sesIdentity`). */
   readonly fromAddress: string;
-  /** Region hosting the verified identity. Undefined => the stack's region. */
-  readonly sesRegion?: string;
+  /**
+   * Region hosting the verified identity (explicit: it can differ from the
+   * region the sending functions run in).
+   */
+  readonly sesRegion: string;
 }
 
 const BASE_TAGS: Record<string, string> = {
@@ -190,7 +213,14 @@ export const environments: Record<EnvName, EnvironmentConfig> = {
   prod: {
     envName: 'prod',
     account: process.env.CDK_DEFAULT_ACCOUNT,
-    region: process.env.CDK_DEFAULT_REGION,
+    // SPA hosting + CI/CD stay in us-east-1 (CloudFront, the pipeline). The
+    // application stacks run in us-east-2: the account hit its VPC limit in
+    // us-east-1 when the Data stack (VPC + Aurora) was first deployed.
+    region: 'us-east-1',
+    appRegion: 'us-east-2',
+    // The pre-move Auth/Api copies in us-east-1 still import the SpaHosting
+    // CloudFront-domain export. Set false after deleting them.
+    legacyAppStacksInHomeRegion: true,
     // SPA custom domain: PAUSED. The prototypes.1cloudhub.com zone in this
     // account (Z10306162UR77DOLJD1L3) is not the one public DNS delegates to,
     // so the ACM DNS validation never completed and blocked the deploy. Re-enable
@@ -212,8 +242,9 @@ export const environments: Record<EnvName, EnvironmentConfig> = {
       // paused. Switch to the custom domain BEFORE real users register passkeys;
       // changing it later invalidates every registered passkey.
       relyingPartyId: undefined,
-      // One-time codes via SES (us-east-1): the 1cloudhub.com domain identity is
-      // verified (DKIM) and the account is out of the SES sandbox.
+      // One-time codes via SES in us-east-1 (cross-region from the us-east-2
+      // user pool): the 1cloudhub.com domain identity is verified (DKIM) there
+      // and the account is out of the SES sandbox.
       email: {
         fromEmail: 'noreply@1cloudhub.com',
         fromName: 'LaneWise',
@@ -240,7 +271,8 @@ export const environments: Record<EnvName, EnvironmentConfig> = {
     notifications: {
       sesIdentity: '1cloudhub.com',
       fromAddress: 'noreply@1cloudhub.com',
-      sesRegion: undefined,
+      // The verified identity only exists in us-east-1.
+      sesRegion: 'us-east-1',
     },
     tags: { ...BASE_TAGS, Environment: 'prod' },
   },
@@ -252,7 +284,9 @@ export const environments: Record<EnvName, EnvironmentConfig> = {
   // staging: {
   //   envName: 'staging',
   //   account: process.env.CDK_DEFAULT_ACCOUNT,
-  //   region: process.env.CDK_DEFAULT_REGION,
+  //   region: 'us-east-1',
+  //   appRegion: 'us-east-2',
+  //   legacyAppStacksInHomeRegion: false,
   //   domainName: undefined, // e.g. 'lanewise-staging.prototypes.1cloudhub.com'
   //   hostedZone: undefined, // { id: 'Z10306162UR77DOLJD1L3', name: 'prototypes.1cloudhub.com' }
   //   retainData: false,
@@ -263,15 +297,16 @@ export const environments: Record<EnvName, EnvironmentConfig> = {
   //     connectionName: 'lanewise-staging-github',
   //   },
   //   auth: { selfSignUp: true, relyingPartyId: undefined, email: undefined },
+  //   // (or the prod `email` block — SES stays in us-east-1)
   //   demoRoleSwitcher: true,
   //   data: { ...prod data, backupRetentionDays: 1, uploadRetentionDays: 30 },
   //   jobs: { workerTimeoutSeconds: 300, maxReceiveCount: 3, maxConcurrency: 1 },
   //   location: { dataSource: 'Here', mapStyle: 'VectorHereExplore' },
-  //   notifications: { sesIdentity: '1cloudhub.com', fromAddress: 'noreply@1cloudhub.com' },
+  //   notifications: { sesIdentity: '1cloudhub.com', fromAddress: 'noreply@1cloudhub.com', sesRegion: 'us-east-1' },
   //   tags: { ...BASE_TAGS, Environment: 'staging' },
   // },
   //
-  // 3. Instantiate the stacks for `staging` in bin/infra.ts and insert a manual
+  // 3. Instantiate the stacks for `staging` (createLaneWiseStacks in bin/infra.ts) and insert a manual
   //    approval (promotion gate) stage before the prod deploy in the pipeline.
 };
 
@@ -290,7 +325,27 @@ export function resolveEnvironment(name: string | undefined): EnvironmentConfig 
     );
   }
   validateDomain(config);
+  validateRegions(config);
   return config;
+}
+
+/** The application stacks' region (`appRegion`, else `region`). */
+export function appRegionOf(config: EnvironmentConfig): string | undefined {
+  return config.appRegion ?? config.region;
+}
+
+/** Whether the application stacks deploy to a different region than SPA hosting / CI/CD. */
+export function isSplitRegion(config: EnvironmentConfig): boolean {
+  return config.appRegion !== undefined && config.appRegion !== config.region;
+}
+
+/** Cross-region references need both regions to be explicit. */
+export function validateRegions(config: EnvironmentConfig): void {
+  if (config.appRegion !== undefined && config.region === undefined) {
+    throw new Error(
+      `Environment "${config.envName}": appRegion ${config.appRegion} needs an explicit region (the SPA/CI-CD region).`,
+    );
+  }
 }
 
 /** A custom domain needs its hosted zone, and must sit inside it. */
