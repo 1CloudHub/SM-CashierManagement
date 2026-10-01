@@ -19,7 +19,7 @@ import {
   CardTitle,
   Checkbox,
   Field,
-  Input,
+  FileInput,
   Select,
   Spinner,
   StateBlock,
@@ -44,13 +44,26 @@ import {
   toColumnMapping,
   type DraftMapping,
 } from './columns'
-import { errorCopy, plural, type ErrorCopy } from './helpers'
+import { errorCopy, plural, sortIssues, type ErrorCopy } from './helpers'
 import { ErrorAlert, SampleDataBanner } from './parts'
 
 type Step = 1 | 2 | 3 | 4 | 'done'
 type Phase = 'uploading' | 'validating' | 'ready' | 'error'
 
 const STEPS = [1, 2, 3, 4] as const
+
+/** Target fields with a format hint (`data.field.<field>.hint`) on the mapping step. */
+const FIELD_HINTS: ReadonlySet<string> = new Set([
+  'date',
+  'hour',
+  'avg_handle_time_min',
+  'handle_time_min',
+  'format',
+  'open',
+  'close',
+  'employment_type',
+  'preferred_rest_day',
+])
 
 export interface UploadScreenProps {
   api: DataApi
@@ -232,12 +245,29 @@ export function UploadScreen({ api, onDone, initialType = 'pos', role }: UploadS
       setDetail(res)
       setProvenance(res.provenance)
       setPhase('ready')
-      announce(t('data.upload.validated'))
+      const rejected = res.run.errorCount > 0 || res.run.status === 'blocked'
+      announce(rejected ? `${t('data.upload.validated')} ${t('data.upload.blocked.title')}` : t('data.upload.validated'))
     } catch (err) {
       if (!mounted.current) return
       setRunError(errorCopy(t, err))
       setPhase('error')
     }
+  }
+
+  /** From a failed or rejected validation: drop the run and start again from file selection. */
+  async function chooseAnotherFile() {
+    await cancelRun()
+    if (!mounted.current) return
+    setDetail(null)
+    setRunError(null)
+    setReportError(null)
+    setFile(null)
+    setFileError(null)
+    setHeaders([])
+    setMapping({})
+    setMappingTouched(false)
+    setPhase('uploading')
+    setStep(1)
   }
 
   async function backToMapping() {
@@ -290,6 +320,15 @@ export function UploadScreen({ api, onDone, initialType = 'pos', role }: UploadS
     <h2 ref={headingRef} tabIndex={-1} className="text-h2 text-text focus-visible:outline-focus-ring">
       {text}
     </h2>
+  )
+
+  const columnLabel = (column: string) =>
+    columns.some((c) => c.field === column) ? t(`data.field.${column}`) : column
+
+  const chooseAnotherButton = (
+    <Button size="sm" onClick={() => void chooseAnotherFile()}>
+      {t('data.upload.chooseAnother')}
+    </Button>
   )
 
   const cancelButton = (
@@ -379,14 +418,15 @@ export function UploadScreen({ api, onDone, initialType = 'pos', role }: UploadS
                     required
                   >
                     {(aria) => (
-                      <Input
+                      <FileInput
                         {...aria}
-                        type="file"
                         accept=".csv,text/csv"
+                        file={file}
+                        chooseLabel={t('data.upload.file.choose')}
+                        emptyLabel={t('data.upload.file.none')}
                         invalid={Boolean(fileError)}
-                        className="py-2"
-                        onChange={(e) => {
-                          setFile(e.target.files?.[0] ?? null)
+                        onFileChange={(next) => {
+                          setFile(next)
                           setFileError(null)
                         }}
                       />
@@ -442,7 +482,7 @@ export function UploadScreen({ api, onDone, initialType = 'pos', role }: UploadS
                     <Col key={c.field} span={4} spanTablet={4} spanLaptop={4}>
                       <Field
                         label={t(`data.field.${c.field}`)}
-                        hint={c.field}
+                        hint={FIELD_HINTS.has(c.field) ? t(`data.field.${c.field}.hint`) : undefined}
                         required={c.required}
                         error={
                           missing
@@ -498,9 +538,12 @@ export function UploadScreen({ api, onDone, initialType = 'pos', role }: UploadS
               <ErrorAlert
                 error={runError}
                 action={
-                  <Button size="sm" onClick={() => void uploadAndValidate()}>
-                    {t('action.retry')}
-                  </Button>
+                  <Cluster gap={2}>
+                    <Button size="sm" onClick={() => void uploadAndValidate()}>
+                      {t('action.retry')}
+                    </Button>
+                    {chooseAnotherButton}
+                  </Cluster>
                 }
               />
             )}
@@ -541,8 +584,14 @@ export function UploadScreen({ api, onDone, initialType = 'pos', role }: UploadS
 
                 {detail.issues.length > 0 && (
                   <Stack gap={2}>
+                    <h3 id={`${ids}-issues`} className="text-h3 text-text">
+                      {t('data.upload.issues')}
+                    </h3>
                     <TableWrap>
-                      <Table aria-label={t('data.upload.issues')}>
+                      <Table aria-labelledby={`${ids}-issues`} aria-describedby={`${ids}-issues-caption`}>
+                        <caption id={`${ids}-issues-caption`} className="sr-only">
+                          {t('data.upload.issues.caption')}
+                        </caption>
                         <TableHead>
                           <TableRow>
                             <TableHeaderCell numeric>{t('data.col.row')}</TableHeaderCell>
@@ -552,12 +601,12 @@ export function UploadScreen({ api, onDone, initialType = 'pos', role }: UploadS
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {detail.issues.map((issue, i) => (
+                          {sortIssues(detail.issues).map((issue, i) => (
                             <TableRow key={`${issue.row}-${issue.column ?? ''}-${issue.code}-${i}`}>
                               <TableRowHeader className="lw-numeric text-right">
                                 {issue.row === 0 ? t('data.upload.wholeFile') : formatNumber(issue.row)}
                               </TableRowHeader>
-                              <TableCell>{issue.column ?? t('data.none')}</TableCell>
+                              <TableCell>{issue.column ? columnLabel(issue.column) : t('data.none')}</TableCell>
                               <TableCell>
                                 <StatusPill tone={issue.severity === 'error' ? 'danger' : 'warning'}>
                                   {t(issue.severity === 'error' ? 'data.severity.error' : 'data.severity.warning')}
@@ -580,7 +629,13 @@ export function UploadScreen({ api, onDone, initialType = 'pos', role }: UploadS
                 <ImpactNotice detail={detail} dataset={typeLabel(datasetType)} />
 
                 {hasErrors && (
-                  <Alert id={`${ids}-blocked`} tone="danger" title={t('data.upload.blocked.title')} live={false}>
+                  <Alert
+                    id={`${ids}-blocked`}
+                    tone="danger"
+                    title={t('data.upload.blocked.title')}
+                    live={false}
+                    action={chooseAnotherButton}
+                  >
                     {plural(t, 'data.upload.blocked.description', run.errorCount, {
                       n: formatNumber(run.errorCount),
                       dataset: typeLabel(datasetType),
@@ -594,15 +649,17 @@ export function UploadScreen({ api, onDone, initialType = 'pos', role }: UploadS
               <Button onClick={() => void backToMapping()} disabled={phase === 'uploading' || phase === 'validating'}>
                 {t('data.upload.back')}
               </Button>
-              {phase === 'ready' && hasErrors ? (
-                <Button variant="primary" disabled aria-describedby={`${ids}-blocked`}>
-                  {t('data.upload.load')}
-                </Button>
-              ) : (
-                <Button variant="primary" disabled={phase !== 'ready'} onClick={() => setStep(4)}>
-                  {t('data.upload.continue')}
-                </Button>
-              )}
+              {/* One stable button: its label never swaps; busy while uploading/validating. */}
+              <Button
+                variant="primary"
+                loading={phase === 'uploading' || phase === 'validating'}
+                loadingLabel={t('data.working')}
+                disabled={phase !== 'ready' || hasErrors}
+                aria-describedby={phase === 'ready' && hasErrors ? `${ids}-blocked` : undefined}
+                onClick={() => setStep(4)}
+              >
+                {t('data.upload.continue')}
+              </Button>
             </Cluster>
           </Stack>
         </Section>

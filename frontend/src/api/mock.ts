@@ -13,6 +13,7 @@ import {
   type RoleCode,
 } from '@lanewise/shared'
 import { ACTIVE_ROLE_HEADER, type ApiAdapter, type ApiRequest, type ApiResponse } from './client'
+import { createMasterDataStore } from './mock-master-data'
 import { createPlanningStore } from './mock-planning'
 import { createOfferStore } from './mock-offers'
 import { createNotificationStore } from './mock-notifications'
@@ -249,6 +250,7 @@ export interface MockAdapterOptions {
 export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {}): ApiAdapter {
   const savedViews = createSavedViewStore()
   const scenarios = createScenarioStore()
+  const masterData = createMasterDataStore()
   const notifications = createNotificationStore()
   const planning = createPlanningStore()
   const rosters = createRosterStore()
@@ -317,6 +319,10 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
         role,
         viewer: mockViewer(role),
       })
+    }
+    if (masterData.owns(pathname)) {
+      // SCR-052/053 stores, departments, staff and availability (scoped like the API; no ₱).
+      return masterData.handle({ method: request.method, pathname, query: new URLSearchParams(search), body: request.body, role })
     }
     if (pathname.startsWith('/admin/') || pathname === '/audit-events' || pathname.startsWith('/audit-events/')) {
       // Users and roles, audit log (SCR-070..073), see ./mock-admin.

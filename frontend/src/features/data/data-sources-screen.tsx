@@ -169,8 +169,9 @@ export function DataSourcesScreen({ api, onUpload, role }: DataSourcesScreenProp
   const heading = (
     <Cluster justify="between" gap={3}>
       <h1 className="text-h1 text-text">{t('data.sources.title')}</h1>
-      {canManage && datasets.state === 'ready' && (
-        <Button variant="primary" onClick={onUpload}>
+      {/* Rendered while loading too (disabled) so the heading row never shifts. */}
+      {canManage && (
+        <Button variant="primary" onClick={onUpload} disabled={datasets.state !== 'ready'}>
           {t('data.sources.upload')}
         </Button>
       )}

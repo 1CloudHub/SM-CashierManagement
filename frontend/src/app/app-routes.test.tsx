@@ -24,17 +24,14 @@ describe('routing', () => {
     expect(await axe(container)).toHaveNoViolations()
   })
 
-  it('renders a placeholder with title, breadcrumb and its spec task', async () => {
-    const { container } = renderApp({ path: '/data/stores', role: 'PLN' })
-    expect(screen.getByRole('heading', { level: 1, name: 'Stores and lanes' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'This screen is not available yet' })).toBeInTheDocument()
-    // The spec task / screen id pill is a dev-only aid (vitest runs with DEV on).
-    expect(screen.getByText('Task 9.1 · SCR-052')).toBeInTheDocument()
-    const crumbs = within(screen.getByRole('navigation', { name: 'Breadcrumb' }))
-    expect(crumbs.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/')
-    expect(crumbs.getByText('Stores and lanes')).toHaveAttribute('aria-current', 'page')
-    expect(within(mainNav()).getByRole('link', { name: 'Stores and lanes' })).toHaveAttribute('aria-current', 'page')
-    expect(await axe(container)).toHaveNoViolations()
+  it('renders a built screen for every wireframe screen (no placeholders left)', () => {
+    for (const s of SCREENS) {
+      if (s.id === 'SCR-010' || s.id === 'SCR-080' || s.id === 'SCR-090') continue // async Home, auth-only Profile, status page
+      const r = ROLE_CODES.find((code) => canAccess(code, s))!
+      const { unmount } = renderApp({ path: s.path.replace(/:\w+/g, 'x'), role: r })
+      expect(screen.queryByRole('heading', { name: 'This screen is not available yet' }), s.id).toBeNull()
+      unmount()
+    }
   })
 
   it('renders SCR-025 My roster with the Staff user’s shift offers (task 17)', async () => {

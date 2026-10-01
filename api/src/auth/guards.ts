@@ -21,6 +21,7 @@ import type { RoutedRequest } from '../http/types.js';
  */
 export type ScopeTarget =
   | { readonly kind: 'store'; readonly param: string }
+  | { readonly kind: 'department'; readonly param: string }
   | { readonly kind: 'staff'; readonly param: string }
   | { readonly kind: 'saved_view'; readonly param: string }
   | { readonly kind: 'notification'; readonly param: string };

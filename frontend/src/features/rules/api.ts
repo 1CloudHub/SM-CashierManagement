@@ -50,6 +50,8 @@ export interface RulesClient {
   approve(versionId: string, comment?: string): Promise<RuleVersionDetail>
   requestChanges(versionId: string, comment: string): Promise<RuleVersionDetail>
   publish(versionId: string): Promise<PublishOutcome>
+  /** Finance's one-step approval + publish of a submitted cost rule; all or nothing on the server. */
+  approveAndPublish(versionId: string, comment?: string): Promise<PublishOutcome>
 }
 
 /** A failed API call with the server's error code and field details. */
@@ -108,5 +110,7 @@ export function createRulesClient(api: Pick<ApiClient, 'request'>): RulesClient 
       (await request<{ version: RuleVersionDetail }>('POST', `/rule-versions/${id(versionId)}/request-changes`, { comment }))
         .version,
     publish: (versionId) => request('POST', `/rule-versions/${id(versionId)}/publish`),
+    approveAndPublish: (versionId, comment) =>
+      request('POST', `/rule-versions/${id(versionId)}/approve-and-publish`, comment ? { comment } : {}),
   }
 }

@@ -201,6 +201,8 @@ interface DetailRow extends SummaryRow {
   created_by: string;
   created_by_name: string | null;
   submitted_at: Date | null;
+  submitted_by: string | null;
+  submitted_by_name: string | null;
   finance_approved_by: string | null;
   finance_approved_by_name: string | null;
   finance_approved_at: Date | null;
@@ -217,6 +219,7 @@ export async function getRuleVersion(db: Queryable, id: string): Promise<RuleVer
     `SELECT v.id, v.rule_set_id, v.version, v.effective_from, v.status, v.is_cost_rule, v.updated_at,
             rs.rule_set_type, rs.name AS rule_set_name, v.payload, v.change_note,
             v.created_by, cu.name AS created_by_name, v.submitted_at,
+            sub.user_id AS submitted_by, su.name AS submitted_by_name,
             v.finance_approved_by, fu.name AS finance_approved_by_name, v.finance_approved_at,
             v.review_comment, v.published_by, pu.name AS published_by_name, v.published_at, v.synthetic
        FROM rule_version v
@@ -224,6 +227,13 @@ export async function getRuleVersion(db: Queryable, id: string): Promise<RuleVer
        LEFT JOIN app_user cu ON cu.id = v.created_by
        LEFT JOIN app_user fu ON fu.id = v.finance_approved_by
        LEFT JOIN app_user pu ON pu.id = v.published_by
+       -- The submitter is not a column: the last submit event in the audit log names them.
+       LEFT JOIN LATERAL (
+         SELECT a.user_id FROM audit_event a
+          WHERE a.object_type = 'rule_version' AND a.object_id = v.id::text AND a.event = 'rule_version.submitted'
+          ORDER BY a.seq DESC LIMIT 1
+       ) sub ON v.submitted_at IS NOT NULL
+       LEFT JOIN app_user su ON su.id = sub.user_id
       WHERE v.id = $1`,
     [id],
   );
@@ -237,6 +247,8 @@ export async function getRuleVersion(db: Queryable, id: string): Promise<RuleVer
     createdBy: row.created_by,
     createdByName: row.created_by_name,
     submittedAt: isoOrNull(row.submitted_at),
+    submittedBy: row.submitted_by,
+    submittedByName: row.submitted_by_name,
     financeApprovedBy: row.finance_approved_by,
     financeApprovedByName: row.finance_approved_by_name,
     financeApprovedAt: isoOrNull(row.finance_approved_at),
@@ -365,6 +377,8 @@ async function transition(
   values: readonly unknown[],
   extra: Record<string, unknown> = {},
   before?: RuleVersion,
+  /** What the audit event records as "before" when it differs from `before` (approve-and-publish). */
+  auditBefore?: RuleVersion,
 ): Promise<RuleVersion> {
   const current = before ?? (await lockVersion(tx, id));
   const next = ruleVersionTransition(current.status, current.isCostRule, action);
@@ -384,7 +398,7 @@ async function transition(
     ...AUDIT_BY_ACTION[action],
     objectType: 'rule_version',
     objectId: id,
-    before: snapshotOf(current),
+    before: snapshotOf(auditBefore ?? current),
     after: { ...snapshotOf(after), ...extra },
     synthetic: after.synthetic,
   });
@@ -452,7 +466,43 @@ export interface PublishResult {
  * transaction, under its single audit event.
  */
 export async function publishRuleVersion(tx: AuditedTx, id: string): Promise<PublishResult> {
-  const current = await lockVersion(tx, id);
+  return publishLocked(tx, id, await lockVersion(tx, id));
+}
+
+/**
+ * Finance's "Approve and publish" (Req 16.3, Q6) as one operation: records
+ * the Finance approval and publishes in the same transaction, so a failure
+ * (e.g. the effective date now precedes the in-force version) leaves the
+ * version submitted, never approved-but-unpublished. One `publish` audit
+ * event whose before is the submitted version and whose after carries the
+ * approval.
+ */
+export async function approveAndPublishRuleVersion(tx: AuditedTx, id: string, comment?: string): Promise<PublishResult> {
+  const submitted = await lockVersion(tx, id);
+  if (ruleVersionTransition(submitted.status, submitted.isCostRule, 'approve') === null) {
+    throw new RuleVersionStateError(
+      `a ${submitted.isCostRule ? 'cost' : 'non-cost'} rule version in status ${submitted.status} does not allow approve`,
+    );
+  }
+  const approved = toVersion(
+    await queryOne<RuleVersionRow>(
+      tx,
+      `UPDATE rule_version SET status = 'approved', finance_approved_by = $2, finance_approved_at = now()
+        WHERE id = $1 RETURNING ${VERSION_COLUMNS}`,
+      [id, tx.actor.userId],
+    ),
+  );
+  const note = comment?.trim() ? comment.trim() : null;
+  return publishLocked(tx, id, approved, submitted, { financeApproval: { approvedBy: tx.actor.userId, comment: note } });
+}
+
+async function publishLocked(
+  tx: AuditedTx,
+  id: string,
+  current: RuleVersion,
+  auditBefore?: RuleVersion,
+  auditExtra: Record<string, unknown> = {},
+): Promise<PublishResult> {
   if (ruleVersionTransition(current.status, current.isCostRule, 'publish') === null) {
     throw new RuleVersionStateError(
       current.isCostRule && current.status !== 'approved'
@@ -506,8 +556,9 @@ export async function publishRuleVersion(tx: AuditedTx, id: string): Promise<Pub
     'publish',
     'published_by = $2, published_at = now()',
     [tx.actor.userId],
-    { supersededVersionId: prior?.id ?? null, staleScenarioIds, notifiedUserIds },
+    { ...auditExtra, supersededVersionId: prior?.id ?? null, staleScenarioIds, notifiedUserIds },
     current,
+    auditBefore,
   );
   return { version, supersededVersionId: prior?.id ?? null, staleScenarioIds, notifiedUserIds };
 }

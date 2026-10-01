@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   hasRulePermission,
   isIsoDate,
@@ -18,7 +18,6 @@ import {
   Field,
   Input,
   Num,
-  Pill,
   StateBlock,
   StatusPill,
   Table,
@@ -34,8 +33,9 @@ import {
 } from '@/components/ui'
 import { useI18n } from '@/i18n'
 import { useDocumentTitle } from '@/features/auth/use-document-title'
-import type { RulesClient } from './api'
+import { RulesApiError, type RulesClient } from './api'
 import { CALENDAR_DATE, STATUS_TONE, statusLabel } from './labels'
+import { localTodayIso } from './logic'
 
 export interface RuleSetsScreenProps {
   readonly client: RulesClient
@@ -50,9 +50,14 @@ export interface RuleSetsScreenProps {
 type Load =
   | { readonly kind: 'loading' }
   | { readonly kind: 'error'; readonly referenceId?: string }
+  | { readonly kind: 'forbidden' }
   | { readonly kind: 'ready'; readonly ruleSets: readonly RuleSetSummary[] }
 
-const todayIso = (): string => new Date().toISOString().slice(0, 10)
+/** A failed load as screen state: 403 is the no-access state, anything else an error with its reference. */
+const loadFailure = (error: unknown): Load =>
+  error instanceof RulesApiError && error.status === 403
+    ? { kind: 'forbidden' }
+    : { kind: 'error', referenceId: error instanceof RulesApiError ? (error.requestId ?? undefined) : undefined }
 
 /**
  * SCR-060 Rule sets (requirement 16). Every rule set with its in-force
@@ -67,11 +72,23 @@ export function RuleSetsScreen({ client, role, onOpenVersion, today }: RuleSetsS
   const [load, setLoad] = useState<Load>({ kind: 'loading' })
   const [draftFor, setDraftFor] = useState<RuleSetSummary | null>(null)
 
+  // Ignore responses that land after the screen has gone (role switch, navigation).
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
+
   const fetchSets = useCallback(() => {
     client.listRuleSets().then(
-      (ruleSets) => setLoad({ kind: 'ready', ruleSets }),
-      (error: unknown) =>
-        setLoad({ kind: 'error', referenceId: (error as { requestId?: string | null }).requestId ?? undefined }),
+      (ruleSets) => {
+        if (mounted.current) setLoad({ kind: 'ready', ruleSets })
+      },
+      (error: unknown) => {
+        if (mounted.current) setLoad(loadFailure(error))
+      },
     )
   }, [client])
 
@@ -84,7 +101,7 @@ export function RuleSetsScreen({ client, role, onOpenVersion, today }: RuleSetsS
     fetchSets()
   }
 
-  if (!canView) {
+  if (!canView || load.kind === 'forbidden') {
     return (
       <StateBlock
         variant="no-access"
@@ -159,7 +176,7 @@ export function RuleSetsScreen({ client, role, onOpenVersion, today }: RuleSetsS
                   <TableRow key={set.id}>
                     <TableRowHeader>{set.name}</TableRowHeader>
                     <TableCell>
-                      {set.isCostRule ? <Pill>{t('rules.list.yes')}</Pill> : t('rules.list.no')}
+                      {set.isCostRule ? t('rules.list.yes') : t('rules.list.no')}
                     </TableCell>
                     <TableCell>
                       {current ? t('rules.list.versionLabel', { version: current.version }) : t('rules.list.none')}
@@ -226,7 +243,7 @@ export function RuleSetsScreen({ client, role, onOpenVersion, today }: RuleSetsS
         key={draftFor?.id ?? 'none'}
         client={client}
         ruleSet={draftFor}
-        defaultDate={today ?? todayIso()}
+        defaultDate={today ?? localTodayIso()}
         onClose={() => setDraftFor(null)}
         onCreated={(id, ruleSetId) => {
           setDraftFor(null)
@@ -261,21 +278,30 @@ function NewDraftDialog({
       setError(t('rules.editor.invalid'))
       return
     }
+    setError(null)
     setBusy(true)
     try {
       const version = await client.createDraft(ruleSet.id, { effectiveFrom })
       onCreated(version.id, ruleSet.id)
     } catch (e) {
       setError(
-        (e as { code?: string }).code === 'conflict' ? t('rules.error.conflict') : t('rules.error.generic'),
+        e instanceof RulesApiError && e.code === 'conflict'
+          ? t('rules.error.conflict')
+          : e instanceof RulesApiError && e.status === 403
+            ? t('rules.error.forbidden')
+            : t('rules.error.generic'),
       )
-    } finally {
       setBusy(false)
     }
   }
 
+  // Stays open while the draft is being created, so the result is never lost.
+  const close = () => {
+    if (!busy) onClose()
+  }
+
   return (
-    <Dialog open={ruleSet !== null} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={ruleSet !== null} onOpenChange={(open) => !open && close()}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{ruleSet ? t('rules.newDraft.title', { name: ruleSet.name }) : ''}</DialogTitle>
@@ -283,14 +309,22 @@ function NewDraftDialog({
         </DialogHeader>
         <Field label={t('rules.editor.effectiveFrom')} required error={error ?? undefined}>
           {(aria) => (
-            <Input {...aria} type="date" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} />
+            <Input
+              {...aria}
+              type="date"
+              value={effectiveFrom}
+              onChange={(e) => {
+                setEffectiveFrom(e.target.value)
+                setError(null)
+              }}
+            />
           )}
         </Field>
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="secondary" onClick={close} disabled={busy}>
             {t('action.cancel')}
           </Button>
-          <Button variant="primary" onClick={() => void create()} aria-busy={busy || undefined} disabled={busy}>
+          <Button variant="primary" onClick={() => void create()} loading={busy} loadingLabel={t('rules.working')}>
             {t('rules.newDraft.create')}
           </Button>
         </DialogFooter>

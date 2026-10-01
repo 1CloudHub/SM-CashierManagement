@@ -36,6 +36,8 @@ export {
   type DialogContentProps,
 } from './dialog'
 export { Field, Label, type FieldProps } from './field'
+export { FileInput, type FileInputProps } from './file-input'
+export { formatFileSize } from './file-size'
 export { Input, Textarea, type InputProps, type TextareaProps } from './input'
 export { KpiCard, KpiCardSkeleton, type KpiCardProps } from './kpi-card'
 export { Pill, StatusPill, type PillProps } from './pill'

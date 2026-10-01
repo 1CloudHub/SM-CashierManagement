@@ -197,6 +197,9 @@ export interface RuleVersionDetail extends RuleVersionSummary {
   readonly createdBy: string;
   readonly createdByName: string | null;
   readonly submittedAt: IsoDateTime | null;
+  /** Who last submitted it (from the audit log), if known. */
+  readonly submittedBy: string | null;
+  readonly submittedByName: string | null;
   readonly financeApprovedBy: string | null;
   readonly financeApprovedByName: string | null;
   readonly financeApprovedAt: IsoDateTime | null;

@@ -26,3 +26,4 @@ export * from './search.js';
 export * from './staff-self-service.js';
 export * from './view-state.js';
 export * from './location-privacy.js';
+export * from './master-data.js';

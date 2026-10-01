@@ -7,6 +7,7 @@ import { useScreenCrumbs } from '@/app/screen-crumbs'
 import { SCREEN_BY_ID } from '@/app/screens'
 import { useI18n } from '@/i18n'
 import { dataApiFromClient } from './api'
+import { datasetFromSearch } from './helpers'
 import { DataSourcesScreen } from './data-sources-screen'
 import { UploadScreen } from './upload-screen'
 
@@ -37,13 +38,14 @@ export function DataSourcesPage() {
 export function UploadPage() {
   const { t } = useI18n()
   const { role } = useActiveRole()
-  const { navigate } = useRouter()
+  const { navigate, location } = useRouter()
+  const initialType = datasetFromSearch(location.search)
   const api = useDataApi()
   const screen = SCREEN_BY_ID['SCR-051']
   const crumbs = useScreenCrumbs(screen)
   return (
     <AppLayout title={t(screen.titleKey)} crumbs={crumbs}>
-      <UploadScreen api={api} role={role} onDone={() => navigate(SCREEN_BY_ID['SCR-050'].path)} />
+      <UploadScreen api={api} role={role} initialType={initialType} onDone={() => navigate(SCREEN_BY_ID['SCR-050'].path)} />
     </AppLayout>
   )
 }

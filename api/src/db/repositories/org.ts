@@ -1,7 +1,15 @@
 /**
  * Regions, stores and departments (DOM-002 Store, Department; SCR-052).
  */
-import type { Department, Scope, Store, StoreFormat } from '@lanewise/shared';
+import type {
+  Department,
+  DepartmentSummary,
+  RegionSummary,
+  Scope,
+  Store,
+  StoreFormat,
+  TradingHours,
+} from '@lanewise/shared';
 import type pg from 'pg';
 import { audit, type AuditedTx } from '../audit.js';
 import type { Queryable } from '../pool.js';
@@ -212,4 +220,127 @@ export async function createDepartment(tx: AuditedTx, input: CreateDepartmentInp
     synthetic: department.synthetic,
   });
   return department;
+}
+
+// ---------------------------------------------------------------------------
+// SCR-052 master data: stores with their departments, regions in scope.
+// ---------------------------------------------------------------------------
+
+/** The SQL filter on `store` (aliased `alias`) for `scope`; `null` = nothing is in scope. */
+function storeScopeFilter(scope: Scope, alias: string): { where: string; values: unknown[] } | null {
+  switch (scope.type) {
+    case 'global':
+      return { where: 'true', values: [] };
+    case 'region':
+      return { where: `${alias}.region_id = ANY($1::uuid[])`, values: [scope.regionIds] };
+    case 'store':
+      return { where: `${alias}.id = ANY($1::uuid[])`, values: [scope.storeIds] };
+    case 'self':
+      return null;
+  }
+}
+
+interface DepartmentSummaryRow extends DepartmentRow {
+  active: boolean;
+}
+
+const DEPARTMENT_SUMMARY_COLUMNS = `${DEPARTMENT_COLUMNS}, active`;
+
+function toDepartmentSummary(row: DepartmentSummaryRow): DepartmentSummary {
+  return { ...toDepartment(row), active: row.active };
+}
+
+/** Departments of `storeIds`, ordered by store then name. */
+export async function listDepartmentsOfStores(db: Queryable, storeIds: readonly string[]): Promise<DepartmentSummary[]> {
+  if (storeIds.length === 0) return [];
+  const { rows } = await db.query<DepartmentSummaryRow>(
+    `SELECT ${DEPARTMENT_SUMMARY_COLUMNS} FROM department WHERE store_id = ANY($1::uuid[]) ORDER BY store_id, name`,
+    [storeIds],
+  );
+  return rows.map(toDepartmentSummary);
+}
+
+export async function getDepartment(db: Queryable, id: string): Promise<DepartmentSummary | null> {
+  const row = await queryMaybe<DepartmentSummaryRow>(
+    db,
+    `SELECT ${DEPARTMENT_SUMMARY_COLUMNS} FROM department WHERE id = $1`,
+    [id],
+  );
+  return row && toDepartmentSummary(row);
+}
+
+/** Regions that hold at least one store in `scope` (all regions for a global scope). */
+export async function listRegionsInScope(db: Queryable, scope: Scope): Promise<RegionSummary[]> {
+  if (scope.type === 'global') {
+    const { rows } = await db.query<RegionSummary & pg.QueryResultRow>('SELECT id, code, name FROM region ORDER BY name, code');
+    return rows;
+  }
+  const filter = storeScopeFilter(scope, 's');
+  if (filter === null) return [];
+  const { rows } = await db.query<RegionSummary & pg.QueryResultRow>(
+    `SELECT DISTINCT r.id, r.code, r.name FROM region r JOIN store s ON s.region_id = r.id
+      WHERE ${filter.where} ORDER BY r.name, r.code`,
+    filter.values,
+  );
+  return rows;
+}
+
+export async function getRegionName(db: Queryable, id: string): Promise<string | null> {
+  const row = await queryMaybe<{ name: string } & pg.QueryResultRow>(db, 'SELECT name FROM region WHERE id = $1', [id]);
+  return row?.name ?? null;
+}
+
+export interface UpdateDepartmentInput {
+  readonly name?: string;
+  readonly installedLanes?: number;
+  readonly defaultHandleTimeMin?: number;
+  readonly tradingHours?: TradingHours;
+  readonly active?: boolean;
+}
+
+/** Edits a department (installed lanes, handle time, trading hours, active); one `department.updated` event. */
+export async function updateDepartment(
+  tx: AuditedTx,
+  id: string,
+  input: UpdateDepartmentInput,
+): Promise<DepartmentSummary> {
+  const before = toDepartmentSummary(
+    await queryOne<DepartmentSummaryRow>(
+      tx,
+      `SELECT ${DEPARTMENT_SUMMARY_COLUMNS} FROM department WHERE id = $1 FOR UPDATE`,
+      [id],
+    ),
+  );
+  const after = toDepartmentSummary(
+    await queryOne<DepartmentSummaryRow>(
+      tx,
+      `UPDATE department
+          SET name = coalesce($2, name),
+              installed_lanes = coalesce($3, installed_lanes),
+              default_handle_time_min = coalesce($4, default_handle_time_min),
+              trading_open = coalesce($5::time, trading_open),
+              trading_close = coalesce($6::time, trading_close),
+              active = coalesce($7, active)
+        WHERE id = $1 RETURNING ${DEPARTMENT_SUMMARY_COLUMNS}`,
+      [
+        id,
+        input.name ?? null,
+        input.installedLanes ?? null,
+        input.defaultHandleTimeMin ?? null,
+        input.tradingHours?.open ?? null,
+        input.tradingHours?.close ?? null,
+        input.active ?? null,
+      ],
+    ),
+  );
+  await audit.record(tx, {
+    action: 'edit',
+    event: 'department.updated',
+    objectType: 'department',
+    objectId: id,
+    before: { ...before },
+    after: { ...after },
+    synthetic: after.synthetic,
+  });
+  return after;
 }
