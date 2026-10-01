@@ -4,6 +4,7 @@ import { useRouteFocus } from '@/components/a11y'
 import { HelpProvider } from '@/components/help'
 import { ProfileScreen } from '@/features/auth/profile-screen'
 import { DataSourcesPage, UploadPage } from '@/features/data/pages'
+import { DepartmentPage, HiringPage, NetworkPage, SummaryPage } from '@/features/planning/pages'
 import { HomeScreen } from '@/features/home/home-screen'
 import { NetworkMapPage } from '@/features/network-map/pages'
 import { SearchResultsScreen } from '@/features/search/search-results-screen'
@@ -23,6 +24,10 @@ import { Guarded, HelpScreen, NotFoundScreen, PlaceholderScreen, StatusScreen } 
  */
 const BUILT: Partial<Record<ScreenId, () => React.ReactNode>> = {
   'SCR-010': () => <HomeScreen />,
+  'SCR-020': () => <NetworkPage />,
+  'SCR-021': () => <DepartmentPage />,
+  'SCR-023': () => <HiringPage />,
+  'SCR-024': () => <SummaryPage />,
   'SCR-026': () => <NetworkMapPage />,
   'SCR-030': () => <ScenarioListPage />,
   'SCR-031': () => <ScenarioSettingsPage />,

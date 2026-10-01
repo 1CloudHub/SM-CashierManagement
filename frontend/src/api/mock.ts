@@ -13,6 +13,7 @@ import {
   type RoleCode,
 } from '@lanewise/shared'
 import { ACTIVE_ROLE_HEADER, type ApiAdapter, type ApiRequest, type ApiResponse } from './client'
+import { createPlanningStore } from './mock-planning'
 import { createScenarioStore } from './mock-scenarios'
 import { createSavedViewStore, mockContextOptions, mockSearch, type MockResult } from './mock-directory'
 import { mockAutoMatch, mockNetworkMap, mockStoreCandidates, parseMockNetworkQuery, type MockNetworkResult } from './mock-network-map'
@@ -243,6 +244,7 @@ export interface MockAdapterOptions {
 export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {}): ApiAdapter {
   const savedViews = createSavedViewStore()
   const scenarios = createScenarioStore()
+  const planning = createPlanningStore()
   return async (request) => {
     log?.push(request)
     if (latencyMs > 0) await new Promise((resolve) => setTimeout(resolve, latencyMs))
@@ -252,6 +254,16 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
     if (!isRoleCode(role)) return fail('bad_request', 'The active role is missing or not recognised.')
 
     const [pathname = '', search = ''] = request.path.split('?', 2)
+    // Task 14 planning endpoints under /scenarios/:id/… (already shaped, see ./mock-planning).
+    const planned = planning.handle({
+      method: request.method,
+      pathname,
+      query: new URLSearchParams(search),
+      body: request.body,
+      role,
+      viewer: mockViewer(role),
+    })
+    if (planned) return planned
     if (pathname === '/scenarios' || pathname.startsWith('/scenarios/')) {
       // Already shaped for the role (cost + published-only), see ./mock-scenarios.
       return scenarios.handle({
