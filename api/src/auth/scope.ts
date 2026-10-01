@@ -101,6 +101,14 @@ export async function isTargetInScope(
       const row = rows[0];
       return row !== undefined && isStoreInScope(scope, { id: row.id, regionId: row.region_id });
     }
+    case 'department': {
+      const { rows } = await db.query<{ store_id: string; region_id: string } & pg.QueryResultRow>(
+        'SELECT d.store_id, st.region_id FROM department d JOIN store st ON st.id = d.store_id WHERE d.id = $1',
+        [id],
+      );
+      const row = rows[0];
+      return row !== undefined && isStoreInScope(scope, { id: row.store_id, regionId: row.region_id });
+    }
     case 'staff': {
       const { rows } = await db.query<{ id: string; store_id: string; region_id: string } & pg.QueryResultRow>(
         'SELECT s.id, s.store_id, st.region_id FROM staff s JOIN store st ON st.id = s.store_id WHERE s.id = $1',

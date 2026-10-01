@@ -18,6 +18,7 @@ import { createOfferStore } from './mock-offers'
 import { createNotificationStore } from './mock-notifications'
 import { createSelfServiceStore } from './mock-self-service'
 import { createRosterStore } from './mock-rosters'
+import { createMasterDataStore } from './mock-master-data'
 import { createScenarioStore } from './mock-scenarios'
 import { createSavedViewStore, mockContextOptions, mockSearch, type MockResult } from './mock-directory'
 import { mockAutoMatch, mockNetworkMap, mockStoreCandidates, parseMockNetworkQuery, type MockNetworkResult } from './mock-network-map'
@@ -253,6 +254,7 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
   const rosters = createRosterStore()
   const offerStore = createOfferStore(rosters)
   const selfService = createSelfServiceStore(rosters)
+  const masterData = createMasterDataStore()
   return async (request) => {
     log?.push(request)
     if (latencyMs > 0) await new Promise((resolve) => setTimeout(resolve, latencyMs))
@@ -315,6 +317,10 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
         role,
         viewer: mockViewer(role),
       })
+    }
+    if (masterData.owns(pathname)) {
+      // SCR-052/053 stores, departments, staff and availability (scoped like the API; no ₱).
+      return masterData.handle({ method: request.method, pathname, query: new URLSearchParams(search), body: request.body, role })
     }
     const { key, id } = routeOf(request.method, pathname)
     const handler = ROUTES[key]

@@ -6,7 +6,18 @@ import {
   ROLE_CODES,
   canPublishRuleVersion,
 } from '@lanewise/shared'
-import { availableActions, defaultVersion, editorPath, flattenLeaves, parseLeafInput, setLeaf } from './logic'
+import {
+  availableActions,
+  defaultVersion,
+  editorPath,
+  flattenLeaves,
+  groupLeaves,
+  keyPath,
+  parseLeafInput,
+  pathKey,
+  previousValue,
+  setLeaf,
+} from './logic'
 
 describe('payload leaves', () => {
   const json = fc.letrec((tie) => ({
@@ -103,5 +114,43 @@ describe('SCR-061 routing', () => {
     expect(defaultVersion([v('v3', 'submitted'), v('v2', 'published')])?.id).toBe('v3')
     expect(defaultVersion([v('v2', 'published'), v('v1', 'superseded')])?.id).toBe('v2')
     expect(defaultVersion([])).toBeNull()
+  })
+})
+
+describe('groupLeaves / previousValue / keyPath (SCR-061 rates table)', () => {
+  const payload = { hourlyRateByRegion: { NCR: 90, Visayas: 78 }, defaultHourlyRate: 80, employerLoading: 0.14 }
+  const isData = (k: string) => !['hourlyRateByRegion', 'defaultHourlyRate', 'employerLoading'].includes(k)
+
+  it('groups a keyed map into one table and keeps other leaves as fields, in order', () => {
+    const groups = groupLeaves(flattenLeaves(payload), isData)
+    expect(groups.map((g) => (g.kind === 'table' ? `table:${pathKey(g.path)}:${g.rows.length}` : `field:${pathKey(g.leaf.path)}`))).toEqual([
+      'table:hourlyRateByRegion:2',
+      'field:defaultHourlyRate',
+      'field:employerLoading',
+    ])
+  })
+
+  it('takes "Was" from the diff, the saved value when unchanged, and nothing for added rows or a first version', () => {
+    const saved = new Map<string, unknown>([
+      ['hourlyRateByRegion.NCR', 90],
+      ['hourlyRateByRegion.Visayas', 78],
+    ])
+    const diff = {
+      fromVersionId: 'v1',
+      toVersionId: 'v2',
+      changes: [
+        { path: ['hourlyRateByRegion', 'NCR'], kind: 'changed' as const, before: 87, after: 90 },
+        { path: ['hourlyRateByRegion', 'Mindanao'], kind: 'added' as const, after: 70 },
+      ],
+    }
+    expect(previousValue(diff, saved, ['hourlyRateByRegion', 'NCR'])).toEqual({ present: true, value: 87 })
+    expect(previousValue(diff, saved, ['hourlyRateByRegion', 'Visayas'])).toEqual({ present: true, value: 78 })
+    expect(previousValue(diff, saved, ['hourlyRateByRegion', 'Mindanao'])).toEqual({ present: false })
+    expect(previousValue({ ...diff, fromVersionId: null }, saved, ['hourlyRateByRegion', 'NCR'])).toEqual({ present: false })
+  })
+
+  it('turns an error key back into a path with list indexes as numbers', () => {
+    expect(keyPath('milestones.0.name')).toEqual(['milestones', 0, 'name'])
+    expect(keyPath('')).toEqual([])
   })
 })
