@@ -18,7 +18,7 @@ function Ramp({ name, stops }: { name: string; stops: readonly number[] }) {
   return (
     <div className="flex flex-col gap-1">
       <code className="text-caption text-text-muted">--lw-{name}-*</code>
-      <div className="flex border-2 border-outline">
+      <div className="flex border border-outline">
         {stops.map((stop) => (
           <div
             key={stop}
@@ -58,13 +58,13 @@ export function FoundationsSection() {
         hint="The three-lane mark, wordmark and 'by SM Retail' endorsement (concept v0.5, task 22). Coloured only by the brand roles, so it follows dark mode and an SM re-brand. SM brand + legal sign-off is pending (Q8/Q28)."
       >
         <div className="flex flex-wrap items-center gap-6">
-          <div className="border-2 border-outline-subtle bg-surface p-4">
+          <div className="border border-outline-subtle bg-surface p-4">
             <BrandMark />
           </div>
-          <div className="border-2 border-outline-subtle bg-bg p-4">
+          <div className="border border-outline-subtle bg-bg p-4">
             <BrandMark />
           </div>
-          <div className="flex items-center gap-3 border-2 border-outline-subtle bg-surface p-4">
+          <div className="flex items-center gap-3 border border-outline-subtle bg-surface p-4">
             <BrandMark lockup="mark" className="h-4" />
             <BrandMark lockup="mark" className="h-6" />
             <BrandMark lockup="mark" className="h-9" />
@@ -72,7 +72,7 @@ export function FoundationsSection() {
         </div>
         <div className="flex items-center gap-4 bg-appbar pr-4 text-on-appbar">
           <BrandMark variant="reversed" className="m-2" />
-          <span className="ml-auto border-2 border-on-appbar px-3 py-1 text-body-sm">
+          <span className="ml-auto border border-on-appbar px-3 py-1 text-body-sm">
             Reversed on the primary app bar
           </span>
         </div>
@@ -197,10 +197,10 @@ export function FoundationsSection() {
         hint="Square corners, 2px functional outlines (never hairlines), no shadows — elevation is surface stepping. Pills/avatars are the one rounded exception (SG-003)."
       >
         <div className="flex flex-wrap items-center gap-4">
-          <div className="grid size-16 place-items-center border-2 border-outline bg-surface text-body-sm text-text-muted">
+          <div className="grid size-16 place-items-center border border-outline bg-surface text-body-sm text-text-muted">
             0px
           </div>
-          <div className="grid size-16 place-items-center rounded-full border-2 border-outline bg-surface text-body-sm text-text-muted">
+          <div className="grid size-16 place-items-center rounded-full border border-outline bg-surface text-body-sm text-text-muted">
             pill
           </div>
           <div className="grid h-16 place-items-center bg-bg px-4 text-body-sm text-text-muted">
@@ -219,7 +219,7 @@ export function FoundationsSection() {
         title="Motion — durations and easings"
         hint="Named tokens (SG-007). Components reference these, never raw ms or beziers. prefers-reduced-motion drops movement to no-motion; nothing conveys meaning by motion alone."
       >
-        <div className="border-2 border-outline-subtle bg-surface px-4">
+        <div className="border border-outline-subtle bg-surface px-4">
           <SpecRow name="--lw-dur-fast" value="120ms — hover, press, exits" />
           <SpecRow name="--lw-dur-base" value="200ms — dialog/toast enter, snap" />
           <SpecRow name="--lw-dur-slow" value="320ms — panels, drawers, theme" />

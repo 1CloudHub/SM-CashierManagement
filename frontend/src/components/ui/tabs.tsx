@@ -19,7 +19,7 @@ export function TabsList({
   return (
     <TabsPrimitive.List
       className={cn(
-        'flex flex-wrap gap-1 border-b-2 border-outline',
+        'flex flex-wrap gap-1 border-b border-outline',
         className,
       )}
       {...props}
@@ -34,7 +34,7 @@ export function TabsTrigger({
   return (
     <TabsPrimitive.Trigger
       className={cn(
-        'motion-tab -mb-0.5 min-h-tap border-2 border-b-0 border-transparent bg-transparent px-4 text-body text-text-muted',
+        'motion-tab -mb-0.5 min-h-tap border border-b-0 border-transparent bg-transparent px-4 text-body text-text-muted',
         'hover:bg-surface-2',
         'data-[state=active]:border-outline data-[state=active]:bg-surface data-[state=active]:text-text data-[state=active]:font-weight-semibold',
         'focus-visible:outline-focus-ring',
@@ -71,7 +71,7 @@ export function SegmentedControl({
   return (
     <TabsPrimitive.List
       className={cn(
-        'inline-flex gap-1 rounded-full border-2 border-outline bg-surface p-1',
+        'inline-flex gap-1 rounded-full border border-outline bg-surface p-1',
         className,
       )}
       {...props}

@@ -23,7 +23,7 @@ export function RoleSwitcher() {
 
   return (
     <div className="inline-flex items-center gap-2">
-      <label htmlFor={id} className="whitespace-nowrap text-label text-text-muted">
+      <label htmlFor={id} className="sr-only whitespace-nowrap text-label text-text-muted laptop:not-sr-only">
         {t('roleSwitcher.label')}
       </label>
       <Select

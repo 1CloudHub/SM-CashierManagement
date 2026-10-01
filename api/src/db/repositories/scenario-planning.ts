@@ -287,7 +287,7 @@ export function submitBlockerOf(record: ScenarioRecord) {
 // ---------------------------------------------------------------------------
 
 /** Writes the live staleness to the stored flag (no audit: derived state). */
-async function syncStaleFlag(tx: AuditedTx, id: string): Promise<Staleness> {
+export async function syncStaleFlag(tx: Queryable, id: string): Promise<Staleness> {
   const row = await queryOne<ScenarioListRow>(tx, `${SELECT_LIST} WHERE s.id = $1`, [id]);
   const live = staleness(row, await currentInputs(tx, row.synthetic));
   await tx.query(

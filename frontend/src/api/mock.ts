@@ -13,6 +13,7 @@ import {
   type RoleCode,
 } from '@lanewise/shared'
 import { ACTIVE_ROLE_HEADER, type ApiAdapter, type ApiRequest, type ApiResponse } from './client'
+import { createRosterStore } from './mock-rosters'
 import { createPlanningStore } from './mock-planning'
 import { createScenarioStore } from './mock-scenarios'
 import { createSavedViewStore, mockContextOptions, mockSearch, type MockResult } from './mock-directory'
@@ -228,6 +229,7 @@ export interface MockAdapterOptions {
 export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {}): ApiAdapter {
   const savedViews = createSavedViewStore()
   const scenarios = createScenarioStore()
+  const rosters = createRosterStore()
   const planning = createPlanningStore()
   return async (request) => {
     log?.push(request)
@@ -251,6 +253,21 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
     if (pathname === '/scenarios' || pathname.startsWith('/scenarios/')) {
       // Already shaped for the role (cost + published-only), see ./mock-scenarios.
       return scenarios.handle({
+        method: request.method,
+        pathname,
+        query: new URLSearchParams(search),
+        body: request.body,
+        role,
+        viewer: mockViewer(role),
+      })
+    }
+    if (/^\/stores\/[^/]+\/rosters(\/|$)/.test(pathname)) {
+      // Published rosters carry no ₱ figures (task 13.4), see ./mock-rosters.
+      return rosters.handle({ method: request.method, pathname, body: request.body, role, userName: `Demo ${role}` })
+    }
+    if (pathname === '/approvals' || pathname.startsWith('/approvals/')) {
+      // Shares the scenario rows; results are shaped for the role like /scenarios.
+      return scenarios.approvals.handle({
         method: request.method,
         pathname,
         query: new URLSearchParams(search),

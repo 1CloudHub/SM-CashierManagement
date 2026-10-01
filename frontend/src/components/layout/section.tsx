@@ -60,7 +60,7 @@ export function Section({
       id={id}
       aria-labelledby={labelled}
       aria-label={aria['aria-label']}
-      className={cn(!bare && 'border-2 border-outline bg-surface p-4', className)}
+      className={cn(!bare && 'border border-outline bg-surface p-4', className)}
     >
       <Stack gap={gap}>
         {(title || actions || description) && (

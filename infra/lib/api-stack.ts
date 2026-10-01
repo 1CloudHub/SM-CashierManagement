@@ -4,6 +4,7 @@ import { CfnOutput, Duration, Fn, RemovalPolicy, Stack, StackProps } from 'aws-c
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import type * as cognito from 'aws-cdk-lib/aws-cognito';
 import type * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
@@ -105,6 +106,19 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'DELETE', path: '/me/home-area' },
   { method: 'GET', path: '/me/home-area/barangays' },
   { method: 'GET', path: '/staff/{staffId}/home-area' },
+  // Task 12: approvals — queue, tracker, step decisions, off-system record (SCR-033).
+  { method: 'GET', path: '/approvals' },
+  { method: 'GET', path: '/approvals/{scenarioId}' },
+  { method: 'POST', path: '/approvals/{scenarioId}/headcount' },
+  { method: 'POST', path: '/approvals/{scenarioId}/budget' },
+  { method: 'POST', path: '/approvals/{scenarioId}/plan' },
+  { method: 'POST', path: '/approvals/{scenarioId}/secured-outside' },
+  // Task 13.4: published rosters and store-manager overrides (SCR-022).
+  { method: 'GET', path: '/stores/{storeId}/rosters' },
+  { method: 'GET', path: '/stores/{storeId}/rosters/{rosterId}' },
+  { method: 'GET', path: '/stores/{storeId}/rosters/{rosterId}/shifts/{shiftId}/replacements' },
+  { method: 'POST', path: '/stores/{storeId}/rosters/{rosterId}/overrides/check' },
+  { method: 'POST', path: '/stores/{storeId}/rosters/{rosterId}/overrides' },
   // Task 14: network view, department day plan, hiring plan and long-roster
   // background jobs, leadership summary (SCR-020/021/023/024).
   { method: 'GET', path: '/scenarios/{scenarioId}/network' },
@@ -223,7 +237,17 @@ export class ApiStack extends Stack {
       },
     });
 
-    const integration = new apigateway.LambdaIntegration(apiFn);
+    // One API-wide invoke permission instead of one (plus a test-invoke one)
+    // per method: with ~100 routes the per-method statements exceed Lambda's
+    // 20 KB resource-policy limit and the stack update fails.
+    // A plain AWS_PROXY integration plus ONE API-wide invoke permission:
+    // LambdaIntegration adds two permissions per method, and with ~100 routes
+    // those statements exceed Lambda's 20 KB resource-policy limit.
+    const integration = new apigateway.Integration({
+      type: apigateway.IntegrationType.AWS_PROXY,
+      integrationHttpMethod: 'POST',
+      uri: `arn:${Stack.of(this).partition}:apigateway:${Stack.of(this).region}:lambda:path/2015-03-31/functions/${apiFn.functionArn}/invocations`,
+    });
 
     // Public: the health check only.
     const health = api.root.addResource('health');
@@ -252,6 +276,11 @@ export class ApiStack extends Stack {
     for (const route of PROTECTED_ROUTES) {
       api.root.resourceForPath(route.path).addMethod(route.method, integration, this.protectedMethodOptions);
     }
+
+    apiFn.addPermission('ApiGatewayInvoke', {
+      principal: new iam.ServicePrincipal('apigateway.amazonaws.com'),
+      sourceArn: api.arnForExecuteApi('*', '/*', '*'),
+    });
 
     this.apiUrl = api.url;
 

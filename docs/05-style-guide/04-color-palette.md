@@ -1,10 +1,10 @@
 ---
 id: SG-004
 title: Color palette
-version: 0.4.0
+version: 0.5.0
 status: Draft
 owner: TBD
-last_updated: 2026-09-30
+last_updated: 2026-10-01
 related: [SG-000, SG-002, SG-007, SG-009, SG-010, UX-001, ADR-0003]
 ---
 
@@ -14,7 +14,7 @@ related: [SG-000, SG-002, SG-007, SG-009, SG-010, UX-001, ADR-0003]
 
 ## Design language
 
-Square corners (radius 0), no shadows, no gradients. Solid fills are reserved for the single most important element on a screen — the primary action, the key number, or the most urgent status. Everything else uses a 2px outline (never a hairline). Accent red is for emphasis only, never for status.
+Square corners (radius 0), no shadows, no gradients. Solid fills are reserved for the single most important element on a screen — the primary action, the key number, or the most urgent status. Everything else uses a thin 1px outline in an AA non-text colour (≥ 3:1); decorative containers (cards, table frames) use the subtle outline. Focus indicators stay 2px. Accent red is for emphasis only, never for status.
 
 ## Base ramps (raw — not used directly in components)
 
@@ -161,3 +161,4 @@ All 106 pair checks pass. Automated contrast is necessary, not sufficient: full 
 | 0.2.0 | 2026-09-30 | Kiro | Neutral SM-flavoured placeholder palette |
 | 0.3.0 | 2026-09-30 | Kiro | Adopted LaneWise v0.5: `--lw-*` semantic tokens, light+dark AA-verified, Okabe–Ito data-viz, design-language rules |
 | 0.4.0 | 2026-09-30 | Claude | Task 22: brand + app-bar roles, dark soft tokens, all hex moved into ramps, BrandMark component, automated contrast suite, "Swapping the brand" procedure (Q8/Q28 sign-off pending) |
+| 0.5.0 | 2026-10-01 | Claude | 1px outlines (thinner, more modern); cards/table frames on the subtle outline; 2px focus ring |

@@ -49,7 +49,7 @@ function synth() {
 }
 
 const DOMAIN = 'lanewise.prototypes.1cloudhub.com';
-const ZONE_ID = 'Z10306162UR77DOLJD1L3';
+const ZONE_ID = 'Z02168532NL1LBQPBHSV0';
 
 /**
  * Prod config with the custom domain switched on. Prod currently has the custom
@@ -61,7 +61,7 @@ function withDomain(): EnvironmentConfig {
   return {
     ...base,
     domainName: DOMAIN,
-    hostedZone: { id: ZONE_ID, name: 'prototypes.1cloudhub.com' },
+    hostedZone: { id: ZONE_ID, name: 'lanewise.prototypes.1cloudhub.com' },
     auth: { ...base.auth, relyingPartyId: DOMAIN },
   };
 }
@@ -225,6 +225,14 @@ describe('API stack', () => {
     });
   });
 
+  it('grants API Gateway one API-wide invoke permission (stays under the 20 KB Lambda policy limit)', () => {
+    api.resourceCountIs('AWS::Lambda::Permission', 1);
+    api.hasResourceProperties('AWS::Lambda::Permission', {
+      Action: 'lambda:InvokeFunction',
+      Principal: 'apigateway.amazonaws.com',
+    });
+  });
+
   it('protects every other route with the Cognito user-pool authorizer (feature routes secure by default)', () => {
     api.resourceCountIs('AWS::ApiGateway::Authorizer', 1);
     api.hasResourceProperties('AWS::ApiGateway::Authorizer', {
@@ -342,6 +350,18 @@ describe('API stack', () => {
     );
   });
 
+  it('protects every task 13.4 roster and override route with the Cognito authorizer', () => {
+    expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
+      expect.arrayContaining([
+        'GET /stores/{storeId}/rosters',
+        'GET /stores/{storeId}/rosters/{rosterId}',
+        'GET /stores/{storeId}/rosters/{rosterId}/shifts/{shiftId}/replacements',
+        'POST /stores/{storeId}/rosters/{rosterId}/overrides/check',
+        'POST /stores/{storeId}/rosters/{rosterId}/overrides',
+      ]),
+    );
+  });
+
   it('protects every task 11 scenario route with the Cognito authorizer', () => {
     expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
       expect.arrayContaining([
@@ -374,6 +394,19 @@ describe('API stack', () => {
         'GET /scenarios/{scenarioId}/rosters/jobs/{jobId}',
         'GET /scenarios/{scenarioId}/summary',
         'GET /scenarios/{scenarioId}/summary/export',
+      ]),
+    );
+  });
+
+  it('protects every task 12 approval route with the Cognito authorizer', () => {
+    expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
+      expect.arrayContaining([
+        'GET /approvals',
+        'GET /approvals/{scenarioId}',
+        'POST /approvals/{scenarioId}/headcount',
+        'POST /approvals/{scenarioId}/budget',
+        'POST /approvals/{scenarioId}/plan',
+        'POST /approvals/{scenarioId}/secured-outside',
       ]),
     );
   });
