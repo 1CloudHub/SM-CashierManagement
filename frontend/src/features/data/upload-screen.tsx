@@ -353,7 +353,7 @@ export function UploadScreen({ api, onDone, initialType = 'pos', role }: UploadS
             <span
               aria-hidden="true"
               className={cn(
-                'lw-numeric inline-flex size-6 items-center justify-center border-2',
+                'lw-numeric inline-flex size-6 items-center justify-center border',
                 current ? 'border-primary bg-primary text-on-primary' : 'border-outline',
               )}
             >

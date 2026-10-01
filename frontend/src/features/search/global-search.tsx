@@ -128,7 +128,7 @@ export function GlobalSearch({ inputId }: { inputId: string }) {
         role="listbox"
         aria-label={t('search.dropdown.label')}
         hidden={!expanded}
-        className="absolute left-0 right-0 top-full z-40 mt-1 max-h-[70vh] overflow-y-auto border-2 border-outline bg-surface"
+        className="absolute left-0 right-0 top-full z-40 mt-1 max-h-[70vh] overflow-y-auto border border-outline bg-surface"
       >
         {loading && groups.length === 0 ? (
           <p className="px-3 py-2 text-body-sm text-text-muted">{t('search.dropdown.loading')}</p>
@@ -139,7 +139,7 @@ export function GlobalSearch({ inputId }: { inputId: string }) {
           const headingId = `${listId}-${g.key}`
           return (
             <div key={g.key} role="group" aria-labelledby={headingId}>
-              <div id={headingId} role="presentation" className="border-t-2 border-outline px-3 pt-2 text-label text-text-muted first:border-t-0">
+              <div id={headingId} role="presentation" className="border-t border-outline px-3 pt-2 text-label text-text-muted first:border-t-0">
                 {g.label}
               </div>
               {g.hits.map((h) => (
@@ -163,7 +163,7 @@ export function GlobalSearch({ inputId }: { inputId: string }) {
           id={optionId(options.length - 1)}
           role="option"
           aria-selected={active === options.length - 1}
-          className={cn(optionClass(options.length - 1), 'border-t-2 border-outline font-weight-semibold')}
+          className={cn(optionClass(options.length - 1), 'border-t border-outline font-weight-semibold')}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => go(seeAllHref)}
         >

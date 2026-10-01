@@ -12,7 +12,7 @@ import { STATUS_META, type StatusTone } from './status'
  * tone; it is emphasis only.
  */
 const pillVariants = cva(
-  'inline-flex items-center gap-1 rounded-full px-3 py-0.5 text-label leading-none whitespace-nowrap border-2',
+  'inline-flex items-center gap-1 rounded-full px-3 py-0.5 text-label leading-none whitespace-nowrap border',
   {
     variants: {
       fill: {

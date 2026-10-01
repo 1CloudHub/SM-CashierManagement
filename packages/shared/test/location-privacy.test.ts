@@ -48,8 +48,11 @@ describe('findFineLocation (P15 guard)', () => {
         fc.double({ min: 4, max: 21, noNaN: true }),
         fc.double({ min: 116, max: 127, noNaN: true }),
         (lat, lon) => {
-          const a = Math.round(lat * 1e5) / 1e5 + 0.00001;
-          const b = Math.round(lon * 1e5) / 1e5 + 0.00001;
+          // Truncate to 4 decimals, then add a non-zero 5th decimal: the value
+          // always has 5 decimals (adding 1e-5 to a 5-decimal rounding could
+          // carry into a whole number such as 11.00000 and stop looking fine).
+          const a = Math.trunc(lat * 1e4) / 1e4 + 0.00003;
+          const b = Math.trunc(lon * 1e4) / 1e4 + 0.00003;
           expect(findFineLocation({ where: a })).not.toEqual([]);
           expect(findFineLocation({ note: `${a.toFixed(5)}, ${b.toFixed(5)}` })).not.toEqual([]);
         },

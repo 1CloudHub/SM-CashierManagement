@@ -51,7 +51,7 @@ export function Swatch({
   sample?: string
 }) {
   return (
-    <div className="flex flex-col border-2 border-outline">
+    <div className="flex flex-col border border-outline">
       <div
         className={cn(
           'flex h-14 items-center justify-center',
@@ -61,7 +61,7 @@ export function Swatch({
       >
         {onToken && <span className="text-body-sm">{sample}</span>}
       </div>
-      <code className="border-t-2 border-outline bg-surface px-2 py-1 text-caption text-text-muted">
+      <code className="border-t border-outline bg-surface px-2 py-1 text-caption text-text-muted">
         {token}
       </code>
     </div>
@@ -82,9 +82,9 @@ export function Specimen({
   className?: string
 }) {
   return (
-    <div className={cn('border-2 border-outline-subtle bg-surface', className)}>
+    <div className={cn('border border-outline-subtle bg-surface', className)}>
       <div className="flex flex-wrap items-center gap-3 p-4">{children}</div>
-      <p className="border-t-2 border-outline-subtle bg-surface-2 px-4 py-2 text-caption text-text-muted">
+      <p className="border-t border-outline-subtle bg-surface-2 px-4 py-2 text-caption text-text-muted">
         {name}
       </p>
     </div>
@@ -106,7 +106,7 @@ export function SpecRow({
   children?: ReactNode
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b-2 border-outline-subtle py-2 last:border-b-0">
+    <div className="flex items-center justify-between gap-4 border-b border-outline-subtle py-2 last:border-b-0">
       <div className="flex items-center gap-3">
         {children}
         <code className="text-body-sm text-text">{name}</code>

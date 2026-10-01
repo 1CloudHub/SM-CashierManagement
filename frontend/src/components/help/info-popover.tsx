@@ -100,7 +100,7 @@ export function InfoPopover({
           role="group"
           aria-label={typeof title === 'string' ? title : label}
           className={cn(
-            'absolute top-full z-40 mt-1 w-64 border-2 border-outline bg-surface p-3 text-body-sm text-text motion-safe:animate-fade-in',
+            'absolute top-full z-40 mt-1 w-64 border border-outline bg-surface p-3 text-body-sm text-text motion-safe:animate-fade-in',
             align === 'end' ? 'right-0' : 'left-0',
           )}
         >

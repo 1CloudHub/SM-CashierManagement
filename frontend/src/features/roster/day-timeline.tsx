@@ -286,11 +286,11 @@ export function DayTimeline({
           role="region"
           aria-label={f.t('roster.timeline.label', { date: f.dayLong(date) })}
           aria-describedby={instructionsId}
-          className="overflow-x-auto border-2 border-outline bg-surface"
+          className="overflow-x-auto border border-outline bg-surface"
         >
           <div className="min-w-[60rem]" style={cols}>
             {/* Hour header (visual only — each bar's name carries its times). */}
-            <div className={cn(rowGrid, 'sticky top-0 z-10 min-h-8 border-b-2 border-outline bg-surface')}>
+            <div className={cn(rowGrid, 'sticky top-0 z-10 min-h-8 border-b border-outline bg-surface')}>
               <div className={metaCol}>
                 {editable && (
                   <label className="grid min-h-tap min-w-tap place-items-center">
@@ -342,7 +342,7 @@ export function DayTimeline({
                     <span
                       aria-hidden="true"
                       className={cn(
-                        'lw-numeric border-2 px-1 text-caption font-weight-bold',
+                        'lw-numeric border px-1 text-caption font-weight-bold',
                         d.delta < 0 && 'border-danger bg-danger text-on-danger',
                         d.delta > 0 && 'border-warning text-text',
                         d.delta === 0 && 'border-outline-subtle text-text-muted',
@@ -403,7 +403,7 @@ export function DayTimeline({
                       {cashier.skills.map((s) => (
                         <span
                           key={s}
-                          className="border-2 border-outline-subtle px-1 text-caption font-weight-semibold text-text-muted"
+                          className="border border-outline-subtle px-1 text-caption font-weight-semibold text-text-muted"
                         >
                           {dept.get(s)?.letter ?? s}
                           <span className="sr-only"> {dept.get(s)?.name}</span>
@@ -509,7 +509,7 @@ export function DayTimeline({
             })}
 
             {/* Required on lanes (Erlang C) — bar height + the value as text. */}
-            <div className={cn(rowGrid, 'min-h-12 border-t-2 border-outline')}>
+            <div className={cn(rowGrid, 'min-h-12 border-t border-outline')}>
               <div className={metaCol}>
                 <b className="font-weight-bold">{f.t('roster.timeline.coverageRow')}</b>
                 <span className="text-text-muted">{f.t('roster.timeline.coverageHint')}</span>
@@ -535,7 +535,7 @@ export function DayTimeline({
                       </span>
                       <span
                         aria-hidden="true"
-                        className="w-[calc(100%-var(--lw-space-2))] border-t-2 border-primary bg-primary-soft"
+                        className="w-[calc(100%-var(--lw-space-2))] border-t border-primary bg-primary-soft"
                         style={{ height: `${(r.required / maxRequired) * 60}%` }}
                       />
                       <span className="sr-only">

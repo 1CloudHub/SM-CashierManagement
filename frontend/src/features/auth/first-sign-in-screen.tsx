@@ -79,7 +79,7 @@ export function FirstSignInScreen({ passkeySupported = isPasskeySupported() }: {
                 <span
                   aria-hidden="true"
                   className={cn(
-                    'lw-numeric inline-flex size-6 items-center justify-center border-2',
+                    'lw-numeric inline-flex size-6 items-center justify-center border',
                     n === step ? 'border-primary bg-primary text-on-primary' : 'border-outline',
                   )}
                 >

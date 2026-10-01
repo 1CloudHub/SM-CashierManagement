@@ -129,7 +129,7 @@ function ToastCard({
       role={assertive ? 'alert' : 'status'}
       aria-live={assertive ? 'assertive' : 'polite'}
       className={cn(
-        'pointer-events-auto flex items-start gap-3 border-2 p-3 motion-safe:animate-toast-in',
+        'pointer-events-auto flex items-start gap-3 border p-3 motion-safe:animate-toast-in',
         meta.soft,
         meta.outline,
       )}
