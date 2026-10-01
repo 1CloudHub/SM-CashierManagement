@@ -6,6 +6,7 @@ import { createPool } from './db/pool.js';
 import { errors } from './http/errors.js';
 import { Router } from './http/router.js';
 import { createS3Storage, type IngestionStorage } from './ingestion/storage.js';
+import { registerApprovalRoutes } from './routes/approvals.js';
 import { healthHandler } from './routes/health.js';
 import { registerIngestionRoutes } from './routes/ingestion.js';
 import { registerMeRoutes } from './routes/me.js';
@@ -67,5 +68,6 @@ export function createApp(deps: AppDeps = depsFromEnv()): Router {
   registerIngestionRoutes(router, deps);
   registerRuleRoutes(router, deps);
   registerScenarioRoutes(router, deps);
+  registerApprovalRoutes(router, deps);
   return router.assertGuarded();
 }

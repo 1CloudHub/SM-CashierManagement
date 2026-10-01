@@ -124,7 +124,14 @@ describe('scenarios (P3, P4, P5)', () => {
     const owner = await insertUser(db.pool);
     const season = 'christmas-2026';
     const publish = async (id: string): Promise<void> => {
-      await db.pool.query(`UPDATE scenario SET status = 'submitted' WHERE id = $1`, [id]);
+      await db.pool.query(`UPDATE scenario SET status = 'submitted', current_submission_no = 1 WHERE id = $1`, [id]);
+      // 0130: a scenario is Approved only with an approved plan step (P10).
+      await db.pool.query(
+        `INSERT INTO approval_step (scenario_id, submission_no, step, status, decided_by, decided_as_role, decided_at)
+         VALUES ($1, 1, 'headcount', 'approved', $2, 'HR', now()), ($1, 1, 'budget', 'approved', $2, 'FIN', now()),
+                ($1, 1, 'plan', 'approved', $2, 'EXE', now())`,
+        [id, owner],
+      );
       await db.pool.query(`UPDATE scenario SET status = 'approved' WHERE id = $1`, [id]);
       await db.pool.query(`UPDATE scenario SET status = 'published', published_at = now() WHERE id = $1`, [id]);
     };
@@ -175,6 +182,8 @@ describe('approval steps (P10, Q3, Q19)', () => {
   async function submitted(): Promise<{ scenarioId: string; approver: string }> {
     const approver = await insertUser(db.pool);
     const scenarioId = await insertScenario(db.pool, approver);
+    // 0130: only the current submission of a Submitted scenario can be decided.
+    await db.pool.query(`UPDATE scenario SET status = 'submitted', current_submission_no = 1 WHERE id = $1`, [scenarioId]);
     await db.pool.query(
       `INSERT INTO approval_step (scenario_id, submission_no, step)
        VALUES ($1, 1, 'headcount'), ($1, 1, 'budget'), ($1, 1, 'plan')`,
