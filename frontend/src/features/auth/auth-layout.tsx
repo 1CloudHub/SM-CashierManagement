@@ -1,3 +1,4 @@
+import { DemoCredit } from '@/components/brand'
 import type { ReactNode } from 'react'
 import { SkipLink } from '@/components/a11y/skip-link'
 import { Col, Grid, Page, Stack } from '@/components/layout'
@@ -31,8 +32,9 @@ export function AuthLayout({ title, children }: { title: string; children: React
                   </p>
                 </Stack>
                 <Card>{children}</Card>
-                <Stack align="center">
+                <Stack align="center" gap={4}>
                   <LanguageSwitcher />
+                  <DemoCredit label={t('brand.demoCredit')} newTabLabel={t('brand.opensNewTab')} />
                 </Stack>
               </Stack>
             </Col>
