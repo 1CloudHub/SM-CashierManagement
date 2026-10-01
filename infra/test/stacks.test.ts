@@ -326,6 +326,10 @@ describe('API stack', () => {
         'GET /staff/{staffId}/home-area',
       ]),
     );
+    // Task 16 network map routes (api/src/routes/network-map.ts).
+    expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
+      expect.arrayContaining(['GET /network-map', 'GET /network-map/stores/{storeId}/candidates', 'GET /network-map/auto-match']),
+    );
     for (const route of PROTECTED_ROUTES) {
       const match = declared.filter((d) => d.key === `${route.method} ${route.path}`);
       expect(match, `${route.method} ${route.path}`).toHaveLength(1);
@@ -358,6 +362,23 @@ describe('API stack', () => {
         'GET /stores/{storeId}/rosters/{rosterId}/shifts/{shiftId}/replacements',
         'POST /stores/{storeId}/rosters/{rosterId}/overrides/check',
         'POST /stores/{storeId}/rosters/{rosterId}/overrides',
+      ]),
+    );
+  });
+
+  it('protects every task 17 offer and borrowing route with the Cognito authorizer', () => {
+    expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
+      expect.arrayContaining([
+        'GET /stores/{storeId}/shifts/{shiftId}/offer-candidates',
+        'POST /stores/{storeId}/shifts/{shiftId}/offers',
+        'GET /stores/{storeId}/offers',
+        'GET /me/offers',
+        'POST /me/offers/{offerId}/accept',
+        'POST /me/offers/{offerId}/decline',
+        'GET /stores/{storeId}/borrow-requests',
+        'POST /stores/{storeId}/borrow-requests',
+        'GET /stores/{storeId}/borrow-requests/{requestId}/candidates',
+        'POST /stores/{storeId}/borrow-requests/{requestId}/decision',
       ]),
     );
   });
@@ -925,10 +946,16 @@ describe('CodeBuild role deploy grants', () => {
       PolicyDocument: {
         Statement: Match.arrayWith([
           Match.objectLike({ Action: 'cloudformation:DescribeStacks', Effect: 'Allow' }),
+          // Task 16.1: read the SPA map key for runtime-config.json, LaneWise keys only.
+          Match.objectLike({ Action: 'geo:DescribeKey', Effect: 'Allow' }),
           Match.objectLike({ Action: 'cloudfront:CreateInvalidation', Effect: 'Allow' }),
         ]),
       },
     });
+    const mapKeyGrant = Object.values(pipelineIam.findResources('AWS::IAM::Policy'))
+      .flatMap((p) => (p as { Properties: { PolicyDocument: { Statement: { Sid?: string; Resource: unknown }[] } } }).Properties.PolicyDocument.Statement)
+      .find((st) => st.Sid === 'ReadLaneWiseMapKey');
+    expect(JSON.stringify(mapKeyGrant?.Resource)).toContain(':api-key/lanewise-*');
   });
 });
 

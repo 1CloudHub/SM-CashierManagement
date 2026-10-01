@@ -33,6 +33,13 @@ export type RosterStatus = (typeof ROSTER_STATUSES)[number];
 export const SHIFT_OVERRIDE_TYPES = ['emergency_off', 'reassign', 'time_change', 'add', 'remove'] as const;
 export type ShiftOverrideType = (typeof SHIFT_OVERRIDE_TYPES)[number];
 
+/**
+ * Every recorded ShiftOverride type: the store-manager changes above plus the
+ * task 17 fills of an open shift — by an accepted offer or a borrow (P14).
+ */
+export const SHIFT_OVERRIDE_RECORD_TYPES = [...SHIFT_OVERRIDE_TYPES, 'offer_fill', 'borrow_fill'] as const;
+export type ShiftOverrideRecordType = (typeof SHIFT_OVERRIDE_RECORD_TYPES)[number];
+
 /** Why a cashier is marked off at short notice (shift editor, Req 7.5). */
 export const EMERGENCY_OFF_REASONS = ['sickCall', 'family', 'other'] as const;
 export type EmergencyOffReason = (typeof EMERGENCY_OFF_REASONS)[number];
@@ -281,11 +288,13 @@ export interface RosterStaffMember {
   readonly trainedDepartmentIds: readonly string[];
   /** Set when the cashier's home store is another store. */
   readonly borrowedFrom: string | null;
+  /** Travel time (minutes) of a borrowed cashier to this store, when known (Req 14.3). */
+  readonly borrowedTravelMin?: number | null;
 }
 
 /** The ✎ marker: the latest store-manager change to the shift. */
 export interface ShiftEditMarker {
-  readonly type: ShiftOverrideType;
+  readonly type: ShiftOverrideRecordType;
   readonly by: string;
   readonly at: IsoDateTime;
 }
@@ -303,7 +312,7 @@ export interface RosterShiftDto extends LocalShiftTimes {
 export interface ShiftOverrideDto {
   readonly id: string;
   readonly shiftId: string;
-  readonly type: ShiftOverrideType;
+  readonly type: ShiftOverrideRecordType;
   readonly fromStaffId: string | null;
   readonly toStaffId: string | null;
   readonly reason: string | null;

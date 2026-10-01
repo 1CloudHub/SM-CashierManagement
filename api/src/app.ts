@@ -17,9 +17,11 @@ import { registerLocationPrivacyRoutes } from './routes/location-privacy.js';
 import { registerMeRoutes } from './routes/me.js';
 import { registerNotificationRoutes } from './routes/notifications.js';
 import { registerPlanningRoutes } from './routes/planning.js';
+import { registerNetworkMapRoutes } from './routes/network-map.js';
 import { registerSavedViewRoutes } from './routes/saved-views.js';
 import { registerSearchRoutes } from './routes/search.js';
 import { registerRosterRoutes } from './routes/rosters.js';
+import { registerOfferRoutes } from './routes/offers.js';
 import { registerRuleRoutes } from './routes/rules.js';
 import { registerScenarioRoutes } from './routes/scenarios.js';
 import { registerStoreRoutes } from './routes/stores.js';
@@ -125,8 +127,10 @@ export function createApp(deps: AppDeps = depsFromEnv()): Router {
   registerLocationPrivacyRoutes(router, deps);
   registerNotificationRoutes(router, deps);
   registerApprovalRoutes(router, deps);
-  registerRosterRoutes(router, deps);
   const inProcess = createInProcessQueue(deps.db);
   registerPlanningRoutes(router, { db: deps.db, jobs: deps.jobs ?? (() => inProcess) });
+  registerNetworkMapRoutes(router, deps);
+  registerRosterRoutes(router, deps);
+  registerOfferRoutes(router, deps);
   return router.assertGuarded();
 }

@@ -9,8 +9,8 @@ version: 0.2
 # workspace forward as the build artifact so the Deploy stage can run
 # `cdk deploy` against the already-built outputs.
 #
-# Repo layout assumed: /packages/shared, /packages/domain, /api, /frontend, /infra at the repo
-# root. CodePipeline places the source at $CODEBUILD_SRC_DIR.
+# Repo layout assumed: /packages/shared, /packages/domain, /packages/matching, /api,
+# /frontend, /infra at the repo root. CodePipeline places the source at $CODEBUILD_SRC_DIR.
 #
 # Artifacts: the entire tree is exported so the Deploy stage has the built SPA
 # (frontend/dist), the API bundle (api/dist/lambda, deployed as the Lambda code
@@ -27,9 +27,10 @@ phases:
     runtime-versions:
       nodejs: 20
     commands:
-      - echo "install — restoring dependencies (shared + domain + API + frontend + infra)"
+      - echo "install — restoring dependencies (shared + domain + matching + API + frontend + infra)"
       - cd "$CODEBUILD_SRC_DIR/packages/shared" && npm ci
       - cd "$CODEBUILD_SRC_DIR/packages/domain" && npm ci
+      - cd "$CODEBUILD_SRC_DIR/packages/matching" && npm ci
       - cd "$CODEBUILD_SRC_DIR/api" && npm ci
       - cd "$CODEBUILD_SRC_DIR/frontend" && npm ci
       - cd "$CODEBUILD_SRC_DIR/infra" && npm ci
@@ -40,6 +41,8 @@ phases:
       - cd "$CODEBUILD_SRC_DIR/packages/shared" && npm run build
       # The API depends on @lanewise/domain (file:) for the demo seed CLI (task 23).
       - cd "$CODEBUILD_SRC_DIR/packages/domain" && npm run build
+      # ... and on @lanewise/matching (file:) for the network map (task 16).
+      - cd "$CODEBUILD_SRC_DIR/packages/matching" && npm run build
       - cd "$CODEBUILD_SRC_DIR/api" && npm run build
       - cd "$CODEBUILD_SRC_DIR/frontend" && npm run build
       - cd "$CODEBUILD_SRC_DIR/infra" && npm run build

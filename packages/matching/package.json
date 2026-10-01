@@ -2,7 +2,7 @@
   "name": "@lanewise/matching",
   "version": "0.1.0",
   "private": true,
-  "description": "Cross-store matching for LaneWise (Cashier Staffing Planner): barangay-level travel-time matrix with an injectable provider, and deterministic candidate eligibility + ranking for open shifts (tasks 16.2, 16.3; P15, P16). Pure TypeScript, no I/O.",
+  "description": "Cross-store matching for LaneWise (Cashier Staffing Planner): barangay-level travel-time matrix with an injectable provider, and deterministic candidate eligibility + ranking for open shifts, and the network-wide auto-match proposal (tasks 16.2–16.4; P15, P16). Pure TypeScript, no I/O.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

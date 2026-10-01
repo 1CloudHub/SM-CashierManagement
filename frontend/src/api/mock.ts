@@ -14,10 +14,12 @@ import {
 } from '@lanewise/shared'
 import { ACTIVE_ROLE_HEADER, type ApiAdapter, type ApiRequest, type ApiResponse } from './client'
 import { createNotificationStore } from './mock-notifications'
-import { createRosterStore } from './mock-rosters'
 import { createPlanningStore } from './mock-planning'
+import { createOfferStore } from './mock-offers'
+import { createRosterStore } from './mock-rosters'
 import { createScenarioStore } from './mock-scenarios'
 import { createSavedViewStore, mockContextOptions, mockSearch, type MockResult } from './mock-directory'
+import { mockAutoMatch, mockNetworkMap, mockStoreCandidates, parseMockNetworkQuery, type MockNetworkResult } from './mock-network-map'
 import type { HomeKpis, HomeScenarioRow, HomeSummary } from './types'
 
 /**
@@ -187,6 +189,19 @@ const ROUTES: Record<string, Handler> = {
   'POST /saved-views': ({ request, savedViews }) => result(savedViews.create(request.body), 201),
   'PATCH /saved-views/:id': ({ request, id, savedViews }) => result(savedViews.update(id ?? '', request.body)),
   'DELETE /saved-views/:id': ({ id, savedViews }) => result(savedViews.remove(id ?? '')),
+  // Network map (task 16.1, 16.4).
+  'GET /network-map': ({ role, query }) => network(query, (q) => mockNetworkMap(role, q)),
+  'GET /network-map/stores/:id/candidates': ({ role, query, id }) => network(query, (q) => mockStoreCandidates(role, id ?? '', q)),
+  'GET /network-map/auto-match': ({ role, query }) => network(query, (q) => mockAutoMatch(role, q)),
+}
+
+const NETWORK_ERROR_CODE = { 403: 'forbidden', 404: 'not_found', 422: 'validation_failed' } as const
+
+function network<T>(query: URLSearchParams, run: (q: NonNullable<ReturnType<typeof parseMockNetworkQuery>>) => MockNetworkResult<T>): ApiResponse {
+  const q = parseMockNetworkQuery(query)
+  if (!q) return fail('validation_failed', 'Check the map filters.')
+  const r = run(q)
+  return r.ok ? ok(r.body) : fail(NETWORK_ERROR_CODE[r.status], r.message)
 }
 
 function ok(body: unknown, status = 200): ApiResponse {
@@ -203,6 +218,8 @@ function result<T>(r: MockResult<T>, status = 200): ApiResponse {
 function routeOf(method: string, pathname: string): { key: string; id: string | null } {
   const exact = `${method} ${pathname}`
   if (ROUTES[exact]) return { key: exact, id: null }
+  const candidates = /^\/network-map\/stores\/([^/]+)\/candidates$/.exec(pathname)
+  if (candidates) return { key: `${method} /network-map/stores/:id/candidates`, id: decodeURIComponent(candidates[1] ?? '') }
   const m = /^(\/[a-z-]+)\/([^/]+)$/.exec(pathname)
   if (!m) return { key: exact, id: null }
   return { key: `${method} ${m[1]}/:id`, id: decodeURIComponent(m[2] ?? '') }
@@ -233,6 +250,7 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
   const notifications = createNotificationStore()
   const rosters = createRosterStore()
   const planning = createPlanningStore()
+  const offerStore = createOfferStore(rosters)
   return async (request) => {
     log?.push(request)
     if (latencyMs > 0) await new Promise((resolve) => setTimeout(resolve, latencyMs))
@@ -267,6 +285,17 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
       // The role's own inbox only (P11); no ₱ figures in notifications.
       return notifications.handle({ method: request.method, pathname, query: new URLSearchParams(search), body: request.body, role })
     }
+    // Task 17 offers (/stores/:id/shifts/:id/offers…, /stores/:id/offers, /me/offers…) and borrow requests, see ./mock-offers.
+    const offered = offerStore.handle({
+      method: request.method,
+      pathname,
+      query: new URLSearchParams(search),
+      body: request.body,
+      role,
+      viewer: mockViewer(role),
+      userName: `Demo ${role}`,
+    })
+    if (offered) return offered
     if (/^\/stores\/[^/]+\/rosters(\/|$)/.test(pathname)) {
       // Published rosters carry no ₱ figures (task 13.4), see ./mock-rosters.
       return rosters.handle({ method: request.method, pathname, body: request.body, role, userName: `Demo ${role}` })

@@ -166,13 +166,29 @@ function evaluate(before: readonly Shift[], after: readonly Shift[], staffIds: r
 // Store
 // ---------------------------------------------------------------------------
 
+/** An open shift of the mock roster, as offers and borrow requests address it (task 17). */
+export interface MockOpenShift {
+  readonly id: string
+  readonly storeId: string
+  readonly rosterId: string
+  readonly departmentName: string
+  readonly date: IsoDate
+  readonly startMin: number
+  readonly endMin: number
+}
+
 export interface MockRosterStore {
   handle(input: { method: string; pathname: string; body: unknown; role: RoleCode; userName: string }): ApiResponse
+  /** The open (unassigned, scheduled) shift `shiftId`, or null. */
+  openShift(shiftId: string): MockOpenShift | null
+  /** Fills an open shift (accepted offer / borrow, P14): records the change, adding a borrowed cashier to the roster. */
+  fill(shiftId: string, cashier: RosterStaffMember, type: 'offer_fill' | 'borrow_fill', by: string, reason?: string | null): boolean
 }
 
 export function createRosterStore(now: () => string = () => new Date().toISOString()): MockRosterStore {
   let shifts = seedShifts()
   const overrides: ShiftOverrideDto[] = []
+  const staff: RosterStaffMember[] = [...STAFF]
 
   const summary = (): RosterSummary => ({
     id: ROSTER_ID,
@@ -191,7 +207,7 @@ export function createRosterStore(now: () => string = () => new Date().toISOStri
   const detail = (role: RoleCode): RosterDetail => ({
     roster: summary(),
     departments: MOCK_DEPARTMENTS.filter((d) => d.storeId === STORE_ID).map(({ id, name }) => ({ id, name })),
-    staff: STAFF,
+    staff: [...staff],
     shifts: shifts.map((s) => ({ ...s })),
     overrides: [...overrides],
     laborChecks: laborCheck(shifts, STAFF.map((s) => s.id)),
@@ -256,6 +272,30 @@ export function createRosterStore(now: () => string = () => new Date().toISOStri
   }
 
   return {
+    openShift(shiftId) {
+      const s = shifts.find((x) => x.id === shiftId && x.staffId === null && x.status === 'scheduled')
+      return s
+        ? {
+            id: s.id,
+            storeId: STORE_ID,
+            rosterId: ROSTER_ID,
+            departmentName: MOCK_DEPARTMENTS.find((d) => d.id === s.departmentId)?.name ?? '',
+            date: s.date,
+            startMin: s.startMin,
+            endMin: s.endMin,
+          }
+        : null
+    },
+    fill(shiftId, cashier, type, by, reason = null) {
+      const target = shifts.find((x) => x.id === shiftId && x.staffId === null && x.status === 'scheduled')
+      if (!target) return false
+      if (!staff.some((s) => s.id === cashier.id)) staff.push(cashier)
+      const at = now()
+      shifts = shifts.map((x) => (x.id === shiftId ? { ...x, staffId: cashier.id, edited: { type, by, at } } : x))
+      seq += 1
+      overrides.push({ id: `ovr-${seq}`, shiftId, type, fromStaffId: null, toStaffId: cashier.id, reason, offReason: null, ruleBreaches: [], by, at })
+      return true
+    },
     handle({ method, pathname, body, role, userName }) {
       // ['stores', storeId, 'rosters', rosterId?, ...rest]
       const parts = pathname.split('/').filter(Boolean).map(decodeURIComponent)
