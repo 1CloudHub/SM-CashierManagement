@@ -35,6 +35,7 @@ import { authEn, authFil } from './auth-messages'
 import { dataEn, dataFil } from './data-messages'
 import { locationPrivacyEn, locationPrivacyFil } from './location-privacy-messages'
 import { networkMapEn, networkMapFil } from './network-map-messages'
+import { offersEn, offersFil } from './offers-messages'
 import { notificationsEn, notificationsFil } from './notifications-messages'
 import { planningEn, planningFil } from './planning-messages'
 import { rosterEn, rosterFil } from './roster-messages'
@@ -316,6 +317,6 @@ const fil: Bundle = {
 
 /** All bundles, keyed by locale. English is the canonical key set. */
 export const BUNDLES: Record<Locale, Bundle> = {
-  en: { ...en, ...authEn, ...appEn, ...rosterEn, ...searchEn, ...dataEn, ...rulesEn, ...scenariosEn, ...locationPrivacyEn, ...approvalsEn, ...planningEn, ...notificationsEn, ...networkMapEn, ...uiEn },
-  fil: { ...fil, ...authFil, ...appFil, ...rosterFil, ...searchFil, ...dataFil, ...rulesFil, ...scenariosFil, ...locationPrivacyFil, ...approvalsFil, ...planningFil, ...notificationsFil, ...networkMapFil, ...uiFil },
+  en: { ...en, ...authEn, ...appEn, ...rosterEn, ...searchEn, ...dataEn, ...rulesEn, ...scenariosEn, ...locationPrivacyEn, ...approvalsEn, ...planningEn, ...notificationsEn, ...networkMapEn, ...offersEn, ...uiEn },
+  fil: { ...fil, ...authFil, ...appFil, ...rosterFil, ...searchFil, ...dataFil, ...rulesFil, ...scenariosFil, ...locationPrivacyFil, ...approvalsFil, ...planningFil, ...notificationsFil, ...networkMapFil, ...offersFil, ...uiFil },
 }

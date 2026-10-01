@@ -37,6 +37,14 @@ describe('routing', () => {
     expect(await axe(container)).toHaveNoViolations()
   })
 
+  it('renders SCR-025 My roster with the Staff user’s shift offers (task 17)', async () => {
+    const { container } = renderApp({ path: '/my-roster', role: 'STF' })
+    expect(screen.getByRole('heading', { level: 1, name: 'My roster' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Open shift offers near you' })).toBeInTheDocument()
+    expect(within(mainNav()).getByRole('link', { name: 'My roster' })).toHaveAttribute('aria-current', 'page')
+    expect(await axe(container)).toHaveNoViolations()
+  })
+
   it('every screen route renders a titled page for a permitted role', () => {
     for (const s of SCREENS) {
       if (s.id === 'SCR-010' || s.id === 'SCR-080') continue // Home loads async; Profile needs auth (covered in root.test)

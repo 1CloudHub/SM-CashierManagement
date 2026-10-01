@@ -52,10 +52,16 @@ export interface Tx extends Queryable {
 }
 
 function toTx(client: pg.PoolClient): Tx {
+  // One client runs one query at a time: chain them, so reads issued together
+  // (e.g. `Promise.all`) queue here instead of on the client (deprecated in pg 9).
+  let last: Promise<unknown> = Promise.resolve();
   return {
     [txBrand]: true,
-    query: <R extends pg.QueryResultRow>(text: string, values?: readonly unknown[]) =>
-      client.query<R>(text, values as unknown[] | undefined),
+    query: <R extends pg.QueryResultRow>(text: string, values?: readonly unknown[]) => {
+      const next = last.then(() => client.query<R>(text, values as unknown[] | undefined));
+      last = next.catch(() => undefined);
+      return next;
+    },
   };
 }
 

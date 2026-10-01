@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { axe } from 'vitest-axe'
 import { createApiClient, createMockAdapter, type ApiRequest } from '@/api'
 import { renderData } from '@/test/data'
+import { createOffersClient, type OffersClient } from '@/features/offers'
 import { networkMapApiFromClient, networkMapSearch, type NetworkMapApi } from './api'
 import { manilaToday } from './format'
 import { ringRadiusKm, staffByCity } from './geo'
@@ -18,9 +19,15 @@ function mockApi(role: RoleCode, log: ApiRequest[] = []): NetworkMapApi {
   return networkMapApiFromClient(client)
 }
 
-function renderMap(role: RoleCode = 'PLN', options: { api?: NetworkMapApi; locale?: 'en' | 'fil'; log?: ApiRequest[] } = {}) {
+function renderMap(role: RoleCode = 'PLN', options: { api?: NetworkMapApi; locale?: 'en' | 'fil'; log?: ApiRequest[]; offers?: OffersClient } = {}) {
   return renderData(
-    <NetworkMapScreen api={options.api ?? mockApi(role, options.log)} role={role} mapConfig={null} initialDate={DATE} />,
+    <NetworkMapScreen
+      api={options.api ?? mockApi(role, options.log)}
+      role={role}
+      mapConfig={null}
+      initialDate={DATE}
+      {...(options.offers ? { offers: options.offers } : {})}
+    />,
     options.locale,
   )
 }
@@ -49,7 +56,7 @@ describe('SCR-026 Network map', () => {
     expect(screen.getByText('Rings: 15, 30 and 45 min')).toBeInTheDocument()
   })
 
-  it('selecting a store shows ranked, pseudonymous candidates and near misses with reasons; offers are not sent', async () => {
+  it('selecting a store shows ranked, pseudonymous candidates and near misses with reasons; without an offers client nothing is sent', async () => {
     const user = userEvent.setup()
     renderMap()
     await storesTable()
@@ -65,6 +72,31 @@ describe('SCR-026 Network map', () => {
     await user.click(within(ranked).getByRole('checkbox', { name: 'Select XS-14' }))
     expect(screen.getByRole('button', { name: 'Offer shift to 1 selected' })).toBeDisabled()
     expect(screen.getByRole('complementary', { name: 'Selected store' })).toHaveTextContent('Borrow from a nearby store')
+  })
+
+  it('task 17: offers the shift to the selected cashiers and requests a borrow from a nearby store', async () => {
+    const user = userEvent.setup()
+    const log: ApiRequest[] = []
+    const adapter = createMockAdapter({ log })
+    const client = createApiClient({ adapter, getActiveRole: () => 'PLN' })
+    renderMap('PLN', { api: networkMapApiFromClient(client), offers: createOffersClient(client) })
+    await storesTable()
+    await user.click(screen.getByRole('button', { name: 'Find cover at SM Megamall' }))
+    const ranked = await screen.findByRole('table', { name: 'Candidates ranked by travel time' })
+    await user.click(within(ranked).getByRole('checkbox', { name: 'Select XS-14' }))
+    await user.click(screen.getByRole('button', { name: 'Offer shift to 1 selected' }))
+    const panel = screen.getByRole('complementary', { name: 'Selected store' })
+    expect(await within(panel).findByText('Offers sent to 1 cashiers.')).toBeInTheDocument()
+    const status = screen.getByRole('list', { name: 'Offers for this shift' })
+    expect(status).toHaveTextContent(/XS-14 · waiting, 30 min left/)
+    // Already offered: the checkbox is checked and locked.
+    expect(within(ranked).getByRole('checkbox', { name: 'Select XS-14' })).toBeDisabled()
+    await user.click(screen.getAllByRole('button', { name: 'Request 1' })[0]!)
+    expect(await within(panel).findByText(/Borrow request sent to .*Its store manager decides\./)).toBeInTheDocument()
+    expect(log.filter((r) => r.method === 'POST').map((r) => r.path.replace(/^\/stores\/[^/]+/, ''))).toEqual([
+      expect.stringMatching(/^\/shifts\/[^/]+\/offers$/),
+      '/borrow-requests',
+    ])
   })
 
   it('selects a store from its pin with the keyboard', async () => {
@@ -99,10 +131,13 @@ describe('SCR-026 Network map', () => {
     expect(screen.queryByRole('button', { name: 'Auto-match all gaps' })).toBeNull()
   })
 
-  it('auto-match: reviews suggestions with remove/restore, and "send" sends nothing', async () => {
+  it('auto-match: reviews suggestions with remove/restore, then sends the kept offers and borrow requests (task 17)', async () => {
     const user = userEvent.setup()
     const log: ApiRequest[] = []
-    renderMap('PLN', { log })
+    const adapter = createMockAdapter({ log })
+    const api = networkMapApiFromClient(createApiClient({ adapter, getActiveRole: () => 'PLN' }))
+    const offers = createOffersClient(createApiClient({ adapter, getActiveRole: () => 'PLN' }))
+    renderMap('PLN', { api, offers })
     await storesTable()
     await user.click(screen.getByRole('button', { name: 'Auto-match all gaps' }))
     const dialog = await screen.findByRole('dialog', { name: 'Review suggested cover' })
@@ -116,8 +151,10 @@ describe('SCR-026 Network map', () => {
     expect(within(dialog).getByRole('button', { name: new RegExp(`^Send ${before - 1} offers`) })).toBeInTheDocument()
     await user.click(remove)
     await user.click(within(dialog).getByRole('button', { name: new RegExp(`^Send ${before} offers`) }))
-    expect(within(dialog).getByText(/Nothing was sent/)).toBeInTheDocument()
-    expect(log.every((r) => r.method === 'GET')).toBe(true)
+    expect(await within(dialog).findByText(new RegExp(`^Sent ${before} offers and \\d+ borrow requests\\.$`))).toBeInTheDocument()
+    const posts = log.filter((r) => r.method === 'POST')
+    expect(posts.filter((r) => /\/shifts\/[^/]+\/offers$/.test(r.path))).toHaveLength(before)
+    expect(posts.every((r) => /\/offers$|\/borrow-requests$/.test(r.path))).toBe(true)
   })
 
   it('shows an error with retry when the map fails to load', async () => {
