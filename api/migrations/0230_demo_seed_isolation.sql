@@ -17,31 +17,9 @@ ALTER TABLE barangay ADD COLUMN synthetic boolean NOT NULL DEFAULT false;
 ALTER TABLE barangay
   ADD CONSTRAINT barangay_demo_code_prefix CHECK (synthetic = (psgc_code LIKE '99%'));
 
--- 3. An ingestion run and the snapshot it loaded share provenance at load
---    time (P18): a real upload can never produce (or point at) a demo
---    snapshot, and vice versa. Enforced by a trigger on the run rather than an
---    FK, so the Rules Steward may still reclassify the snapshot afterwards
---    (Req 17.6) while the run keeps the provenance of what was uploaded
---    (immutable, task 9). snapshot_id is null for blocked runs.
-CREATE FUNCTION ingestion_run_snapshot_provenance() RETURNS trigger
-LANGUAGE plpgsql AS $$
-DECLARE
-  snap_synthetic boolean;
-  snap_type text;
-BEGIN
-  IF NEW.snapshot_id IS NULL OR (TG_OP = 'UPDATE' AND NEW.snapshot_id IS NOT DISTINCT FROM OLD.snapshot_id) THEN
-    RETURN NEW;
-  END IF;
-  SELECT synthetic, dataset_type::text INTO snap_synthetic, snap_type FROM dataset_snapshot WHERE id = NEW.snapshot_id;
-  IF snap_synthetic IS DISTINCT FROM NEW.synthetic OR snap_type IS DISTINCT FROM NEW.dataset_type::text THEN
-    RAISE EXCEPTION 'ingestion run % and snapshot % differ in provenance or dataset type', NEW.id, NEW.snapshot_id
-      USING ERRCODE = 'foreign_key_violation';
-  END IF;
-  RETURN NEW;
-END;
-$$;
--- An AFTER constraint trigger (like an FK check), so row CHECK constraints are
--- evaluated first.
-CREATE CONSTRAINT TRIGGER ingestion_run_snapshot_provenance
-  AFTER INSERT OR UPDATE OF snapshot_id ON ingestion_run
-  FOR EACH ROW EXECUTE FUNCTION ingestion_run_snapshot_provenance();
+-- 3. An ingestion run and the snapshot it loaded share provenance (P18): a
+--    real upload can never produce (or point at) a demo snapshot, and vice
+--    versa. snapshot_id is null for blocked runs (MATCH SIMPLE skips those).
+ALTER TABLE ingestion_run
+  ADD CONSTRAINT ingestion_run_snapshot_provenance_fk FOREIGN KEY (snapshot_id, dataset_type, synthetic)
+    REFERENCES dataset_snapshot (id, dataset_type, synthetic);

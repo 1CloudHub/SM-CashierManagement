@@ -527,9 +527,15 @@ export async function setSnapshotSynthetic(tx: AuditedTx, id: string, synthetic:
   if (before.synthetic === synthetic) throw errors.conflict(`The dataset is already ${synthetic ? 'synthetic' : 'real'}.`);
   let row: SnapshotRow;
   try {
+    // One statement: the run that loaded the snapshot shares its provenance
+    // (FK ingestion_run -> dataset_snapshot incl. `synthetic`, P18), and the
+    // FK is checked once both rows agree.
     row = await queryOne<SnapshotRow>(
       tx,
-      `UPDATE dataset_snapshot SET synthetic = $2, synthetic_changed_at = now(), synthetic_changed_by = $3
+      `WITH runs AS (
+         UPDATE ingestion_run SET synthetic = $2 WHERE snapshot_id = $1 AND synthetic <> $2
+       )
+       UPDATE dataset_snapshot SET synthetic = $2, synthetic_changed_at = now(), synthetic_changed_by = $3
         WHERE id = $1 RETURNING ${SNAPSHOT_COLUMNS}`,
       [id, synthetic, tx.actor.userId],
     );

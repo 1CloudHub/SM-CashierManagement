@@ -33,7 +33,8 @@ CREATE INDEX ingestion_run_type_idx ON ingestion_run (dataset_type, started_at D
 
 -- Lifecycle: validating -> validated | blocked | failed; validated -> loaded |
 -- cancelled. Everything else is terminal, and the validation outcome (counts,
--- issues, file, provenance) never changes after validation.
+-- issues, file, provenance) never changes after validation — except that a
+-- loaded run's provenance moves with its snapshot's synthetic flag.
 CREATE FUNCTION lw_ingestion_run_guard() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
@@ -55,7 +56,10 @@ BEGIN
     OR NEW.warning_count IS DISTINCT FROM OLD.warning_count
     OR NEW.error_count IS DISTINCT FROM OLD.error_count
     OR NEW.issues IS DISTINCT FROM OLD.issues
-    OR NEW.synthetic IS DISTINCT FROM OLD.synthetic
+    -- A loaded run's provenance follows the snapshot it loaded (the Rules
+    -- Steward may clear/set that flag, Req 17.6; run and snapshot share
+    -- provenance, P18): it changes in the same statement as the snapshot.
+    OR (NEW.synthetic IS DISTINCT FROM OLD.synthetic AND OLD.status <> 'loaded')
     OR NEW.normalized_key IS DISTINCT FROM OLD.normalized_key
     OR NEW.normalized_sha256 IS DISTINCT FROM OLD.normalized_sha256
     OR NEW.base_snapshot_id IS DISTINCT FROM OLD.base_snapshot_id

@@ -349,6 +349,9 @@ describe('synthetic flag (Req 17.6) and provenance (Req 18, P9)', () => {
       expect(ev.rows[0]).toEqual({ event: 'snapshot.synthetic_cleared', active_role: 'RST' });
       const stamp = await fresh.pool.query('SELECT synthetic_changed_by FROM dataset_snapshot WHERE id = $1', [snapshotId]);
       expect(stamp.rows[0].synthetic_changed_by).toBe(user);
+      // The run that loaded it shares its provenance (P18, FK from 0230).
+      const source = await fresh.pool.query('SELECT synthetic FROM ingestion_run WHERE id = $1', [v.body.run.id]);
+      expect(source.rows[0].synthetic).toBe(false);
 
       const after = await dispatch(local, 'GET', '/datasets/provenance', as(user, 'STF'));
       expect(after.body).toEqual({ sampleData: false, syntheticDatasetTypes: [] });
