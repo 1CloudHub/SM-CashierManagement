@@ -41,13 +41,16 @@ export function routerClient(router: Router) {
     if (options.role !== undefined) headers['X-Active-Role'] = options.role;
     if (options.body !== undefined) headers['Content-Type'] = 'application/json';
     const email = options.email === undefined ? null : options.email;
+    // API Gateway delivers the query string separately from the path.
+    const [path, search] = options.path.split('?', 2) as [string, string | undefined];
+    const query = search === undefined ? null : Object.fromEntries(new URLSearchParams(search));
     const event = {
       httpMethod: options.method ?? 'GET',
-      path: options.path,
+      path,
       resource: '/{proxy+}',
       headers,
       multiValueHeaders: {},
-      queryStringParameters: null,
+      queryStringParameters: query,
       multiValueQueryStringParameters: null,
       pathParameters: null,
       stageVariables: null,

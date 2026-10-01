@@ -4,6 +4,7 @@ import type {
   IsoDateTime,
   RoleCode,
   ScenarioSummary,
+  StoreFormat,
 } from '@lanewise/shared'
 
 /**
@@ -130,4 +131,24 @@ export interface HomeKpis {
 export interface HomeScenarioRow
   extends Pick<ScenarioSummary, 'id' | 'name' | 'status' | 'stale' | 'updatedAt'> {
   readonly ownerName: string
+}
+
+/**
+ * `GET /context-options` — the planning context bar's choices (task 20),
+ * already limited to the active role's scope by the server (P1). Lands in the
+ * API with the planning screens (task 14); the mock serves it until then.
+ */
+export interface ContextOptions {
+  readonly scenarios: readonly Pick<ScenarioSummary, 'id' | 'name' | 'status' | 'stale'>[]
+  readonly regions: readonly { readonly id: string; readonly name: string }[]
+  readonly formats: readonly StoreFormat[]
+  readonly stores: readonly {
+    readonly id: string
+    readonly name: string
+    readonly regionId: string
+    readonly format: StoreFormat
+  }[]
+  readonly departments: readonly { readonly id: string; readonly name: string; readonly storeId: string }[]
+  /** Planning seasons (hiring plan). */
+  readonly seasons: readonly { readonly id: string; readonly start: IsoDate; readonly end: IsoDate }[]
 }
