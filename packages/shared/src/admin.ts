@@ -85,7 +85,8 @@ export interface InviteUserRequest {
   readonly email: string;
   readonly name?: string;
   readonly roles: readonly RoleCode[];
-  readonly scope: AdminScopeInput;
+  /** Required unless Staff is the only role (Staff is always self-scoped). */
+  readonly scope?: AdminScopeInput;
 }
 
 export interface UpdateUserRequest {

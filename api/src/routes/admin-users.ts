@@ -214,7 +214,11 @@ async function mutate(db: pg.Pool, principal: Principal, context: RequestContext
     if (error instanceof NoChange || error instanceof ApiError) throw error;
     const code = pgErrorCode(error);
     if (code === PG_ERRORS.uniqueViolation) throw errors.conflict('Someone with this work email already has an account.');
-    if (code === PG_ERRORS.checkViolation) throw invalid('body.email', DOMAIN_NOT_ALLOWED_MESSAGE);
+    if (code === PG_ERRORS.checkViolation) {
+      // The database's allowlist backstop (P13); any other check is a state conflict.
+      if ((error as { constraint?: string }).constraint === 'app_user_email_domain') throw invalid('body.email', DOMAIN_NOT_ALLOWED_MESSAGE);
+      throw errors.conflict('This change isn’t allowed for the user in their current state.');
+    }
     throw error;
   }
 }
