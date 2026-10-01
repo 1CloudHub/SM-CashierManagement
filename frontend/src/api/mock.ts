@@ -14,6 +14,7 @@ import {
   type ScenarioListItem,
 } from '@lanewise/shared'
 import { ACTIVE_ROLE_HEADER, type ApiAdapter, type ApiRequest, type ApiResponse } from './client'
+import { createMasterDataStore } from './mock-master-data'
 import { createPlanningStore } from './mock-planning'
 import { createOfferStore } from './mock-offers'
 import { createNotificationStore } from './mock-notifications'
@@ -251,6 +252,7 @@ export interface MockAdapterOptions {
 export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {}): ApiAdapter {
   const savedViews = createSavedViewStore()
   const scenarios = createScenarioStore()
+  const masterData = createMasterDataStore()
   const notifications = createNotificationStore()
   const planning = createPlanningStore()
   const rosters = createRosterStore()

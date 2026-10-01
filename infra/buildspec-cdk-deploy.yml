@@ -97,5 +97,10 @@ phases:
         cat "$CODEBUILD_SRC_DIR/frontend/dist/runtime-config.json"
       # Upload the built SPA. --delete removes stale assets no longer in dist.
       - aws s3 sync "$CODEBUILD_SRC_DIR/frontend/dist" "s3://$SPA_BUCKET" --delete
+      # The entry points must revalidate on every load, or browsers keep an old
+      # index.html (and so old hashed bundles) after a deploy. Hashed assets
+      # stay cacheable.
+      - aws s3 cp "$CODEBUILD_SRC_DIR/frontend/dist/index.html" "s3://$SPA_BUCKET/index.html" --cache-control "no-cache, must-revalidate" --content-type "text/html"
+      - aws s3 cp "$CODEBUILD_SRC_DIR/frontend/dist/runtime-config.json" "s3://$SPA_BUCKET/runtime-config.json" --cache-control "no-cache, must-revalidate" --content-type "application/json"
       # Invalidate the CloudFront cache so the new SPA is served immediately.
       - aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths "/*"
