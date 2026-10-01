@@ -112,7 +112,7 @@ export function MobileDayList({
           <li
             key={cashier.id}
             className={cn(
-              'border-2 border-outline bg-surface p-3',
+              'border border-outline bg-surface p-3',
               shift?.edited && 'lw-edited',
             )}
           >
@@ -185,7 +185,7 @@ export function MobileWeekList({
           <section
             key={date}
             aria-labelledby={headingId}
-            className="border-2 border-outline bg-surface p-3"
+            className="border border-outline bg-surface p-3"
           >
             <Stack gap={2}>
               <h3 id={headingId} className="text-h3 text-text">
@@ -197,7 +197,7 @@ export function MobileWeekList({
                 </span>
               </h3>
               {open.map((o) => (
-                <p key={o.id} className="border-2 border-dashed border-danger px-2 py-1 text-body-sm font-weight-semibold text-on-danger-soft">
+                <p key={o.id} className="border border-dashed border-danger px-2 py-1 text-body-sm font-weight-semibold text-on-danger-soft">
                   <span aria-hidden="true">! </span>
                   {f.t('roster.grid.openShiftLabel', {
                     count: f.num(o.count),

@@ -89,7 +89,7 @@ export function MyRoster({
                     <li
                       key={day.date}
                       className={cn(
-                        'border-2 border-outline bg-surface p-3',
+                        'border border-outline bg-surface p-3',
                         s?.edited && 'lw-edited',
                         day.absence === 'unavailable' && 'lw-hatch-unavailable',
                       )}
