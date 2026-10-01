@@ -1,6 +1,6 @@
 import { createContext, useContext, type MouseEvent, type ReactNode } from 'react'
-import { AppShell } from '@/components/layout'
-import type { NavSection } from '@/components/shell'
+import { AppShell, useMediaQuery } from '@/components/layout'
+import { NotificationBell, ThemeToggle, UserMenu, type NavSection } from '@/components/shell'
 import { Alert } from '@/components/ui/alert'
 import type { Crumb } from '@/components/ui/breadcrumbs'
 import { useDocumentTitle } from '@/features/auth/use-document-title'
@@ -16,15 +16,23 @@ import { useRouter } from './router'
 /**
  * The signed-in frame (design.md › App shell): AppShell wired to the active
  * role — nav filtered to what the role may open (requirement 2.3), "Viewing
- * as" switcher, language, account menu, global search, breadcrumb, sample-data
- * banner and page title. Screens render inside it.
+ * as" switcher, language, theme toggle, notifications bell, account menu,
+ * global search, breadcrumb, sample-data banner and page title. Screens render
+ * inside it.
  */
 
 export const GLOBAL_SEARCH_ID = 'global-search'
 
-/** Slots the app root fills in (e.g. the account menu, which needs auth). */
+/** The signed-in account, filled in by the app root (it needs auth). */
+export interface ShellAccount {
+  readonly email: string
+  readonly name?: string
+  readonly onSignOut: () => void
+}
+
+/** Slots the app root fills in (e.g. the account, which needs auth). */
 export interface ShellSlots {
-  readonly account?: ReactNode
+  readonly account?: ShellAccount
 }
 
 const ShellSlotsContext = createContext<ShellSlots>({})
@@ -32,6 +40,29 @@ export const ShellSlotsProvider = ShellSlotsContext.Provider
 
 export function useShellSlots(): ShellSlots {
   return useContext(ShellSlotsContext)
+}
+
+/**
+ * Unread notifications for the bell. The notifications API (task 19) is not
+ * in the client yet, so this is 0 until it lands; the bell already announces
+ * a count as text when there is one.
+ */
+function useUnreadNotifications(): number {
+  return 0
+}
+
+/**
+ * The account menu for the top bar: name / email, Profile, Help and
+ * shortcuts, Sign out. `roleSwitcher` is shown inside it on narrow screens,
+ * where the top bar has no room for the "Viewing as" control.
+ */
+export function AppUserMenu({ roleSwitcher }: { roleSwitcher?: ReactNode }) {
+  const { account } = useShellSlots()
+  return (
+    <UserMenu name={account?.name} email={account?.email} onSignOut={account?.onSignOut}>
+      {roleSwitcher}
+    </UserMenu>
+  )
 }
 
 export function AppLayout({
@@ -51,7 +82,8 @@ export function AppLayout({
   const { t } = useI18n()
   const { role } = useActiveRole()
   const { location, navigate } = useRouter()
-  const slots = useShellSlots()
+  const isTabletUp = useMediaQuery('(min-width: 37.5rem)')
+  const unread = useUnreadNotifications()
   useDocumentTitle(t('shell.pageTitle', { title }))
 
   const current = screenForPath(location.pathname)
@@ -96,10 +128,14 @@ export function AppLayout({
         search={canAccess(role, 'SCR-041') ? <GlobalSearch inputId={GLOBAL_SEARCH_ID} /> : undefined}
         contextBar={contextBar}
         trailing={
+          // Below tablet the bar holds only icon-sized controls; "Viewing as"
+          // moves into the account menu so nothing overflows at ~400px.
           <>
             <LanguageSwitcher />
-            <RoleSwitcher />
-            {slots.account}
+            {isTabletUp && <RoleSwitcher />}
+            <ThemeToggle />
+            {canAccess(role, 'SCR-040') && <NotificationBell unreadCount={unread} />}
+            <AppUserMenu roleSwitcher={isTabletUp ? undefined : <RoleSwitcher variant="menu" />} />
           </>
         }
         sampleDataBanner={

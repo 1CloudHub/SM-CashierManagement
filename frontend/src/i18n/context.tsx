@@ -157,6 +157,17 @@ export function useI18n(): I18nContextValue {
   return ctx
 }
 
+/**
+ * `t()` for the shared UI kit and shell: the active locale inside an
+ * I18nProvider, English outside one (isolated component tests, the gallery
+ * before its provider mounts), so kit components never throw for want of a
+ * provider.
+ */
+export function useUiT(): I18nContextValue['t'] {
+  const ctx = useContext(I18nContext)
+  return ctx ? ctx.t : (id, values) => translate(BUNDLES, DEFAULT_LOCALE, id, values)
+}
+
 /** Convenience: just the `t()` function for components that only translate. */
 export function useT(): I18nContextValue['t'] {
   return useI18n().t

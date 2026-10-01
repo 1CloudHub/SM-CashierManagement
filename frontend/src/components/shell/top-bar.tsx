@@ -1,6 +1,7 @@
 import { Menu, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { useUiT } from '@/i18n/context'
 
 /**
  * TopBar (UX-006 navigation, UX-004).
@@ -18,6 +19,15 @@ import { Button } from '@/components/ui/button'
  * so the toggles are hidden.
  *
  * The brand uses the app mark; a text lockup is shown until the SVG mark lands.
+ *
+ * Narrow screens (~400px): the bar must not overflow. Below tablet the
+ * "by SM Retail" byline is visually hidden (still read as part of the brand
+ * link), the brand truncates rather than pushing controls off-screen
+ * (`min-w-0`), and the trailing slot is expected to collapse secondary
+ * controls (role switcher, sign out) into the user menu — AppLayout does.
+ * Search: pass `search` to render the inline field (AppShell passes it only
+ * from tablet up) and/or `onSearchToggle` for the mobile search button, so the
+ * search form is mounted once per breakpoint.
  */
 export function TopBar({
   onMenuToggle,
@@ -31,17 +41,19 @@ export function TopBar({
   onMenuToggle?: () => void
   menuExpanded?: boolean
   brand?: React.ReactNode
-  /** The search form (role="search"); hidden on mobile behind the toggle. */
+  /** The inline search form (role="search"); hidden below tablet. */
   search?: React.ReactNode
+  /** Renders the mobile (< tablet) search button that opens full-screen search. */
   onSearchToggle?: () => void
   /** Language switcher, role switcher, bell, user menu. */
   trailing?: React.ReactNode
   className?: string
 }) {
+  const t = useUiT()
   return (
     <header
       className={cn(
-        'sticky top-0 z-30 flex items-center gap-3 border-b border-outline bg-surface px-4 py-2',
+        'sticky top-0 z-30 flex min-w-0 items-center gap-2 border-b border-outline bg-surface px-2 py-2 tablet:gap-3 tablet:px-4',
         className,
       )}
     >
@@ -49,11 +61,11 @@ export function TopBar({
         <Button
           size="icon"
           variant="ghost"
-          aria-label="Open navigation"
+          aria-label={t('shell.openNav')}
           aria-controls="sidenav"
           aria-expanded={menuExpanded ?? false}
           onClick={onMenuToggle}
-          className="tablet:hidden"
+          className="shrink-0 tablet:hidden"
         >
           <Menu aria-hidden="true" className="size-5" />
         </Button>
@@ -61,12 +73,14 @@ export function TopBar({
 
       <a
         href="/"
-        className="flex items-baseline gap-2 font-weight-bold text-text no-underline focus-visible:outline-focus-ring"
+        className="flex min-w-0 items-baseline gap-2 truncate font-weight-bold text-text no-underline focus-visible:outline-focus-ring"
       >
         {brand ?? (
           <>
             LaneWise
-            <span className="text-label text-text-muted">by SM Retail</span>
+            <span className="sr-only text-label text-text-muted tablet:not-sr-only">
+              {t('shell.byline')}
+            </span>
           </>
         )}
       </a>
@@ -77,12 +91,12 @@ export function TopBar({
         </div>
       )}
 
-      <div className="ml-auto flex items-center gap-2">
-        {search && onSearchToggle && (
+      <div className="ml-auto flex min-w-0 shrink-0 items-center gap-1 tablet:gap-2">
+        {onSearchToggle && (
           <Button
             size="icon"
             variant="ghost"
-            aria-label="Search"
+            aria-label={t('shell.searchToggle')}
             onClick={onSearchToggle}
             className="tablet:hidden"
           >

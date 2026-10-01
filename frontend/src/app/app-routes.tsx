@@ -10,7 +10,7 @@ import { SearchResultsScreen } from '@/features/search/search-results-screen'
 import { RuleSetsPage, RuleVersionEditorPage } from '@/features/rules/pages'
 import { ScenarioComparePage, ScenarioListPage, ScenarioSettingsPage } from '@/features/scenarios/pages'
 import { SCREEN_BY_ID, SCREENS, type ScreenDef, type ScreenId } from './screens'
-import { GLOBAL_SEARCH_ID, useShellSlots } from './app-layout'
+import { AppUserMenu, GLOBAL_SEARCH_ID } from './app-layout'
 import { useRouter } from './router'
 import { Guarded, HelpScreen, NotFoundScreen, PlaceholderScreen, StatusScreen } from './screen-pages'
 
@@ -64,11 +64,10 @@ function WithHelp() {
 }
 
 export function AppRoutes() {
-  const slots = useShellSlots()
   return (
     <Routes>
       {/* The gallery owns its own providers (help, toast, i18n). */}
-      <Route path="/gallery" element={<App accountSlot={slots.account} />} />
+      <Route path="/gallery" element={<App accountSlot={<AppUserMenu />} />} />
       <Route element={<WithHelp />}>
         {SCREENS.map((screen) => (
           <Route key={screen.id} path={screen.path} element={screenElement(screen)} />

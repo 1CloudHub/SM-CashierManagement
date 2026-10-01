@@ -10,6 +10,7 @@ import { SkipLink } from '@/components/a11y/skip-link'
 import { SideNav, type NavSection } from '@/components/shell/side-nav'
 import { TopBar } from '@/components/shell/top-bar'
 import { Breadcrumbs, type Crumb } from '@/components/ui/breadcrumbs'
+import { useUiT } from '@/i18n/context'
 import { Page } from './page'
 import { Stack } from './stack'
 import { useMediaQuery } from './use-media-query'
@@ -81,13 +82,14 @@ export function AppShell({
   sampleDataBanner,
   contextBar,
   width = 'laptop',
-  navLabel = 'Main',
-  mainLabel = 'Main content',
+  navLabel,
+  mainLabel,
   skipLinkLabel,
   navCollapseLabel,
   navExpandLabel,
   children,
 }: AppShellProps) {
+  const t = useUiT()
   const [navOpen, setNavOpen] = useState(false)
   const [navCollapsedPref, setNavCollapsedPref] = useState<boolean | null>(readNavPref)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -111,8 +113,10 @@ export function AppShell({
         brand={brand}
         onMenuToggle={() => setNavOpen(true)}
         menuExpanded={navOpen}
-        search={search}
-        onSearchToggle={search ? () => setSearchOpen(true) : undefined}
+        // Search is mounted once per breakpoint (no duplicate ids): inline
+        // from tablet up, inside the full-screen dialog below it.
+        search={isTabletUp ? search : undefined}
+        onSearchToggle={search && !isTabletUp ? () => setSearchOpen(true) : undefined}
         trailing={trailing}
       />
 
@@ -123,7 +127,7 @@ export function AppShell({
         {isTabletUp && (
           <SideNav
             sections={nav}
-            label={navLabel}
+            label={navLabel ?? t('shell.navLabel')}
             collapsed={navCollapsed}
             onToggleCollapsed={toggleNav}
             collapseLabel={navCollapseLabel}
@@ -145,7 +149,7 @@ export function AppShell({
             as="main"
             id="main"
             tabIndex={-1}
-            aria-label={mainLabel}
+            aria-label={mainLabel ?? t('a11y.mainContent')}
             width={width}
             className="py-4 focus-visible:outline-focus-ring"
           >
@@ -171,23 +175,24 @@ export function AppShell({
             variant="drawer"
             className="left-0 right-auto max-w-xs p-0"
           >
-            <DialogTitle className="px-4 pt-4">Navigation</DialogTitle>
-            <SideNav sections={nav} label={navLabel} className="border-r-0" />
+            <DialogTitle className="px-4 pt-4">{t('shell.navDrawerTitle')}</DialogTitle>
+            <SideNav sections={nav} label={navLabel ?? t('shell.navLabel')} className="border-r-0" />
           </DialogContent>
         </Dialog>
       )}
 
       {/* Mobile: full-screen search. The desktop search form is reused inside
-          a full-bleed dialog so there is a single search implementation. */}
-      {search && (
+          a full-bleed dialog so there is a single search implementation, and
+          only mounted below tablet so the form (and its ids) exist once. */}
+      {search && !isTabletUp && (
         <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
           <DialogContent
             variant="drawer"
-            className={cn('inset-0 h-full w-full max-w-none p-4')}
+            className="inset-0 h-dvh w-full max-w-none p-4"
           >
-            <DialogTitle>Search</DialogTitle>
+            <DialogTitle>{t('shell.searchDialogTitle')}</DialogTitle>
             <div className="mt-2">{search}</div>
-            <DialogClose className="sr-only">Close search</DialogClose>
+            <DialogClose className="sr-only">{t('shell.closeSearch')}</DialogClose>
           </DialogContent>
         </Dialog>
       )}

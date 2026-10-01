@@ -6,6 +6,7 @@ import {
   Alert,
   Button,
   CardSkeleton,
+  Checkbox,
   Field,
   Input,
   KpiCard,
@@ -251,17 +252,13 @@ export function ScenarioSettingsScreen({ client, role, scenarioId, onOpenScenari
               </Field>
             </Section>
             <Section title={t('scenarios.settings.shifts')}>
-              <Cluster gap={2} as="label" htmlFor={`${ids}-pt`} className="min-h-tap text-body text-text">
-                <input
-                  id={`${ids}-pt`}
-                  type="checkbox"
-                  className="size-5 accent-primary"
-                  checked={f.allowPartTime}
-                  disabled={!editable}
-                  onChange={(e) => update({ allowPartTime: e.target.checked })}
-                />
-                {t('scenarios.settings.allowPartTime')}
-              </Cluster>
+              <Checkbox
+                id={`${ids}-pt`}
+                label={t('scenarios.settings.allowPartTime')}
+                checked={f.allowPartTime}
+                disabled={!editable}
+                onChange={(e) => update({ allowPartTime: e.target.checked })}
+              />
             </Section>
             <Section title={t('scenarios.settings.season')}>
               <Field label={t('scenarios.settings.planningFrom')} error={issue('planningFrom')}>

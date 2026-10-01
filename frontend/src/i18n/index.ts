@@ -21,6 +21,7 @@ export {
   I18nProvider,
   useI18n,
   useT,
+  useUiT,
   type I18nContextValue,
 } from './context'
 export { LanguageSwitcher } from './language-switcher'
