@@ -13,6 +13,7 @@ import { registerLocationPrivacyRoutes } from './routes/location-privacy.js';
 import { registerMeRoutes } from './routes/me.js';
 import { registerSavedViewRoutes } from './routes/saved-views.js';
 import { registerSearchRoutes } from './routes/search.js';
+import { registerRosterRoutes } from './routes/rosters.js';
 import { registerRuleRoutes } from './routes/rules.js';
 import { registerScenarioRoutes } from './routes/scenarios.js';
 import { registerStoreRoutes } from './routes/stores.js';
@@ -71,5 +72,6 @@ export function createApp(deps: AppDeps = depsFromEnv()): Router {
   registerScenarioRoutes(router, deps);
   registerLocationPrivacyRoutes(router, deps);
   registerApprovalRoutes(router, deps);
+  registerRosterRoutes(router, deps);
   return router.assertGuarded();
 }
