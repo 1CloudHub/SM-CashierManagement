@@ -53,7 +53,8 @@ describe('mock notifications mirror the API (P11)', () => {
     expect(before.items.some((i) => i.category === 'data')).toBe(true)
     await client.updatePreferences({ preferences: [{ category: 'data', inApp: false }] })
     const after = await client.list({ limit: 100 })
-    expect(after.items.some((i) => i.category === 'data')).toBe(false)
+    // A critical item (the rejected upload) still shows; the rest of the category is hidden.
+    expect(after.items.filter((i) => i.category === 'data').map((i) => i.event)).toEqual(['ingestion.failed'])
   })
 })
 
@@ -91,19 +92,20 @@ describe('SCR-040 Notifications', () => {
     expect(within(table).getByText('Run complete — Christmas 2026 v4')).toBeInTheDocument()
     expect(within(table).getAllByRole('link', { name: 'Open' })[0]).toHaveAttribute('href', expect.stringMatching(/^\//))
     const tabs = screen.getByRole('tablist', { name: 'Filter notifications' })
-    expect(within(tabs).getByRole('tab', { name: 'Unread (4)' })).toBeInTheDocument()
+    expect(within(tabs).getByRole('tab', { name: 'Unread (7)' })).toBeInTheDocument()
     expect(await axe(container)).toHaveNoViolations()
 
     await userEvent.click(within(tabs).getByRole('tab', { name: 'Data' }))
     await waitFor(() => expect(window.location.search).toBe('?filter=data'))
     const filtered = await screen.findByRole('table', { name: 'Notifications' })
-    await waitFor(() => expect(within(filtered).getAllByRole('row')).toHaveLength(2))
-    expect(within(filtered).getByText('Data load succeeded — pos_hourly_2026-09.csv')).toBeInTheDocument()
+    await waitFor(() => expect(within(filtered).getAllByRole('row')).toHaveLength(3))
+    expect(within(filtered).getByText('Data load succeeded — POS hourly (47,548 rows)')).toBeInTheDocument()
+    expect(within(filtered).getByText('Data load failed — pos_hourly_aug-dec_2025.csv (112 errors)')).toBeInTheDocument()
   })
 
   it('Mark all read clears the unread count on the page and the bell', async () => {
     renderApp({ path: '/notifications', role: 'HR' })
-    const bell = await screen.findByRole('button', { name: 'Notifications, 2 unread' })
+    const bell = await screen.findByRole('button', { name: 'Notifications, 4 unread' })
     await screen.findByRole('table', { name: 'Notifications' })
     await userEvent.click(screen.getByRole('button', { name: 'Mark all read' }))
     await waitFor(() => expect(screen.getByRole('tab', { name: 'Unread (0)' })).toBeInTheDocument())
@@ -115,7 +117,7 @@ describe('SCR-040 Notifications', () => {
     renderApp({ path: '/notifications', role: 'STF' })
     const table = await screen.findByRole('table', { name: 'Notifications' })
     expect(within(table).getByText(/^Your shift changed — /)).toBeInTheDocument()
-    expect(within(table).getByText(/^Open shift offered at SM Supermarket – Quezon City/)).toBeInTheDocument()
+    expect(within(table).getByText(/^Open shift offered at SM Supermarket – Megamall/)).toBeInTheDocument()
     expect(within(table).queryByText(/Christmas 2026/)).toBeNull()
   })
 
@@ -150,7 +152,7 @@ describe('SCR-040 Notifications', () => {
 describe('top-bar bell', () => {
   it('shows the unread count in its name and the latest items with deep links', async () => {
     const { container } = renderApp({ path: '/', role: 'PLN' })
-    const bell = await screen.findByRole('button', { name: 'Notifications, 4 unread' })
+    const bell = await screen.findByRole('button', { name: 'Notifications, 7 unread' })
     expect(bell).toHaveAttribute('aria-expanded', 'false')
     await userEvent.click(bell)
     expect(bell).toHaveAttribute('aria-expanded', 'true')
@@ -158,9 +160,9 @@ describe('top-bar bell', () => {
     const links = within(menu).getAllByRole('link')
     expect(links.length).toBeLessThanOrEqual(6)
     expect(within(menu).getByRole('link', { name: 'See all notifications' })).toHaveAttribute('href', '/notifications')
-    expect(within(menu).getByRole('link', { name: /Run complete — Christmas 2026 v4/ })).toHaveAttribute(
+    expect(within(menu).getByRole('link', { name: /Budget secured — Christmas 2026 v4/ })).toHaveAttribute(
       'href',
-      '/scenarios/scn-xmas-2026-v4/settings',
+      '/approvals?scenario=scn-xmas-2026-v4',
     )
     expect(await axe(container)).toHaveNoViolations()
 
@@ -171,12 +173,12 @@ describe('top-bar bell', () => {
 
   it('opening an unread item marks it read and goes to the object', async () => {
     renderApp({ path: '/', role: 'EXE' })
-    const bell = await screen.findByRole('button', { name: 'Notifications, 2 unread' })
+    const bell = await screen.findByRole('button', { name: 'Notifications, 4 unread' })
     await userEvent.click(bell)
     const menu = screen.getByRole('region', { name: 'Latest notifications' })
     await userEvent.click(within(menu).getByRole('link', { name: /Plan ready for your approval/ }))
     await waitFor(() => expect(window.location.pathname).toBe('/approvals'))
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Notifications, 1 unread' })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Notifications, 3 unread' })).toBeInTheDocument())
   })
 
   it('is translated (Filipino)', async () => {
@@ -184,6 +186,6 @@ describe('top-bar bell', () => {
     // The shell's language switcher changes every label, including the bell's.
     const select = await screen.findByLabelText('Language')
     await userEvent.selectOptions(select, 'fil')
-    expect(await screen.findByRole('button', { name: 'Mga abiso, 2 hindi pa nababasa' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Mga abiso, 4 hindi pa nababasa' })).toBeInTheDocument()
   })
 })

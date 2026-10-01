@@ -15,7 +15,7 @@ beforeEach(() => useLaptopViewport())
 afterEach(() => vi.unstubAllGlobals())
 
 /** Every other cashier on the demo Quezon City roster (P11: never on the Staff user's screen). */
-const OTHER_CASHIERS = ['Isa Palma', 'Ana Reyes', 'Ralph Edu', 'Dina Rusel', 'FT-01', 'FT-03', 'FT-07', 'FT-09', 'PT-06', 'FL-01']
+const OTHER_CASHIERS = ['Isa Palma', 'Cora Fisco', 'Ralph Edu', 'Dina Rusel', 'Guy Hapin', 'Arlene Mac', 'FT-01', 'FT-03', 'FT-07', 'FT-09', 'PT-05', 'PT-06', 'FL-01']
 
 describe('SCR-025 My roster (task 18.1)', () => {
   it('shows only the Staff user’s own shifts and rest days, offers and requests — no other names or costs (P11, axe clean)', async () => {
@@ -33,7 +33,10 @@ describe('SCR-025 My roster (task 18.1)', () => {
     expect(await screen.findByText(/Dec 24 \(family\)/)).toBeInTheDocument()
     const text = document.body.textContent ?? ''
     for (const other of OTHER_CASHIERS) expect(text).not.toContain(other)
-    expect(text).not.toMatch(/₱/)
+    // The only ₱ figures are the pay and allowance of their own open-shift offers.
+    const offers = screen.getByRole('region', { name: 'Open shift offers near you' })
+    expect(offers.textContent).toMatch(/₱347\.50 \+ ₱80\.00 transport/)
+    expect(text.replace(offers.textContent ?? '', '')).not.toMatch(/₱/)
     expect(await axe(container)).toHaveNoViolations()
   })
 
@@ -73,8 +76,8 @@ describe('SCR-025 My roster (task 18.1)', () => {
 
     // Store Manager: the panel lists it; approving applies it to the roster.
     renderApp({ path: '/plan/roster', role: 'STM', adapter })
-    const panel = (await screen.findByText(/Staff requests — 3 pending/)).closest('details')!
-    const row = within(panel).getByRole('row', { name: /Swap/ })
+    const panel = (await screen.findByText(/Staff requests — 4 pending/)).closest('details')!
+    const row = within(panel).getAllByRole('row', { name: /Swap/ }).find((r) => within(r).queryByText(/PT-02 Juan dela Cruz/))!
     expect(within(row).getByText(/PT-02 Juan dela Cruz/)).toBeInTheDocument()
     await user.click(within(row).getByRole('button', { name: 'Approve request from PT-02 Juan dela Cruz' }))
     const confirm = await screen.findByRole('dialog', { name: /Approve request from PT-02/ })

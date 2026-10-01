@@ -26,6 +26,7 @@ import {
 } from '@lanewise/shared'
 import type { ApiResponse } from './client'
 import { MOCK_PEOPLE, createApprovalBook, type MockApprovalBook } from './mock-approvals'
+import { PEOPLE, SCENARIO_STORE_BASE, WORLD_DEPARTMENTS, WORLD_STORES, worldHash } from './mock-world'
 
 /**
  * In-memory `/scenarios` for the mock API (task 11). Scenarios live per
@@ -39,21 +40,33 @@ import { MOCK_PEOPLE, createApprovalBook, type MockApprovalBook } from './mock-a
 type Mutable<T> = { -readonly [K in keyof T]: T[K] }
 type Row = Mutable<Omit<ScenarioDetail, 'editable' | 'submitBlocker' | 'defaults' | 'baseHourlyRate' | 'departments'>>
 
-const STORES = [
-  { storeId: 'store-smsm-qc', storeName: 'SM Supermarket – Quezon City', regionId: 'reg-luzon', base: 42, lanes: 18, rate: 92, staff: 38 },
-  { storeId: 'st-cebu', storeName: 'SM Supermarket – Cebu City', regionId: 'reg-visayas', base: 36, lanes: 15, rate: 78, staff: 33 },
-  { storeId: 'st-davao', storeName: 'SM Hypermarket – Davao', regionId: 'reg-mindanao', base: 48, lanes: 22, rate: 74, staff: 41 },
-] as const
+/** ₱ all-in hourly cost by region: the published NCR wage rule plus on-cost, holiday premiums and night differential. */
+const RATE_BY_REGION: Readonly<Record<string, number>> = { 'reg-ncr-north': 136, 'reg-ncr-east': 136, 'reg-ncr-south': 139 }
 
-/** POS-learned department baselines (simulated) for the SCR-031 overrides table. */
-const DEPARTMENTS: readonly (ScenarioDepartmentBaseline & { readonly regionId: string })[] = [
-  { departmentId: 'dept-qc-main', departmentName: 'Main lanes', storeId: 'store-smsm-qc', storeName: 'SM Supermarket – Quezon City', regionId: 'reg-luzon', baselineTxPerDay: 1636, handleTimeMin: 2.43, upliftPct: 81 },
-  { departmentId: 'dept-qc-express', departmentName: 'Express lanes', storeId: 'store-smsm-qc', storeName: 'SM Supermarket – Quezon City', regionId: 'reg-luzon', baselineTxPerDay: 971, handleTimeMin: 1.17, upliftPct: 64 },
-  { departmentId: 'dept-ceb-main', departmentName: 'Main lanes', storeId: 'st-cebu', storeName: 'SM Supermarket – Cebu City', regionId: 'reg-visayas', baselineTxPerDay: 1422, handleTimeMin: 2.5, upliftPct: 78 },
-  { departmentId: 'dept-ceb-express', departmentName: 'Express lanes', storeId: 'st-cebu', storeName: 'SM Supermarket – Cebu City', regionId: 'reg-visayas', baselineTxPerDay: 942, handleTimeMin: 1.17, upliftPct: 62 },
-  { departmentId: 'dept-dav-main', departmentName: 'Main lanes', storeId: 'st-davao', storeName: 'SM Hypermarket – Davao', regionId: 'reg-mindanao', baselineTxPerDay: 2804, handleTimeMin: 2.67, upliftPct: 85 },
-  { departmentId: 'dept-dav-gm', departmentName: 'General merchandise', storeId: 'st-davao', storeName: 'SM Hypermarket – Davao', regionId: 'reg-mindanao', baselineTxPerDay: 280, handleTimeMin: 1.83, upliftPct: 120 },
-]
+const STORES = WORLD_STORES.map((s) => ({
+  storeId: s.id,
+  storeName: s.name,
+  regionId: s.regionId,
+  ...(SCENARIO_STORE_BASE[s.id] ?? { base: 30, lanes: 12, staff: 22 }),
+  rate: RATE_BY_REGION[s.regionId] ?? 92,
+}))
+
+/** POS-learned department baselines (simulated) for the SCR-031 overrides table: main and express lanes per store. */
+const DEPARTMENTS: readonly (ScenarioDepartmentBaseline & { readonly regionId: string })[] = WORLD_DEPARTMENTS.filter((d) => !d.id.endsWith('-d3')).map((d) => {
+  const store = WORLD_STORES.find((s) => s.id === d.storeId)
+  const main = d.id.endsWith('-d1')
+  const scale = store?.scale ?? 1
+  return {
+    departmentId: d.id,
+    departmentName: d.name,
+    storeId: d.storeId,
+    storeName: store?.name ?? d.storeId,
+    regionId: store?.regionId ?? '',
+    baselineTxPerDay: Math.round((main ? 1636 : 971) * scale),
+    handleTimeMin: main ? 2.43 : 1.17,
+    upliftPct: Math.round((main ? 81 : 64) + (worldHash(d.id) - 0.5) * 12),
+  }
+})
 
 /** ₱ base hourly rate of the pinned wage rule (its default rate). */
 const BASE_HOURLY_RATE = 80
@@ -119,11 +132,13 @@ export function simulateResults(s: ScenarioSettingsValues): ScenarioRunResults {
 }
 
 const POS_OLD = { datasetType: 'pos', snapshotId: 'snap-pos-0915', loadedAt: '2026-09-15T06:00:00+08:00' }
-const POS_NEW = { datasetType: 'pos', snapshotId: 'snap-pos-0928', loadedAt: '2026-09-28T06:00:00+08:00' }
+const POS_NEW = { datasetType: 'pos', snapshotId: 'snap-pos-0928', loadedAt: '2026-09-28T14:02:00+08:00' }
 const STAFF = { datasetType: 'staff', snapshotId: 'snap-staff-0901', loadedAt: '2026-09-01T06:00:00+08:00' }
 const RULES = [
-  { ruleSetId: 'rules-wages', ruleSetName: 'Wage rates', ruleSetType: 'wages', ruleVersionId: 'rv-wages-2', version: 2, effectiveFrom: '2026-07-01', publishedAt: '2026-06-20T10:00:00+08:00' },
-  { ruleSetId: 'rules-service', ruleSetName: 'Service targets', ruleSetType: 'service', ruleVersionId: 'rv-service-1', version: 1, effectiveFrom: '2026-01-01', publishedAt: '2025-12-15T10:00:00+08:00' },
+  { ruleSetId: 'rules-wages', ruleSetName: 'Wage rates (by region)', ruleSetType: 'wages', ruleVersionId: 'rv-wages-2', version: 2, effectiveFrom: '2026-07-01', publishedAt: '2026-06-20T10:00:00+08:00' },
+  { ruleSetId: 'rules-service', ruleSetName: 'Service targets', ruleSetType: 'service_levels', ruleVersionId: 'rv-service-1', version: 1, effectiveFrom: '2026-01-01', publishedAt: '2025-12-15T10:00:00+08:00' },
+  { ruleSetId: 'rules-holidays', ruleSetName: 'Holiday calendar 2026', ruleSetType: 'holidays', ruleVersionId: 'rv-holidays-2', version: 2, effectiveFrom: '2026-01-01', publishedAt: '2025-11-20T10:00:00+08:00' },
+  { ruleSetId: 'rules-labor', ruleSetName: 'Labor rules (PH)', ruleSetType: 'labor', ruleVersionId: 'rv-labor-1', version: 1, effectiveFrom: '2025-01-01', publishedAt: '2024-12-15T10:00:00+08:00' },
 ] as const
 
 /** Latest publish time among the pinned rule versions ("Rules version"). */
@@ -184,77 +199,33 @@ function seed(): Row[] {
   }
   const v3s = xmas({ notes: 'Approved plan for the 2026 Christmas season.' })
   const v4s = xmas({
-    growth: 1.08,
-    notes: 'Higher growth after the September POS refresh.',
+    growth: 0.96,
+    notes: 'Stricter labor rules per HR guidance; leaner growth after the September POS refresh.',
     waitSeconds: 45,
-    departmentOverrides: [{ departmentId: 'dept-qc-main', baselineTxPerDay: null, handleTimeMin: 2.6, upliftPct: null }],
+    departmentOverrides: [{ departmentId: 'st-qc-d1', baselineTxPerDay: null, handleTimeMin: 2.6, upliftPct: null }],
   })
+  const v5s = xmas({ growth: 1.12, notes: 'What if growth reaches 12%?' })
+  const ft5s = xmas({ growth: 1.05, ftShiftPattern: '7+1', notes: 'Five-day full-time weeks.' })
   const v2s = xmas({ growth: 1.03, allowPartTime: false })
-  const ber = { ...xmas({ growth: 1.02, planningFrom: '2026-10-01', planningTo: '2026-11-30', peakDay: '2026-11-28' }) }
+  const v1s = xmas({ growth: 1, allowPartTime: false, notes: 'First cut from the 2025 baseline.' })
+  const ber = { ...xmas({ growth: 0.85, planningFrom: '2026-10-01', planningTo: '2026-11-30', peakDay: '2026-11-28' }) }
+  const x25 = xmas({ growth: 1, planningFrom: '2025-12-01', planningTo: '2025-12-31', peakDay: '2025-12-20', notes: 'Last year’s published plan.' })
+  const paolo = { ownerId: PEOPLE.planner2.id, ownerName: PEOPLE.planner2.name } as const
+  const current = currentPins()
+  const row = (r: Omit<Row, keyof typeof base | 'latestRun'> & Partial<Pick<Row, 'season' | 'ownerId' | 'ownerName' | 'planningFrom' | 'planningTo'>> & { readonly runAt: string | null }): Row => {
+    const { runAt, ...rest } = r
+    const merged = { ...base, ...rest }
+    return { ...merged, latestRun: runAt ? run(merged.id, merged.settings, runAt, merged.snapshots, merged.ruleVersions) : null }
+  }
   return [
-    {
-      ...base,
-      id: 'scn-xmas-2026-v3',
-      name: 'Christmas 2026 v3',
-      status: 'published',
-      isPublished: true,
-      stale: false,
-      staleReasons: [],
-      parentScenarioId: 'scn-xmas-2026-v2',
-      ...oldPins,
-      lastRunAt: '2026-09-16T10:00:00+08:00',
-      updatedAt: '2026-10-01T09:00:00+08:00',
-      settings: v3s,
-      latestRun: run('scn-xmas-2026-v3', v3s, '2026-09-16T10:00:00+08:00', oldPins.snapshots, oldPins.ruleVersions),
-    },
-    {
-      ...base,
-      id: 'scn-xmas-2026-v4',
-      name: 'Christmas 2026 v4',
-      status: 'draft',
-      isPublished: false,
-      stale: true,
-      staleReasons: ['snapshot_superseded'],
-      parentScenarioId: 'scn-xmas-2026-v3',
-      ...oldPins,
-      lastRunAt: '2026-09-20T15:00:00+08:00',
-      updatedAt: '2026-10-03T14:30:00+08:00',
-      settings: v4s,
-      latestRun: run('scn-xmas-2026-v4', v4s, '2026-09-20T15:00:00+08:00', oldPins.snapshots, oldPins.ruleVersions),
-    },
-    {
-      ...base,
-      id: 'scn-ber-2026-v1',
-      name: 'Ber months 2026 v1',
-      season: 'ber-2026',
-      planningFrom: ber.planningFrom,
-      planningTo: ber.planningTo,
-      status: 'submitted',
-      isPublished: false,
-      stale: false,
-      staleReasons: [],
-      parentScenarioId: null,
-      ...currentPins(),
-      lastRunAt: '2026-09-29T11:00:00+08:00',
-      updatedAt: '2026-09-29T11:30:00+08:00',
-      settings: ber,
-      latestRun: run('scn-ber-2026-v1', ber, '2026-09-29T11:00:00+08:00', currentPins().snapshots, currentPins().ruleVersions),
-    },
-    {
-      ...base,
-      id: 'scn-xmas-2026-v2',
-      name: 'Christmas 2026 v2',
-      status: 'archived',
-      isPublished: false,
-      stale: false,
-      staleReasons: [],
-      parentScenarioId: null,
-      ...oldPins,
-      lastRunAt: '2026-09-10T09:00:00+08:00',
-      updatedAt: '2026-09-12T09:00:00+08:00',
-      settings: v2s,
-      latestRun: run('scn-xmas-2026-v2', v2s, '2026-09-10T09:00:00+08:00', oldPins.snapshots, oldPins.ruleVersions),
-    },
+    row({ id: 'scn-xmas-2026-v3', name: 'Christmas 2026 v3', status: 'published', isPublished: true, stale: false, staleReasons: [], parentScenarioId: 'scn-xmas-2026-v2', ...oldPins, lastRunAt: '2026-09-16T10:00:00+08:00', updatedAt: '2026-09-18T09:00:00+08:00', settings: v3s, runAt: '2026-09-16T10:00:00+08:00' }),
+    row({ id: 'scn-xmas-2026-v4', name: 'Christmas 2026 v4', status: 'submitted', isPublished: false, stale: false, staleReasons: [], parentScenarioId: 'scn-xmas-2026-v3', ...current, lastRunAt: '2026-09-29T08:40:00+08:00', updatedAt: '2026-09-29T09:10:00+08:00', settings: v4s, runAt: '2026-09-29T08:40:00+08:00' }),
+    row({ id: 'scn-ber-2026-v1', name: 'Ber months 2026 v1', season: 'ber-2026', planningFrom: ber.planningFrom, planningTo: ber.planningTo, status: 'submitted', isPublished: false, stale: false, staleReasons: [], parentScenarioId: null, ...current, lastRunAt: '2026-09-29T11:00:00+08:00', updatedAt: '2026-09-29T11:30:00+08:00', settings: ber, runAt: '2026-09-29T11:00:00+08:00' }),
+    row({ id: 'scn-xmas-2026-v5', name: 'Christmas 2026 v5 (what-if)', ...paolo, status: 'draft', isPublished: false, stale: true, staleReasons: ['snapshot_superseded'], parentScenarioId: 'scn-xmas-2026-v4', ...oldPins, lastRunAt: '2026-09-22T16:00:00+08:00', updatedAt: '2026-09-22T16:05:00+08:00', settings: v5s, runAt: '2026-09-22T16:00:00+08:00' }),
+    row({ id: 'scn-xmas-2026-ft5', name: '5-day FT rule test', ...paolo, status: 'draft', isPublished: false, stale: true, staleReasons: ['snapshot_superseded'], parentScenarioId: 'scn-xmas-2026-v3', ...oldPins, lastRunAt: '2026-09-24T10:00:00+08:00', updatedAt: '2026-09-24T10:20:00+08:00', settings: ft5s, runAt: '2026-09-24T10:00:00+08:00' }),
+    row({ id: 'scn-xmas-2026-v2', name: 'Christmas 2026 v2', status: 'superseded', isPublished: false, stale: false, staleReasons: [], parentScenarioId: 'scn-xmas-2026-v1', ...oldPins, lastRunAt: '2026-09-10T09:00:00+08:00', updatedAt: '2026-09-18T09:00:00+08:00', settings: v2s, runAt: '2026-09-10T09:00:00+08:00' }),
+    row({ id: 'scn-xmas-2026-v1', name: 'Christmas 2026 v1', status: 'archived', isPublished: false, stale: false, staleReasons: [], parentScenarioId: null, ...oldPins, lastRunAt: '2026-09-02T14:00:00+08:00', updatedAt: '2026-09-05T11:00:00+08:00', settings: v1s, runAt: '2026-09-02T14:00:00+08:00' }),
+    row({ id: 'scn-xmas-2025', name: 'Christmas 2025', season: 'christmas-2025', planningFrom: x25.planningFrom, planningTo: x25.planningTo, status: 'superseded', isPublished: false, stale: false, staleReasons: [], parentScenarioId: null, ...oldPins, lastRunAt: '2025-09-20T10:00:00+08:00', updatedAt: '2026-09-18T09:00:00+08:00', settings: x25, runAt: '2025-09-20T10:00:00+08:00' }),
   ]
 }
 

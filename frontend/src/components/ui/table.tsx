@@ -214,7 +214,7 @@ export function TableEmpty({
   children: React.ReactNode
 }) {
   return (
-    <tr>
+    <tr data-state="empty">
       <td colSpan={colSpan} className="px-3 py-8 text-center text-text-muted">
         {children}
       </td>

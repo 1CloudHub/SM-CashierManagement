@@ -23,6 +23,7 @@ import {
 } from '@lanewise/shared'
 import type { ApiResponse } from './client'
 import { MOCK_DEPARTMENTS, MOCK_STORES, mockStoreScope } from './mock-directory'
+import { STM_STORE_ID, WORLD_STAFF, WORLD_STORES, managerOf } from './mock-world'
 
 /**
  * In-memory published rosters for the mock API (task 13.4): `GET
@@ -39,10 +40,8 @@ import { MOCK_DEPARTMENTS, MOCK_STORES, mockStoreScope } from './mock-directory'
  * actuals.
  */
 
-const STORE_ID = 'st-qc'
-const MAIN = `${STORE_ID}-d1`
-const EXPRESS = `${STORE_ID}-d2`
-const ROSTER_ID = 'ros-qc-main-2026-12-14'
+const QC = STM_STORE_ID
+const QC_ROSTER_ID = 'ros-qc-main-2026-12-14'
 const PERIOD_START: IsoDate = '2026-12-14'
 const PERIOD_END: IsoDate = '2026-12-20'
 const WEEK = Array.from({ length: 7 }, (_, i) => `2026-12-${String(14 + i).padStart(2, '0')}`)
@@ -52,39 +51,70 @@ const REST_AFTER_DAYS = 6
 
 type Mutable<T> = { -readonly [K in keyof T]: T[K] }
 type Shift = Mutable<RosterShiftDto>
+type Pattern = readonly (readonly [number, number] | null)[]
 
-const STAFF: RosterStaffMember[] = [
-  { id: 'st-qc-ft01', employeeNo: 'FT-01', name: 'Isa Palma', contract: 'FT', departmentId: MAIN, trainedDepartmentIds: [EXPRESS], borrowedFrom: null },
-  { id: 'st-qc-ft03', employeeNo: 'FT-03', name: 'Ana Reyes', contract: 'FT', departmentId: MAIN, trainedDepartmentIds: [], borrowedFrom: null },
-  { id: 'st-qc-ft07', employeeNo: 'FT-07', name: 'Ralph Edu', contract: 'FT', departmentId: MAIN, trainedDepartmentIds: [], borrowedFrom: null },
-  { id: 'st-qc-ft09', employeeNo: 'FT-09', name: 'Dina Rusel', contract: 'FT', departmentId: MAIN, trainedDepartmentIds: [], borrowedFrom: null },
-  { id: 'st-qc-pt02', employeeNo: 'PT-02', name: 'Juan dela Cruz', contract: 'PT', departmentId: EXPRESS, trainedDepartmentIds: [MAIN], borrowedFrom: null },
-  { id: 'st-qc-pt06', employeeNo: 'PT-06', name: 'Arlene Mac', contract: 'PT', departmentId: MAIN, trainedDepartmentIds: [], borrowedFrom: null },
-  { id: 'st-qc-fl01', employeeNo: 'FL-01', name: 'Cam Wills', contract: 'FLOAT', departmentId: MAIN, trainedDepartmentIds: [EXPRESS], borrowedFrom: null },
-]
+const rosterIdOf = (storeId: string) => (storeId === QC ? QC_ROSTER_ID : `ros-${storeId.replace(/^st-/, '')}-main-2026-12-14`)
+const mainOf = (storeId: string) => `${storeId}-d1`
 
-/** Mon–Sun pattern per cashier: [startHour, endHour] or null for a rest day. */
-const PATTERN: Record<string, readonly (readonly [number, number] | null)[]> = {
+/** A store's active cashiers, as the roster lists them (world staff, ./mock-world). */
+function storeStaff(storeId: string): RosterStaffMember[] {
+  return WORLD_STAFF.filter((s) => s.storeId === storeId && s.active).map((s) => ({
+    id: s.id,
+    employeeNo: s.employeeNo,
+    name: s.name,
+    contract: s.contract,
+    departmentId: s.departmentId,
+    trainedDepartmentIds: [...s.trainedDepartmentIds],
+    borrowedFrom: null,
+  }))
+}
+
+/** Quezon City (the wireframe roster): Mon–Sun per cashier, [startHour, endHour] or null for a rest day. */
+const QC_PATTERN: Record<string, Pattern> = {
   'st-qc-ft01': [[9, 18], [9, 18], [9, 18], [9, 18], [9, 18], [10, 19], null],
   'st-qc-ft03': [[10, 19], [10, 19], null, [10, 19], [10, 19], [10, 19], [10, 19]],
   'st-qc-ft07': [null, [12, 21], [12, 21], [12, 21], [12, 21], [12, 21], [12, 21]],
   'st-qc-ft09': [[8, 17], [8, 17], null, [8, 17], [8, 17], [8, 17], [9, 18]],
   'st-qc-pt02': [null, [15, 19], null, [15, 19], null, [12, 21], null],
+  'st-qc-pt05': [null, [15, 19], [15, 19], null, [17, 21], [15, 19], [13, 17]],
   'st-qc-pt06': [[13, 17], null, [13, 17], null, [17, 21], [13, 17], null],
   'st-qc-fl01': [null, null, [11, 20], [11, 20], null, [11, 20], [11, 20]],
+  'st-qc-ft12': [[8, 17], [8, 17], [8, 17], null, [8, 17], [9, 18], [9, 18]],
+  'st-qc-pt14': [[17, 21], null, null, null, [17, 21], [13, 17], [13, 17]],
 }
 
-function seedShifts(): Shift[] {
+const DAY_INDEX = { mon: 0, tue: 1, wed: 2, thu: 3, fri: 4, sat: 5, sun: 6 } as const
+
+/** Other stores: a deterministic week from each cashier's contract, rest day and unavailable dates. */
+function generatedPattern(staffId: string, i: number): Pattern {
+  const w = WORLD_STAFF.find((s) => s.id === staffId)
+  if (!w) return []
+  const start = [8, 9, 10, 11, 12][i % 5] ?? 9
+  const off = new Set(w.unavailable.map((u) => WEEK.indexOf(u.date)).filter((d) => d >= 0))
+  return WEEK.map((_, d) => {
+    if (off.has(d)) return null
+    if (w.contract === 'FT') return d === DAY_INDEX[w.preferredRestDay ?? 'mon'] ? null : [start, start + 9]
+    if (w.contract === 'FLOAT') return (d + i) % 7 < 4 ? [start + 1, start + 10] : null
+    const peak = w.availability === 'weekends' ? d >= 5 : w.availability === 'evenings' || w.availability === 'student' ? d >= 5 || (d + i) % 2 === 0 : (d + i) % 2 === 0
+    return peak ? (d >= 5 ? [13, 17] : [17, 21]) : null
+  })
+}
+
+function seedShifts(storeId: string): Shift[] {
   const out: Shift[] = []
-  for (const [staffId, days] of Object.entries(PATTERN)) {
-    days.forEach((p, i) => {
+  const staff = storeStaff(storeId)
+  staff.forEach((member, i) => {
+    const days = storeId === QC ? (QC_PATTERN[member.id] ?? []) : generatedPattern(member.id, i)
+    // Customer-service and express cashiers work their own lanes; the rest the main lanes.
+    const departmentId = member.departmentId.endsWith('-d1') || (member.contract === 'PT' && member.trainedDepartmentIds.includes(mainOf(storeId))) ? mainOf(storeId) : member.departmentId
+    days.forEach((p, d) => {
       if (!p) return
       const [a, b] = p
       out.push({
-        id: `${staffId}-${WEEK[i]}`,
-        staffId,
-        departmentId: MAIN,
-        date: WEEK[i] ?? PERIOD_START,
+        id: `${member.id}-${WEEK[d]}`,
+        staffId: member.id,
+        departmentId,
+        date: WEEK[d] ?? PERIOD_START,
         startMin: a * 60,
         endMin: b * 60,
         activities: b - a >= 8 ? [{ kind: 'meal', startMin: (a + 4) * 60, endMin: (a + 5) * 60 }] : [],
@@ -92,8 +122,29 @@ function seedShifts(): Shift[] {
         edited: null,
       })
     })
+  })
+  const open = (id: string, date: IsoDate, a: number, b: number, departmentId = mainOf(storeId)): Shift => ({
+    id,
+    staffId: null,
+    departmentId,
+    date,
+    startMin: a * 60,
+    endMin: b * 60,
+    activities: [],
+    status: 'scheduled',
+    edited: null,
+  })
+  if (storeId === QC) {
+    // Two open shifts on Sat Dec 19 (the wireframe's "2 open shifts") and one express shift on Tue.
+    out.push(open('open-qc-2026-12-19', '2026-12-19', 16, 22))
+    out.push(open('open-qc-2026-12-19-b', '2026-12-19', 13, 17))
+    out.push(open('open-qc-2026-12-15', '2026-12-15', 15, 19, `${QC}-d2`))
+  } else {
+    // The map's staffing gap on Sat Dec 19, 1–5 PM, as open shifts with the map's ids (./mock-network-map).
+    const store = WORLD_STORES.find((x) => x.id === storeId)
+    const gap = store ? Math.max(0, store.required - store.rostered) : 0
+    for (let k = 1; k <= gap; k += 1) out.push(open(`open-${store?.code ?? storeId}-${k}`, '2026-12-19', 13, 17))
   }
-  out.push({ id: 'open-qc-2026-12-19', staffId: null, departmentId: MAIN, date: '2026-12-19', startMin: 16 * 60, endMin: 22 * 60, activities: [], status: 'scheduled', edited: null })
   return out
 }
 
@@ -141,7 +192,7 @@ function laborCheck(shifts: readonly Shift[], staffIds: readonly string[]): Labo
         out.push({ rule: 'MANDATORY_REST', severity: 'block', staffId, date, message: `Day ${run} in a row.` })
       }
     })
-    const contract = STAFF.find((s) => s.id === staffId)?.contract ?? 'FT'
+    const contract = WORLD_STAFF.find((s) => s.id === staffId)?.contract ?? 'FT'
     const weeks = new Map<IsoDate, number>()
     for (const s of mine) weeks.set(mondayOf(s.date), (weeks.get(mondayOf(s.date)) ?? 0) + paidHours(s))
     for (const [week, hours] of weeks) {
@@ -215,49 +266,76 @@ export interface MockSelfServiceRoster {
   ): void
 }
 
+interface Book {
+  readonly storeId: string
+  readonly rosterId: string
+  shifts: Shift[]
+  readonly overrides: ShiftOverrideDto[]
+  readonly befores: Map<string, MockShiftTimes>
+  readonly staff: RosterStaffMember[]
+}
+
 export function createRosterStore(now: () => string = () => new Date().toISOString()): MockRosterStore {
-  let shifts = seedShifts()
-  const overrides: ShiftOverrideDto[] = []
-  const befores = new Map<string, MockShiftTimes>()
-  const staff: RosterStaffMember[] = [...STAFF]
+  const books = new Map<string, Book>(
+    WORLD_STORES.map((store) => [
+      store.id,
+      { storeId: store.id, rosterId: rosterIdOf(store.id), shifts: seedShifts(store.id), overrides: [], befores: new Map(), staff: storeStaff(store.id) },
+    ]),
+  )
+  const qc = books.get(QC) as Book
+  // Juan's Sat Dec 19 shift was moved by his store manager (wireframe SCR-025 "Changed").
+  {
+    const target = qc.shifts.find((x) => x.id === 'st-qc-pt02-2026-12-19')
+    if (target) {
+      const at = '2026-12-18T10:02:00.000Z'
+      const by = managerOf(QC)?.name ?? 'Store manager'
+      target.edited = { type: 'time_change', by, at }
+      target.activities = [{ kind: 'meal', startMin: 16 * 60, endMin: 17 * 60 }]
+      qc.overrides.push({ id: 'ovr-seed-1', shiftId: target.id, type: 'time_change', fromStaffId: target.staffId, toStaffId: target.staffId, reason: null, offReason: null, ruleBreaches: [], by, at })
+      qc.befores.set('ovr-seed-1', { date: target.date, startMin: 13 * 60, endMin: 17 * 60 })
+    }
+  }
+  const bookOfShift = (shiftId: string) => [...books.values()].find((b) => b.shifts.some((x) => x.id === shiftId))
   const timesOf = (x: Shift): MockShiftTimes => ({ date: x.date, startMin: x.startMin, endMin: x.endMin })
-  const reassigned = (changes: readonly { shiftId: string; staffId: string | null }[]) =>
-    shifts.map((x) => {
+  const reassigned = (book: Book, changes: readonly { shiftId: string; staffId: string | null }[]) =>
+    book.shifts.map((x) => {
       const c = changes.find((y) => y.shiftId === x.id)
       return c ? { ...x, staffId: c.staffId } : x
     })
 
-  const summary = (): RosterSummary => ({
-    id: ROSTER_ID,
-    storeId: STORE_ID,
-    storeName: MOCK_STORES.find((s) => s.id === STORE_ID)?.name ?? '',
-    departmentId: MAIN,
-    departmentName: MOCK_DEPARTMENTS.find((d) => d.id === MAIN)?.name ?? '',
+  const summary = (book: Book): RosterSummary => ({
+    id: book.rosterId,
+    storeId: book.storeId,
+    storeName: MOCK_STORES.find((s) => s.id === book.storeId)?.name ?? '',
+    departmentId: mainOf(book.storeId),
+    departmentName: MOCK_DEPARTMENTS.find((d) => d.id === mainOf(book.storeId))?.name ?? '',
     periodStart: PERIOD_START,
     periodEnd: PERIOD_END,
     status: 'published',
     publishedAt: '2026-12-10T09:00:00.000Z',
-    overrideCount: overrides.length,
+    overrideCount: book.overrides.length,
     synthetic: true,
   })
 
-  const detail = (role: RoleCode): RosterDetail => ({
-    roster: summary(),
-    departments: MOCK_DEPARTMENTS.filter((d) => d.storeId === STORE_ID).map(({ id, name }) => ({ id, name })),
-    staff: [...staff],
-    shifts: shifts.map((s) => ({ ...s })),
-    overrides: [...overrides],
-    laborChecks: laborCheck(shifts, STAFF.map((s) => s.id)),
+  const detail = (book: Book, role: RoleCode): RosterDetail => ({
+    roster: summary(book),
+    departments: MOCK_DEPARTMENTS.filter((d) => d.storeId === book.storeId).map(({ id, name }) => ({ id, name })),
+    staff: [...book.staff],
+    shifts: book.shifts.map((s) => ({ ...s })),
+    overrides: [...book.overrides],
+    laborChecks: laborCheck(book.shifts, storeStaff(book.storeId).map((s) => s.id)),
     canOverride: can(role, 'shift_edit', 'manage'),
   })
 
   /** The shift set after a change, or an error response. */
-  function apply(change: ShiftOverrideRequest): { after: Shift[]; target: Shift | null; next: Shift | null; from: string | null; to: string | null } | ApiResponse {
+  function apply(book: Book, change: ShiftOverrideRequest): { after: Shift[]; target: Shift | null; next: Shift | null; from: string | null; to: string | null } | ApiResponse {
+    const shifts = book.shifts
+    const own = storeStaff(book.storeId)
     const bad = (path: string, message: string) => fail('validation_failed', 'This change cannot be made.', [{ path: `body.${path}`, message }])
     const staffOk = (id: string | null, departmentId: string) =>
-      id === null || STAFF.some((s) => s.id === id && (s.departmentId === departmentId || s.trainedDepartmentIds.includes(departmentId)))
+      id === null || own.some((s) => s.id === id && (s.departmentId === departmentId || s.trainedDepartmentIds.includes(departmentId)))
     if (change.type === 'add') {
-      if (!MOCK_DEPARTMENTS.some((d) => d.id === change.departmentId && d.storeId === STORE_ID)) return bad('departmentId', 'Pick a department of this store.')
+      if (!MOCK_DEPARTMENTS.some((d) => d.id === change.departmentId && d.storeId === book.storeId)) return bad('departmentId', 'Pick a department of this store.')
       if (!staffOk(change.staffId, change.departmentId)) return bad('staffId', 'Pick an active cashier of this store.')
       if (change.date < PERIOD_START || change.date > PERIOD_END) return bad('date', 'Keep the shift inside the roster period.')
       seq += 1
@@ -310,12 +388,13 @@ export function createRosterStore(now: () => string = () => new Date().toISOStri
 
   return {
     openShift(shiftId) {
-      const s = shifts.find((x) => x.id === shiftId && x.staffId === null && x.status === 'scheduled')
-      return s
+      const book = bookOfShift(shiftId)
+      const s = book?.shifts.find((x) => x.id === shiftId && x.staffId === null && x.status === 'scheduled')
+      return book && s
         ? {
             id: s.id,
-            storeId: STORE_ID,
-            rosterId: ROSTER_ID,
+            storeId: book.storeId,
+            rosterId: book.rosterId,
             departmentName: MOCK_DEPARTMENTS.find((d) => d.id === s.departmentId)?.name ?? '',
             date: s.date,
             startMin: s.startMin,
@@ -324,42 +403,43 @@ export function createRosterStore(now: () => string = () => new Date().toISOStri
         : null
     },
     fill(shiftId, cashier, type, by, reason = null) {
-      const target = shifts.find((x) => x.id === shiftId && x.staffId === null && x.status === 'scheduled')
-      if (!target) return false
-      if (!staff.some((s) => s.id === cashier.id)) staff.push(cashier)
+      const book = bookOfShift(shiftId)
+      const target = book?.shifts.find((x) => x.id === shiftId && x.staffId === null && x.status === 'scheduled')
+      if (!book || !target) return false
+      if (!book.staff.some((s) => s.id === cashier.id)) book.staff.push(cashier)
       const at = now()
-      shifts = shifts.map((x) => (x.id === shiftId ? { ...x, staffId: cashier.id, edited: { type, by, at } } : x))
+      book.shifts = book.shifts.map((x) => (x.id === shiftId ? { ...x, staffId: cashier.id, edited: { type, by, at } } : x))
       seq += 1
-      overrides.push({ id: `ovr-${seq}`, shiftId, type, fromStaffId: null, toStaffId: cashier.id, reason, offReason: null, ruleBreaches: [], by, at })
-      befores.set(`ovr-${seq}`, timesOf(target))
+      book.overrides.push({ id: `ovr-${seq}`, shiftId, type, fromStaffId: null, toStaffId: cashier.id, reason, offReason: null, ruleBreaches: [], by, at })
+      book.befores.set(`ovr-${seq}`, timesOf(target))
       return true
     },
     selfService: {
-      storeId: STORE_ID,
-      storeName: MOCK_STORES.find((s) => s.id === STORE_ID)?.name ?? '',
+      storeId: QC,
+      storeName: MOCK_STORES.find((s) => s.id === QC)?.name ?? '',
       period: { start: PERIOD_START, end: PERIOD_END },
       departmentName: (id) => MOCK_DEPARTMENTS.find((d) => d.id === id)?.name ?? '',
-      staff: () => [...staff],
-      shifts: () => shifts.map((x) => ({ ...x })),
-      history: () => overrides.map((o) => ({ override: o, before: befores.get(o.id) ?? null })),
+      staff: () => [...qc.staff],
+      shifts: () => qc.shifts.map((x) => ({ ...x })),
+      history: () => qc.overrides.map((o) => ({ override: o, before: qc.befores.get(o.id) ?? null })),
       check(changes) {
         const affected = [
           ...new Set(
-            changes.flatMap((c) => [shifts.find((x) => x.id === c.shiftId)?.staffId ?? null, c.staffId]).filter((x): x is string => x !== null),
+            changes.flatMap((c) => [qc.shifts.find((x) => x.id === c.shiftId)?.staffId ?? null, c.staffId]).filter((x): x is string => x !== null),
           ),
         ]
-        return evaluate(shifts, reassigned(changes), affected)
+        return evaluate(qc.shifts, reassigned(qc, changes), affected)
       },
       apply(changes, type, by, reason, ruleBreaches) {
         const at = now()
         for (const c of changes) {
-          const target = shifts.find((x) => x.id === c.shiftId)
+          const target = qc.shifts.find((x) => x.id === c.shiftId)
           if (!target) continue
           seq += 1
-          overrides.push({ id: `ovr-${seq}`, shiftId: c.shiftId, type, fromStaffId: target.staffId, toStaffId: c.staffId, reason, offReason: null, ruleBreaches, by, at })
-          befores.set(`ovr-${seq}`, timesOf(target))
+          qc.overrides.push({ id: `ovr-${seq}`, shiftId: c.shiftId, type, fromStaffId: target.staffId, toStaffId: c.staffId, reason, offReason: null, ruleBreaches, by, at })
+          qc.befores.set(`ovr-${seq}`, timesOf(target))
         }
-        shifts = reassigned(changes).map((x) => (changes.some((c) => c.shiftId === x.id) ? { ...x, edited: { type, by, at } } : x))
+        qc.shifts = reassigned(qc, changes).map((x) => (changes.some((c) => c.shiftId === x.id) ? { ...x, edited: { type, by, at } } : x))
       },
     },
     handle({ method, pathname, body, role, userName }) {
@@ -370,19 +450,21 @@ export function createRosterStore(now: () => string = () => new Date().toISOStri
         return fail('forbidden', 'You do not have access to this resource.')
       }
       if (!storeId || !mockStoreScope(role).includes(storeId)) return fail('not_found', 'We couldn’t find that, or you don’t have access to it.')
+      const book = books.get(storeId)
       if (rosterId === undefined) {
         if (method !== 'GET') return fail('method_not_allowed', 'Method not allowed for this resource.')
-        return { status: 200, body: { rosters: storeId === STORE_ID ? [summary()] : [] } }
+        return { status: 200, body: { rosters: book ? [summary(book)] : [] } }
       }
-      if (storeId !== STORE_ID || rosterId !== ROSTER_ID) return fail('not_found', 'We couldn’t find that, or you don’t have access to it.')
-      if (rest.length === 0 && method === 'GET') return { status: 200, body: detail(role) }
+      if (!book || rosterId !== book.rosterId) return fail('not_found', 'We couldn’t find that, or you don’t have access to it.')
+      const shifts = book.shifts
+      if (rest.length === 0 && method === 'GET') return { status: 200, body: detail(book, role) }
 
       if (!can(role, 'shift_edit', 'manage')) return fail('forbidden', 'You do not have access to this resource.')
 
       if (method === 'GET' && rest[0] === 'shifts' && rest[2] === 'replacements') {
         const shift = shifts.find((s) => s.id === rest[1])
         if (!shift) return fail('not_found', 'We couldn’t find that.')
-        const candidates: ReplacementCandidate[] = STAFF.filter(
+        const candidates: ReplacementCandidate[] = storeStaff(book.storeId).filter(
           (s) => s.id !== shift.staffId && (s.departmentId === shift.departmentId || s.trainedDepartmentIds.includes(shift.departmentId)),
         ).map((s) => {
           const after = shifts.map((x) => (x.id === shift.id ? { ...x, staffId: s.id } : x))
@@ -408,7 +490,7 @@ export function createRosterStore(now: () => string = () => new Date().toISOStri
         return fail('validation_failed', 'Some fields are missing or invalid.', parsed.issues.map((i) => ({ path: `body.${i.path}`, message: i.message })))
       }
       const change = parsed.request
-      const applied = apply(change)
+      const applied = apply(book, change)
       if ('status' in applied) return applied
       const affected = [...new Set([applied.from, applied.to].filter((x): x is string => x !== null))]
       const check = evaluate(shifts, applied.after, affected)
@@ -425,7 +507,7 @@ export function createRosterStore(now: () => string = () => new Date().toISOStri
       const at = now()
       const next = applied.next as Shift
       next.edited = { type: change.type, by: userName, at }
-      shifts = applied.target ? applied.after : [...shifts, next]
+      book.shifts = applied.target ? applied.after : [...shifts, next]
       seq += 1
       const override: ShiftOverrideDto = {
         id: `ovr-${seq}`,
@@ -439,9 +521,9 @@ export function createRosterStore(now: () => string = () => new Date().toISOStri
         by: userName,
         at,
       }
-      overrides.push(override)
-      if (applied.target) befores.set(override.id, timesOf(applied.target))
-      return { status: 201, body: { override, check, roster: detail(role) } }
+      book.overrides.push(override)
+      if (applied.target) book.befores.set(override.id, timesOf(applied.target))
+      return { status: 201, body: { override, check, roster: detail(book, role) } }
     },
   }
 }

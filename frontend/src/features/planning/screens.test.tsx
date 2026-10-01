@@ -24,16 +24,16 @@ describe('SCR-020 network view (Req 5.1, 5.3, 5.4)', () => {
     const { container } = renderApp({ path: '/plan/network?date=2026-12-19', role: 'PLN' })
     expect(await screen.findByText('Peak cashiers on lanes')).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1, name: 'All stores and departments' })).toBeInTheDocument()
-    expect(screen.getByText('6 stores · 18 departments')).toBeInTheDocument()
-    // Cebu main lanes are over capacity on Dec 19 (wireframe example).
+    expect(screen.getByText('8 stores · 24 departments')).toBeInTheDocument()
+    // Megamall main lanes are over capacity on Dec 19 (wireframe example).
     expect(screen.getByText('Over installed lanes')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /^SM Supermarket – Cebu City · Main checkout lanes: needs \d+, has 20/ })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /^SM Supermarket – Megamall · Main checkout lanes: needs \d+, has 24/ })).toBeInTheDocument()
     const heatmap = screen.getByRole('table', { name: 'Lane-capacity pressure by department and hour' })
     // Every heatmap cell prints its value and has a text band, never colour alone.
-    const cebu = within(heatmap).getByRole('row', { name: /SM Supermarket – Cebu City · Main checkout lanes/ })
+    const cebu = within(heatmap).getByRole('row', { name: /SM Supermarket – Megamall · Main checkout lanes/ })
     expect(within(cebu).getAllByText(/over capacity/).length).toBeGreaterThan(0)
     const link = within(cebu).getByRole('link')
-    expect(link.getAttribute('href')).toBe('/plan/department?store=st-cebu&dept=st-cebu-d1&date=2026-12-19')
+    expect(link.getAttribute('href')).toBe('/plan/department?store=st-megamall&dept=st-megamall-d1&date=2026-12-19')
     expect(screen.getByRole('button', { name: 'Export CSV' })).toBeInTheDocument()
     expect(await axe(container)).toHaveNoViolations()
   }, AXE_TIMEOUT)
@@ -52,7 +52,7 @@ describe('SCR-020 network view (Req 5.1, 5.3, 5.4)', () => {
     renderApp({ path: '/plan/network', role: 'STM' })
     expect(await screen.findByText('1 stores · 3 departments')).toBeInTheDocument()
     const table = screen.getByRole('table', { name: 'Staffing plan by store and department' })
-    expect(within(table).queryByText(/Cebu/)).toBeNull()
+    expect(within(table).queryByText(/Megamall/)).toBeNull()
     expect(within(table).getAllByText(/₱/).length).toBeGreaterThan(0) // own store cost
     expect(screen.getAllByText('Hidden for your role').length).toBeGreaterThan(0) // network KPI
     expect(screen.queryByRole('button', { name: 'Export CSV' })).toBeNull()

@@ -26,6 +26,7 @@ import {
   type ScenarioStatus,
 } from '@lanewise/shared'
 import type { ApiResponse } from './client'
+import { PEOPLE } from './mock-world'
 
 /**
  * In-memory `/approvals` for the mock API (task 12). The book shares the
@@ -65,10 +66,10 @@ export interface ApprovalBookDeps<R extends ApprovalScenarioRow> {
 }
 
 export const MOCK_PEOPLE: Readonly<Record<'PLN' | 'HR' | 'FIN' | 'EXE', ApprovalPerson>> = {
-  PLN: { id: 'u-pln-ana', name: 'Ana Reyes' },
-  HR: { id: 'u-hr-ltan', name: 'L. Tan' },
-  FIN: { id: 'u-fin-rsantos', name: 'R. Santos' },
-  EXE: { id: 'u-exe-mcruz', name: 'M. Cruz' },
+  PLN: { id: PEOPLE.planner.id, name: PEOPLE.planner.name },
+  HR: { id: PEOPLE.hr.id, name: PEOPLE.hr.short },
+  FIN: { id: PEOPLE.finance.id, name: PEOPLE.finance.short },
+  EXE: { id: PEOPLE.executive.id, name: PEOPLE.executive.short },
 }
 
 function person(role: RoleCode): ApprovalPerson {
@@ -93,37 +94,57 @@ function decided(step: Step, role: RoleCode, at: string, comment: string): Step 
   return { ...step, status: 'approved', decidedBy: person(role), decidedAsRole: role, decidedAt: at, comment }
 }
 
-/** Seeded trackers for the scenarios in ./mock-scenarios. */
+function withStatus(step: Step, role: RoleCode, at: string, status: Step['status'], comment: string): Step {
+  return { ...step, status, decidedBy: person(role), decidedAsRole: role, decidedAt: at, comment }
+}
+
+/** Seeded trackers for the scenarios in ./mock-scenarios: every stage of the workflow is on show. */
 function seed(): Map<string, Submission[]> {
-  const v3 = pendingSteps(1)
-  const ber = pendingSteps(1)
+  const approvedAll = (no: number, at: readonly [string, string, string], comments: readonly [string, string, string]): Step[] => {
+    const s = pendingSteps(no)
+    return [decided(s[0]!, 'HR', at[0], comments[0]), decided(s[1]!, 'FIN', at[1], comments[1]), decided(s[2]!, 'EXE', at[2], comments[2])]
+  }
+  const v4 = pendingSteps(1)
+  const v1 = pendingSteps(1)
   return new Map([
+    // Last year's plan and v2: approved and published, then superseded.
+    ['scn-xmas-2025', [{ submissionNo: 1, submittedBy: MOCK_PEOPLE.PLN, submittedAt: '2025-09-22T10:00:00+08:00', steps: approvedAll(1, ['2025-09-23T10:00:00+08:00', '2025-09-24T11:00:00+08:00', '2025-09-25T09:00:00+08:00'], ['OK.', 'Within budget.', 'Approved.']) }]],
+    // v1: Finance asked for changes, then the planner archived it and started v2.
     [
-      'scn-xmas-2026-v3',
+      'scn-xmas-2026-v1',
       [
         {
           submissionNo: 1,
           submittedBy: MOCK_PEOPLE.PLN,
-          submittedAt: '2026-09-16T11:00:00+08:00',
+          submittedAt: '2026-09-02T15:00:00+08:00',
           steps: [
-            decided(v3[0]!, 'HR', '2026-09-17T10:00:00+08:00', '284 seasonal hires agreed.'),
-            decided(v3[1]!, 'FIN', '2026-09-17T15:00:00+08:00', 'Within the Christmas labor budget.'),
-            decided(v3[2]!, 'EXE', '2026-09-18T09:00:00+08:00', 'Approved for publication.'),
+            decided(v1[0]!, 'HR', '2026-09-03T10:00:00+08:00', '262 seasonal hires agreed.'),
+            withStatus(v1[1]!, 'FIN', '2026-09-04T16:00:00+08:00', 'changes_requested', 'Over the labor budget by ₱0.8M — use part-timers for the peaks.'),
+            v1[2]!,
           ],
         },
       ],
     ],
+    ['scn-xmas-2026-v2', [{ submissionNo: 1, submittedBy: MOCK_PEOPLE.PLN, submittedAt: '2026-09-10T11:00:00+08:00', steps: approvedAll(1, ['2026-09-10T15:00:00+08:00', '2026-09-11T10:00:00+08:00', '2026-09-11T16:00:00+08:00'], ['Headcount OK.', 'Budget OK.', 'Publish v2.']) }]],
+    ['scn-xmas-2026-v3', [{ submissionNo: 1, submittedBy: MOCK_PEOPLE.PLN, submittedAt: '2026-09-16T11:00:00+08:00', steps: approvedAll(1, ['2026-09-17T10:00:00+08:00', '2026-09-17T15:00:00+08:00', '2026-09-18T09:00:00+08:00'], ['284 seasonal hires agreed.', 'Within the Christmas labor budget.', 'Approved for publication.']) }]],
+    // v4: headcount approved, budget secured outside the system by the Executive → plan ready.
     [
-      'scn-ber-2026-v1',
+      'scn-xmas-2026-v4',
       [
         {
           submissionNo: 1,
           submittedBy: MOCK_PEOPLE.PLN,
-          submittedAt: '2026-09-29T11:30:00+08:00',
-          steps: [decided(ber[0]!, 'HR', '2026-09-30T10:00:00+08:00', 'Seasonal hires OK.'), ber[1]!, ber[2]!],
+          submittedAt: '2026-09-29T09:10:00+08:00',
+          steps: [
+            decided(v4[0]!, 'HR', '2026-09-30T10:00:00+08:00', '254 seasonal, OK.'),
+            { ...withStatus(v4[1]!, 'EXE', '2026-09-30T16:30:00+08:00', 'secured_outside', 'Budget confirmed by the CFO.'), outside: { reference: 'email 30 Sep “Xmas labor budget”', note: 'Budget confirmed by the CFO.' } },
+            v4[2]!,
+          ],
         },
       ],
     ],
+    // Ber months: just submitted, waiting for HR and Finance.
+    ['scn-ber-2026-v1', [{ submissionNo: 1, submittedBy: MOCK_PEOPLE.PLN, submittedAt: '2026-09-29T11:30:00+08:00', steps: pendingSteps(1) }]],
   ])
 }
 

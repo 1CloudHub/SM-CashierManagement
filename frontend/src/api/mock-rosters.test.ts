@@ -16,7 +16,7 @@ describe('mock roster API (task 13.4)', () => {
     expect(call(store, 'GET', '/stores/st-qc/rosters', undefined, 'PLN').status).toBe(200)
     expect((call(store, 'GET', BASE, undefined, 'PLN').body as RosterDetail).canOverride).toBe(false)
     expect((call(store, 'GET', BASE).body as RosterDetail).canOverride).toBe(true)
-    expect(call(store, 'GET', '/stores/st-cebu/rosters').status).toBe(404)
+    expect(call(store, 'GET', '/stores/st-moa/rosters').status).toBe(404)
     expect(call(store, 'GET', BASE, undefined, 'STF').status).toBe(403)
     expect(call(store, 'POST', `${BASE}/overrides`, { type: 'remove', shiftId: 'st-qc-ft03-2026-12-14' }, 'PLN').status).toBe(403)
   })
@@ -55,7 +55,8 @@ describe('mock roster API (task 13.4)', () => {
     fc.assert(
       fc.property(fc.array(changeArb, { maxLength: 8 }), (changes) => {
         const store = createRosterStore()
-        let count = 0
+        // The seeded roster already carries the store manager's change to Juan's Sat shift.
+        let count = (call(store, 'GET', BASE).body as RosterDetail).overrides.length
         for (const change of changes) {
           const res = call(store, 'POST', `${BASE}/overrides`, change)
           if (res.status === 201) {

@@ -16,7 +16,7 @@ describe('mock search mirrors the API scope rules (P1, P11)', () => {
     fc.assert(
       fc.property(
         fc.constantFrom(...ROLE_CODES),
-        fc.oneof(fc.constantFrom('sm', 'cebu', 'lanes', 'christmas', 'ft-03', 'Juan', 'a'), fc.string({ minLength: 1, maxLength: 4 })),
+        fc.oneof(fc.constantFrom('sm', 'aura', 'lanes', 'christmas', 'ft-03', 'Juan', 'a'), fc.string({ minLength: 1, maxLength: 4 })),
         (role, q) => {
           const res = mockSearch(role, q, '50')
           if (q.trim().length === 0) {
@@ -49,18 +49,18 @@ describe('mock search mirrors the API scope rules (P1, P11)', () => {
 
 describe('SCR-041 Search results', () => {
   it('groups in-scope results with counts and links, with no axe violations', async () => {
-    const { container } = renderApp({ path: '/search?q=cebu', role: 'PLN' })
-    expect(await screen.findByRole('heading', { level: 1, name: 'Results for “cebu”' })).toBeInTheDocument()
+    const { container } = renderApp({ path: '/search?q=aura', role: 'PLN' })
+    expect(await screen.findByRole('heading', { level: 1, name: 'Results for “aura”' })).toBeInTheDocument()
     const tabs = await screen.findByRole('tablist', { name: 'Result types' })
     expect(within(tabs).getByRole('tab', { name: 'Stores (1)' })).toBeInTheDocument()
     expect(within(tabs).getByRole('tab', { name: 'Departments (3)' })).toBeInTheDocument()
-    expect(within(tabs).getByRole('tab', { name: 'Staff (2)' })).toBeInTheDocument()
+    expect(within(tabs).getByRole('tab', { name: 'Staff (6)' })).toBeInTheDocument()
     const stores = screen.getByRole('region', { name: 'Stores' })
-    expect(within(stores).getByRole('link', { name: 'SM Supermarket – Cebu City' })).toHaveAttribute(
+    expect(within(stores).getByRole('link', { name: 'SM Supermarket – Aura' })).toHaveAttribute(
       'href',
-      '/plan/department?store=st-cebu',
+      '/plan/department?store=st-aura',
     )
-    expect(within(stores).getByText('Visayas · SM Supermarket')).toBeInTheDocument()
+    expect(within(stores).getByText('NCR South · SM Supermarket')).toBeInTheDocument()
     expect(screen.getByText('Results only include what your role can see.')).toBeInTheDocument()
     expect(await axe(container)).toHaveNoViolations()
   })
@@ -79,10 +79,10 @@ describe('SCR-041 Search results', () => {
 
   it('keeps the selected tab in the URL', async () => {
     const user = userEvent.setup()
-    renderApp({ path: '/search?q=cebu', role: 'PLN' })
-    await user.click(await screen.findByRole('tab', { name: 'Staff (2)' }))
-    expect(window.location.search).toBe('?q=cebu&type=staff')
-    expect(screen.getByRole('tab', { name: 'Staff (2)' })).toHaveAttribute('aria-selected', 'true')
+    renderApp({ path: '/search?q=aura', role: 'PLN' })
+    await user.click(await screen.findByRole('tab', { name: 'Staff (6)' }))
+    expect(window.location.search).toBe('?q=aura&type=staff')
+    expect(screen.getByRole('tab', { name: 'Staff (6)' })).toHaveAttribute('aria-selected', 'true')
   })
 
   it('shows the empty and the prompt states', async () => {
@@ -115,7 +115,7 @@ describe('global search box', () => {
   it('Enter opens SCR-041; ↓ then Enter opens the highlighted hit; Esc closes', async () => {
     const user = userEvent.setup()
     renderApp({ path: '/', role: 'PLN' })
-    await user.type(box(), 'cebu')
+    await user.type(box(), 'aura')
     const list = await screen.findByRole('listbox', { name: 'Search suggestions' })
     await within(list).findByRole('group', { name: 'Stores' })
     await user.keyboard('{ArrowDown}')
@@ -123,15 +123,15 @@ describe('global search box', () => {
     expect(first).toHaveAttribute('aria-selected', 'true')
     expect(box()).toHaveAttribute('aria-activedescendant', first.id)
     await user.keyboard('{Enter}')
-    expect(window.location.pathname + window.location.search).toBe('/plan/department?store=st-cebu')
+    expect(window.location.pathname + window.location.search).toBe('/plan/department?store=st-aura')
 
     await user.clear(box())
-    await user.type(box(), 'cebu')
+    await user.type(box(), 'aura')
     await user.keyboard('{Escape}')
     expect(box()).toHaveAttribute('aria-expanded', 'false')
     await user.keyboard('{Enter}')
-    expect(window.location.pathname + window.location.search).toBe('/search?q=cebu')
-    expect(await screen.findByRole('heading', { level: 1, name: 'Results for “cebu”' })).toBeInTheDocument()
+    expect(window.location.pathname + window.location.search).toBe('/search?q=aura')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Results for “aura”' })).toBeInTheDocument()
   })
 
   it('is not offered to Staff, whose role has no search results screen', async () => {

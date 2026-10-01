@@ -22,6 +22,7 @@ import {
   type RoleCode,
 } from '@lanewise/shared'
 import type { ApiResponse } from './client'
+import { DEMO_NOW } from './mock-world'
 
 /**
  * In-memory `/notifications` and `/notification-preferences` for the mock API
@@ -44,63 +45,138 @@ interface Seed {
   readonly read?: boolean
 }
 
-const NOW = Date.parse('2026-10-03T10:00:00+08:00')
-const V3 = { objectType: 'scenario', objectId: 'scn-xmas-2026-v3', objectName: 'Christmas 2026 v3' } as const
-const V4 = { objectType: 'scenario', objectId: 'scn-xmas-2026-v4', objectName: 'Christmas 2026 v4' } as const
+const NOW = Date.parse(DEMO_NOW)
+const H = 60
+const D = 24 * H
+const scenario = (id: string, name: string) => ({ objectType: 'scenario', objectId: id, objectName: name }) as const
+const V3 = scenario('scn-xmas-2026-v3', 'Christmas 2026 v3')
+const V4 = scenario('scn-xmas-2026-v4', 'Christmas 2026 v4')
+const V5 = scenario('scn-xmas-2026-v5', 'Christmas 2026 v5 (what-if)')
+const FT5 = scenario('scn-xmas-2026-ft5', '5-day FT rule test')
+const BER = scenario('scn-ber-2026-v1', 'Ber months 2026 v1')
+const QC_ROSTER = { objectType: 'roster', objectId: 'ros-qc-main-2026-12-14', objectName: 'QC main lanes, week of Dec 14' } as const
 
-const OFFERS_DUE: Omit<Seed, 'id'> = { event: 'hiring.milestone_due', ...V3, ago: 60 * 48 }
+const OFFERS_DUE: Omit<Seed, 'id'> = { event: 'hiring.milestone_due', ...V3, objectName: 'Christmas 2026 v3 · Offers due Oct 5', ago: 2 * D }
+const MILESTONE_OVERDUE: Omit<Seed, 'id'> = { event: 'hiring.milestone_overdue', ...V3, objectName: 'Christmas 2026 v3 · PT requisition (Sep 30)', ago: 10 * H }
 const POS_LOADED: Omit<Seed, 'id'> = {
   event: 'ingestion.succeeded',
   objectType: 'ingestion_run',
   objectId: 'run-pos-0928',
-  objectName: 'pos_hourly_2026-09.csv',
+  objectName: 'POS hourly (47,548 rows)',
   params: { datasetType: 'pos', rows: 47_548, staleScenarios: 2 },
-  ago: 60 * 24 * 5,
+  ago: 3 * D - 4 * H,
+  read: true,
+}
+const POS_REJECTED: Omit<Seed, 'id'> = {
+  event: 'ingestion.failed',
+  objectType: 'ingestion_run',
+  objectId: 'run-pos-0927',
+  objectName: 'pos_hourly_aug-dec_2025.csv (112 errors)',
+  params: { datasetType: 'pos', errors: 112 },
+  ago: 4 * D,
   read: true,
 }
 const WAGES_PUBLISHED: Omit<Seed, 'id'> = {
   event: 'rule_version.published',
   objectType: 'rule_version',
-  objectId: 'rv-wages-2026-2',
-  objectName: 'Wage rates v2',
+  objectId: 'rv-wages-2',
+  objectName: 'Wage rates (by region) v2',
   params: { ruleSetId: 'rules-wages', version: 2 },
-  ago: 60 * 24 * 18,
+  ago: 103 * D,
   read: true,
 }
-const STALE_V4: Omit<Seed, 'id'> = { event: 'scenario.stale', ...V4, params: { reason: 'data_refreshed' }, ago: 60 * 24 * 5 }
-const UNFILLED: Omit<Seed, 'id'> = {
-  event: 'roster.unfilled_shifts',
-  objectType: 'roster',
-  objectId: 'roster-qc-main-dec14',
-  objectName: 'QC main lanes, Sat Dec 19',
-  params: { count: 2 },
-  ago: 90,
+const HOLIDAYS_PUBLISHED: Omit<Seed, 'id'> = {
+  event: 'rule_version.published',
+  objectType: 'rule_version',
+  objectId: 'rv-holidays-2',
+  objectName: 'Holiday calendar 2026 v2',
+  params: { ruleSetId: 'rules-holidays', version: 2 },
+  ago: 315 * D,
+  read: true,
 }
+const V3_PUBLISHED: Omit<Seed, 'id'> = { event: 'scenario.published', ...V3, ago: 13 * D, read: true }
+const V4_PAUSED: Omit<Seed, 'id'> = { event: 'scenario.paused', ...V4, ago: 3 * D - 4 * H, read: true }
+const V4_SECURED: Omit<Seed, 'id'> = { event: 'approval.secured', ...V4, params: { step: 'budget' }, ago: 17 * H + 30 }
+const V4_HEADCOUNT: Omit<Seed, 'id'> = { event: 'approval.decided', ...V4, params: { step: 'headcount', decision: 'approved' }, ago: D, read: true }
+const LANES_OVER: Omit<Seed, 'id'> = { event: 'plan.lane_capacity_exceeded', ...V4, objectName: 'Christmas 2026 v4 · Megamall main lanes, Dec 24', ago: 2 * D - 2 * H }
+const UNFILLED: Omit<Seed, 'id'> = { event: 'roster.unfilled_shifts', ...QC_ROSTER, objectName: 'QC main lanes, Sat Dec 19', params: { count: 2 }, ago: 90 }
 
 const SEEDS: Readonly<Record<RoleCode, readonly Omit<Seed, 'id'>[]>> = {
-  ADM: [OFFERS_DUE, WAGES_PUBLISHED],
-  EXE: [
-    { event: 'approval.plan_ready', ...V4, ago: 30 },
+  ADM: [
+    { event: 'passkey.added', objectType: 'passkey', objectId: 'pk-juan-2', objectName: null, ago: 3 * H },
+    POS_REJECTED,
     OFFERS_DUE,
-    { event: 'scenario.published', ...V3, ago: 60 * 24 * 20, read: true },
+    { ...WAGES_PUBLISHED, read: true },
+  ],
+  EXE: [
+    { event: 'approval.plan_ready', ...V4, ago: 17 * H + 30 },
+    MILESTONE_OVERDUE,
+    LANES_OVER,
+    OFFERS_DUE,
+    V4_HEADCOUNT,
+    V3_PUBLISHED,
+    { event: 'scenario.published', ...scenario('scn-xmas-2026-v2', 'Christmas 2026 v2'), ago: 20 * D, read: true },
   ],
   PLN: [
+    { event: 'scenario_run.completed', ...V4, ago: 2 * D - H },
+    V4_SECURED,
+    LANES_OVER,
+    { event: 'scenario.stale', ...V5, params: { reason: 'data_refreshed' }, ago: 3 * D - 4 * H },
+    { event: 'scenario.stale', ...FT5, params: { reason: 'data_refreshed' }, ago: 3 * D - 4 * H },
     OFFERS_DUE,
-    { event: 'scenario_run.completed', ...V4, ago: 60 * 3 },
     UNFILLED,
-    STALE_V4,
+    { event: 'offer.resolved', objectType: 'shift_offer', objectId: 'off-seed-4', objectName: null, params: { outcome: 'accepted', storeName: 'SM Supermarket – Megamall' }, ago: 66, read: true },
+    { event: 'borrow.decided', objectType: 'borrow_request', objectId: 'bor-nedsa-pasig', objectName: null, params: { outcome: 'approved', fromStore: 'SaveMore – Center Pasig' }, ago: 22 * H, read: true },
+    V4_HEADCOUNT,
+    { event: 'scenario_run.failed', ...FT5, ago: 7 * D + 2 * H, read: true },
     POS_LOADED,
+    POS_REJECTED,
+    V3_PUBLISHED,
+    { event: 'approval.decided', ...scenario('scn-xmas-2026-v1', 'Christmas 2026 v1'), params: { step: 'budget', decision: 'changes_requested' }, ago: 27 * D, read: true },
     WAGES_PUBLISHED,
   ],
-  STM: [OFFERS_DUE, UNFILLED, { event: 'scenario.published', ...V3, ago: 60 * 24 * 20, read: true }],
-  HR: [{ event: 'approval.headcount_requested', ...V4, ago: 45 }, OFFERS_DUE, WAGES_PUBLISHED],
-  FIN: [{ event: 'approval.budget_requested', ...V4, ago: 45 }, OFFERS_DUE, WAGES_PUBLISHED],
-  RST: [OFFERS_DUE, STALE_V4, POS_LOADED],
+  STM: [
+    UNFILLED,
+    { event: 'borrow.requested', objectType: 'borrow_request', objectId: 'bor-mega-qc', objectName: null, params: { fromStore: 'SM Supermarket – Quezon City', storeName: 'SM Supermarket – Megamall' }, ago: 3 * H },
+    { event: 'staff_request.submitted', objectType: 'staff_request', objectId: 'req-seed-3', objectName: null, params: { type: 'swap', employeeNo: 'PT-05', storeName: 'SM Supermarket – Quezon City' }, ago: 4 * H },
+    { event: 'staff_request.submitted', objectType: 'staff_request', objectId: 'req-seed-1', objectName: null, params: { type: 'time_off', employeeNo: 'PT-02', storeName: 'SM Supermarket – Quezon City' }, ago: 7 * H },
+    { event: 'staff_request.submitted', objectType: 'staff_request', objectId: 'req-seed-2', objectName: null, params: { type: 'time_off', employeeNo: 'PT-06', storeName: 'SM Supermarket – Quezon City' }, ago: 6 * H, read: true },
+    { event: 'offer.resolved', objectType: 'shift_offer', objectId: 'off-seed-3', objectName: null, params: { outcome: 'declined', storeName: 'SM Supermarket – Quezon City' }, ago: 5 },
+    { event: 'borrow.decided', objectType: 'borrow_request', objectId: 'bor-qc-mega', objectName: null, params: { outcome: 'declined', fromStore: 'SM Supermarket – Megamall' }, ago: 28 * H, read: true },
+    { event: 'roster.override_rule_breach', ...QC_ROSTER, params: { startsAt: '2026-12-17T08:00:00+08:00', rule: 'MIN_REST' }, ago: 2 * D, read: true },
+    { event: 'roster.published', ...QC_ROSTER, ago: 3 * D, read: true },
+    V3_PUBLISHED,
+  ],
+  HR: [
+    { event: 'approval.headcount_requested', ...BER, ago: 2 * D - 90 },
+    MILESTONE_OVERDUE,
+    OFFERS_DUE,
+    V4_SECURED,
+    V4_PAUSED,
+    V3_PUBLISHED,
+    WAGES_PUBLISHED,
+  ],
+  FIN: [
+    { event: 'approval.budget_requested', ...BER, ago: 2 * D - 90 },
+    V4_SECURED,
+    V4_HEADCOUNT,
+    V4_PAUSED,
+    OFFERS_DUE,
+    V3_PUBLISHED,
+    WAGES_PUBLISHED,
+  ],
+  RST: [
+    { ...POS_LOADED, read: false },
+    { ...POS_REJECTED, read: false },
+    OFFERS_DUE,
+    WAGES_PUBLISHED,
+    HOLIDAYS_PUBLISHED,
+  ],
   STF: [
     {
       event: 'shift.changed',
       objectType: 'shift_override',
-      objectId: 'ovr-pt02-dec19',
+      objectId: 'ovr-seed-1',
       objectName: null,
       params: { change: 'time_change', startsAt: '2026-12-19T12:00:00+08:00', endsAt: '2026-12-19T21:00:00+08:00' },
       ago: 20,
@@ -108,12 +184,14 @@ const SEEDS: Readonly<Record<RoleCode, readonly Omit<Seed, 'id'>[]>> = {
     {
       event: 'offer.sent',
       objectType: 'shift_offer',
-      objectId: 'offer-pt02-dec22',
+      objectId: 'off-seed-7',
       objectName: null,
-      params: { storeName: 'SM Supermarket – Quezon City', startsAt: '2026-12-22T15:00:00+08:00', expiresAt: '2026-12-20T15:00:00+08:00', travelMinutes: 18 },
-      ago: 60 * 5,
+      params: { storeName: 'SM Supermarket – Megamall', startsAt: '2026-12-20T13:00:00+08:00', travelMinutes: 22 },
+      ago: 6,
     },
-    { event: 'roster.published', objectType: 'roster', objectId: 'roster-qc-main-dec14', objectName: null, ago: 60 * 24 * 3, read: true },
+    { event: 'offer.resolved', objectType: 'shift_offer', objectId: 'off-seed-8', objectName: null, params: { outcome: 'accepted', storeName: 'SM Hypermarket – North EDSA' }, ago: 20 * H, read: true },
+    { event: 'staff_request.decided', objectType: 'staff_request', objectId: 'req-seed-4', objectName: null, params: { type: 'swap', outcome: 'declined' }, ago: 2 * D, read: true },
+    { event: 'roster.published', ...QC_ROSTER, objectName: null, ago: 3 * D, read: true },
   ],
 }
 

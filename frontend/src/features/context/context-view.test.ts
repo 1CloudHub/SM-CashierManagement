@@ -95,7 +95,7 @@ describe('P8 filter round-trip through the context bar', () => {
   })
 
   it('shows only the filters that apply to the screen', () => {
-    const everything = decodeViewState('scenario=scn-xmas-2026-v3&region=reg-luzon&format=savemore&store=st-lp&dept=st-lp-d1&date=2026-12-19&season=nov02-dec31')
+    const everything = decodeViewState('scenario=scn-xmas-2026-v3&region=reg-ncr-south&format=savemore&store=st-lp&dept=st-lp-d1&date=2026-12-19&season=nov02-dec31')
     const options: ContextOptions = {
       scenarios: MOCK_SCENARIOS,
       regions: MOCK_REGIONS,

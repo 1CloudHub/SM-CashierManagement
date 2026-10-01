@@ -24,6 +24,7 @@ import {
 } from '@lanewise/shared'
 import type { ApiResponse } from './client'
 import { mockStoreScope } from './mock-directory'
+import { STF_STAFF_ID, managerOf } from './mock-world'
 import type { MockRosterStore } from './mock-rosters'
 
 /**
@@ -37,7 +38,7 @@ import type { MockRosterStore } from './mock-rosters'
  * Sample data — simulated, not SM actuals.
  */
 
-const SELF = 'st-qc-pt02'
+const SELF = STF_STAFF_ID
 const addDaysIso = (date: IsoDate, days: number): IsoDate => new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10)
 /** Mock "now": the demo roster week (Dec 14–20, 2026) is in the future. */
 const MOCK_TODAY: IsoDate = '2026-12-10'
@@ -109,6 +110,60 @@ export function createSelfServiceStore(rosters: MockRosterStore, now: () => Date
       targetStaffId: null,
       decidedAt: null,
       decidedBy: null,
+      decisionNote: null,
+    },
+    {
+      // Guy Hapin offers his Sat evening express shift for the open Tue express shift (wireframe SCR-022).
+      id: 'req-seed-3',
+      staffId: 'st-qc-pt05',
+      type: 'swap',
+      status: 'pending',
+      createdAt: '2026-12-09T05:30:00.000Z',
+      dateFrom: null,
+      dateTo: null,
+      reason: null,
+      note: 'Class on Saturday',
+      offeredShiftId: 'st-qc-pt05-2026-12-19',
+      targetShiftId: 'open-qc-2026-12-15',
+      targetStaffId: null,
+      decidedAt: null,
+      decidedBy: null,
+      decisionNote: null,
+    },
+    {
+      // Juan's earlier swap, declined (wireframe SCR-025 "need cover Sat").
+      id: 'req-seed-4',
+      staffId: SELF,
+      type: 'swap',
+      status: 'declined',
+      createdAt: '2026-12-08T09:00:00.000Z',
+      dateFrom: null,
+      dateTo: null,
+      reason: null,
+      note: null,
+      offeredShiftId: 'st-qc-pt02-2026-12-19',
+      targetShiftId: 'open-qc-2026-12-15',
+      targetStaffId: null,
+      decidedAt: '2026-12-08T11:00:00.000Z',
+      decidedBy: managerOf('st-qc')?.name ?? 'Store manager',
+      decisionNote: 'Need cover on Saturday.',
+    },
+    {
+      // Marites Dizon's approved leave for a family event.
+      id: 'req-seed-5',
+      staffId: 'st-qc-ft12',
+      type: 'time_off',
+      status: 'approved',
+      createdAt: '2026-12-02T01:00:00.000Z',
+      dateFrom: '2026-12-31',
+      dateTo: '2026-12-31',
+      reason: 'family',
+      note: 'New Year’s Eve with family',
+      offeredShiftId: null,
+      targetShiftId: null,
+      targetStaffId: null,
+      decidedAt: '2026-12-03T02:00:00.000Z',
+      decidedBy: managerOf('st-qc')?.name ?? 'Store manager',
       decisionNote: null,
     },
   ]

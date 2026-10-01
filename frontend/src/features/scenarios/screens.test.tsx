@@ -26,14 +26,14 @@ describe('SCR-030 Scenario list', () => {
     // The "+" glyph is decorative: the button is named by its text only.
     expect(screen.getByRole('button', { name: 'New scenario' })).toBeInTheDocument()
     expect(screen.getByRole('search', { name: 'Filter scenarios' })).toBeInTheDocument()
-    const v4 = await rowOf('Christmas 2026 v4')
+    const v4 = await rowOf('Christmas 2026 v5 (what-if)')
     expect(within(v4).getByText('Stale')).toBeInTheDocument()
     // A stale draft shows Submit disabled with the reason, plus Recalculate and Archive; no redundant Open.
-    const submit = within(v4).getByRole('button', { name: 'Submit: Christmas 2026 v4' })
+    const submit = within(v4).getByRole('button', { name: 'Submit: Christmas 2026 v5 (what-if)' })
     expect(submit).toBeDisabled()
     expect(submit).toHaveAccessibleDescription('Recalculate first: this scenario is stale.')
-    expect(within(v4).getByRole('button', { name: 'Recalculate: Christmas 2026 v4' })).toBeInTheDocument()
-    expect(within(v4).getByRole('button', { name: 'Archive: Christmas 2026 v4' })).toBeInTheDocument()
+    expect(within(v4).getByRole('button', { name: 'Recalculate: Christmas 2026 v5 (what-if)' })).toBeInTheDocument()
+    expect(within(v4).getByRole('button', { name: 'Archive: Christmas 2026 v5 (what-if)' })).toBeInTheDocument()
     expect(within(v4).queryByRole('button', { name: /^Open/ })).toBeNull()
     // Published scenarios can't be archived.
     expect(within(v3).queryByRole('button', { name: /^Archive/ })).toBeNull()
@@ -44,24 +44,24 @@ describe('SCR-030 Scenario list', () => {
   it('recalculates a stale draft from its row', async () => {
     const user = userEvent.setup()
     const { log } = renderApp({ path: '/scenarios', role: 'PLN' })
-    const v4 = await rowOf('Christmas 2026 v4')
-    await user.click(within(v4).getByRole('button', { name: 'Recalculate: Christmas 2026 v4' }))
-    expect(await screen.findByText('“Christmas 2026 v4” recalculated')).toBeInTheDocument()
+    const v4 = await rowOf('Christmas 2026 v5 (what-if)')
+    await user.click(within(v4).getByRole('button', { name: 'Recalculate: Christmas 2026 v5 (what-if)' }))
+    expect(await screen.findByText('“Christmas 2026 v5 (what-if)” recalculated')).toBeInTheDocument()
     expect(log.some((r) => r.method === 'POST' && r.path.endsWith('/run'))).toBe(true)
-    await waitFor(async () => expect(within(await rowOf('Christmas 2026 v4')).queryByText('Stale')).toBeNull())
+    await waitFor(async () => expect(within(await rowOf('Christmas 2026 v5 (what-if)')).queryByText('Stale')).toBeNull())
   })
 
   it('asks before archiving', async () => {
     const user = userEvent.setup()
     const { log } = renderApp({ path: '/scenarios', role: 'PLN' })
-    const v4 = await rowOf('Christmas 2026 v4')
-    await user.click(within(v4).getByRole('button', { name: 'Archive: Christmas 2026 v4' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Archive “Christmas 2026 v4”?' })
+    const v4 = await rowOf('Christmas 2026 v5 (what-if)')
+    await user.click(within(v4).getByRole('button', { name: 'Archive: Christmas 2026 v5 (what-if)' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Archive “Christmas 2026 v5 (what-if)”?' })
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }))
     expect(log.some((r) => r.path.endsWith('/archive'))).toBe(false)
-    await user.click(within(v4).getByRole('button', { name: 'Archive: Christmas 2026 v4' }))
+    await user.click(within(v4).getByRole('button', { name: 'Archive: Christmas 2026 v5 (what-if)' }))
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Archive scenario' }))
-    expect(await screen.findByText('“Christmas 2026 v4” archived')).toBeInTheDocument()
+    expect(await screen.findByText('“Christmas 2026 v5 (what-if)” archived')).toBeInTheDocument()
     expect(log.filter((r) => r.path.endsWith('/archive'))).toHaveLength(1)
   })
 
@@ -83,7 +83,7 @@ describe('SCR-030 Scenario list', () => {
     await userEvent.click(screen.getByRole('checkbox', { name: 'Stale only' }))
     expect(window.location.search).toBe('?stale=true')
     await waitFor(() => expect(screen.queryByRole('link', { name: 'Christmas 2026 v3' })).toBeNull())
-    expect(screen.getByRole('link', { name: 'Christmas 2026 v4' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Christmas 2026 v5 (what-if)' })).toBeInTheDocument()
   })
 
   it('filters by owner and offers Clear filters when nothing matches', async () => {
@@ -184,10 +184,10 @@ describe('SCR-030 Scenario list', () => {
 describe('SCR-031 Scenario settings', () => {
   it('shows a stale draft with reasons; Recalculate runs it and unblocks Submit', async () => {
     const user = userEvent.setup()
-    const { container } = renderApp({ path: '/scenarios/scn-xmas-2026-v4/settings', role: 'PLN' })
-    expect(await screen.findByRole('heading', { level: 1, name: 'Christmas 2026 v4' })).toBeInTheDocument()
+    const { container } = renderApp({ path: '/scenarios/scn-xmas-2026-v5/settings', role: 'PLN' })
+    expect(await screen.findByRole('heading', { level: 1, name: 'Christmas 2026 v5 (what-if)' })).toBeInTheDocument()
     expect(screen.getByText('A newer data snapshot has been loaded')).toBeInTheDocument()
-    expect(screen.getByLabelText('Volume growth (%)')).toHaveValue(8)
+    expect(screen.getByLabelText('Volume growth (%)')).toHaveValue(12)
     expect(screen.getByRole('button', { name: 'Submit for approval' })).toBeDisabled()
     expect(screen.getByText('Recalculate first: this scenario is stale.')).toBeInTheDocument()
     expect(await axe(container)).toHaveNoViolations()
@@ -200,8 +200,8 @@ describe('SCR-031 Scenario settings', () => {
   })
 
   it('has a section nav, fieldsets per section and a rules and data summary with links', async () => {
-    renderApp({ path: '/scenarios/scn-xmas-2026-v4/settings', role: 'PLN' })
-    await screen.findByRole('heading', { level: 1, name: 'Christmas 2026 v4' })
+    renderApp({ path: '/scenarios/scn-xmas-2026-v5/settings', role: 'PLN' })
+    await screen.findByRole('heading', { level: 1, name: 'Christmas 2026 v5 (what-if)' })
     const nav = screen.getByRole('navigation', { name: 'Settings sections' })
     expect(within(nav).getByRole('link', { name: 'Demand' })).toHaveAttribute('href', '#scn-demand')
     expect(within(nav).getByRole('link', { name: 'Labor rules (roster)' })).toHaveAttribute('href', '#scn-labor')
@@ -217,7 +217,7 @@ describe('SCR-031 Scenario settings', () => {
 
   it('edits an override: marks it edited against the rule default and saves it', async () => {
     const user = userEvent.setup()
-    const { log } = renderApp({ path: '/scenarios/scn-xmas-2026-v4/settings', role: 'PLN' })
+    const { log } = renderApp({ path: '/scenarios/scn-xmas-2026-v5/settings', role: 'PLN' })
     const days = await screen.findByLabelText('FT max days / week')
     expect(days).toHaveValue(null)
     expect(days).toHaveAccessibleDescription('Default 6')
@@ -236,7 +236,7 @@ describe('SCR-031 Scenario settings', () => {
 
   it('validates a field when it loses focus and on save', async () => {
     const user = userEvent.setup()
-    const { log } = renderApp({ path: '/scenarios/scn-xmas-2026-v4/settings', role: 'PLN' })
+    const { log } = renderApp({ path: '/scenarios/scn-xmas-2026-v5/settings', role: 'PLN' })
     const growth = await screen.findByLabelText('Volume growth (%)')
     await user.clear(growth)
     await user.type(growth, '300')
@@ -255,7 +255,7 @@ describe('SCR-031 Scenario settings', () => {
 
   it('submits the form with Enter', async () => {
     const user = userEvent.setup()
-    const { log } = renderApp({ path: '/scenarios/scn-xmas-2026-v4/settings', role: 'PLN' })
+    const { log } = renderApp({ path: '/scenarios/scn-xmas-2026-v5/settings', role: 'PLN' })
     const growth = await screen.findByLabelText('Volume growth (%)')
     await user.clear(growth)
     await user.type(growth, '9{Enter}')
@@ -265,22 +265,22 @@ describe('SCR-031 Scenario settings', () => {
 
   it('confirms before discarding edits', async () => {
     const user = userEvent.setup()
-    renderApp({ path: '/scenarios/scn-xmas-2026-v4/settings', role: 'PLN' })
+    renderApp({ path: '/scenarios/scn-xmas-2026-v5/settings', role: 'PLN' })
     const growth = await screen.findByLabelText('Volume growth (%)')
     await user.clear(growth)
-    await user.type(growth, '12')
+    await user.type(growth, '15')
     await user.click(screen.getByRole('button', { name: 'Discard changes' }))
     const dialog = await screen.findByRole('dialog', { name: 'Discard changes?' })
     await user.click(within(dialog).getByRole('button', { name: 'Keep editing' }))
-    expect(growth).toHaveValue(12)
+    expect(growth).toHaveValue(15)
     await user.click(screen.getByRole('button', { name: 'Discard changes' }))
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Discard changes' }))
-    expect(growth).toHaveValue(8)
+    expect(growth).toHaveValue(12)
   })
 
   it('warns before the browser leaves with unsaved edits', async () => {
     const user = userEvent.setup()
-    renderApp({ path: '/scenarios/scn-xmas-2026-v4/settings', role: 'PLN' })
+    renderApp({ path: '/scenarios/scn-xmas-2026-v5/settings', role: 'PLN' })
     const growth = await screen.findByLabelText('Volume growth (%)')
     const unload = () => {
       const e = new Event('beforeunload', { cancelable: true })
@@ -326,26 +326,26 @@ describe('SCR-032 Compare', () => {
 
   it('compares A and the published B: headline table, settings diff and grouped by-store, and passes axe', async () => {
     const user = userEvent.setup()
-    const { container } = renderApp({ path: '/scenarios/compare?a=scn-xmas-2026-v4', role: 'PLN' })
-    await waitFor(() => expect(window.location.search).toBe('?a=scn-xmas-2026-v4&b=scn-xmas-2026-v3'))
+    const { container } = renderApp({ path: '/scenarios/compare?a=scn-xmas-2026-v5', role: 'PLN' })
+    await waitFor(() => expect(window.location.search).toBe('?a=scn-xmas-2026-v5&b=scn-xmas-2026-v3'))
     const headline = await screen.findByRole('table', { name: 'Headline differences' })
     for (const name of ['Seasonal hires', 'Peak-season team', 'Season cost', 'First needed by']) {
       expect(within(headline).getByRole('rowheader', { name })).toBeInTheDocument()
     }
     const team = within(headline).getByRole('rowheader', { name: 'Peak-season team' }).closest('tr')!
-    expect(within(team).getAllByRole('cell').map((c) => c.textContent)).toEqual(['142', '132', '-10'])
+    expect(within(team).getAllByRole('cell').map((c) => c.textContent)).toEqual(['570', '534', '-36'])
     const settings = screen.getByRole('table', { name: 'Settings that differ' })
     const growth = within(settings).getByRole('rowheader', { name: 'Volume growth (%)' }).closest('tr')!
-    expect(within(growth).getByText('+8 %')).toBeInTheDocument()
+    expect(within(growth).getByText('+12 %')).toBeInTheDocument()
     expect(within(growth).getByText('+5 %')).toBeInTheDocument()
     const byStore = screen.getByRole('table', { name: 'By store' })
     expect(within(byStore).getByRole('columnheader', { name: 'Seasonal hires' })).toHaveAttribute('scope', 'colgroup')
     expect(within(byStore).getByRole('columnheader', { name: 'Season cost' })).toHaveAttribute('scope', 'colgroup')
     expect(await axe(container)).toHaveNoViolations()
     // A can't be picked as B, and Swap exchanges them.
-    expect(within(screen.getByLabelText('Scenario B')).getByRole('option', { name: /Christmas 2026 v4/ })).toBeDisabled()
+    expect(within(screen.getByLabelText('Scenario B')).getByRole('option', { name: /Christmas 2026 v5 \(what-if\)/ })).toBeDisabled()
     await user.click(screen.getByRole('button', { name: 'Swap' }))
-    expect(window.location.search).toBe('?a=scn-xmas-2026-v3&b=scn-xmas-2026-v4')
+    expect(window.location.search).toBe('?a=scn-xmas-2026-v3&b=scn-xmas-2026-v5')
   })
 
   it('asks for two different scenarios when A and B are the same', async () => {

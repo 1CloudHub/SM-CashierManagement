@@ -25,7 +25,8 @@ import {
   type Weekday,
 } from '@lanewise/shared'
 import type { ApiResponse } from './client'
-import { MOCK_DEPARTMENTS, MOCK_REGIONS, MOCK_STAFF, MOCK_STORES, mockStoreScope } from './mock-directory'
+import { MOCK_DEPARTMENTS, MOCK_REGIONS, MOCK_STORES, mockStoreScope } from './mock-directory'
+import { WORLD_STAFF, barangayByCode, departmentById, staffById, type WorldAvailability, type WorldStaff } from './mock-world'
 
 /**
  * In-memory master data for the mock API: SCR-052 stores, departments and
@@ -48,20 +49,23 @@ interface MockStore {
   active: boolean
 }
 
-const LANES: Readonly<Record<string, { lanes: number; aht: number }>> = {
-  'Main checkout lanes': { lanes: 30, aht: 2.5 },
-  'Express lanes': { lanes: 11, aht: 1.2 },
-  'Customer service': { lanes: 4, aht: 3 },
+/** Weekly availability by the world's pattern kind (wireframe SCR-053 "Availability pattern"). */
+const AVAILABILITY: Readonly<Record<WorldAvailability, WeeklyAvailability>> = {
+  any: FULL_AVAILABILITY,
+  student: {
+    ...FULL_AVAILABILITY,
+    mon: ['afternoon', 'evening'],
+    tue: ['afternoon', 'evening'],
+    wed: ['afternoon', 'evening'],
+    thu: ['afternoon', 'evening'],
+    fri: ['afternoon', 'evening'],
+  },
+  evenings: Object.fromEntries(WEEKDAYS.map((d) => [d, ['evening']])) as unknown as WeeklyAvailability,
+  weekends: { ...Object.fromEntries(WEEKDAYS.map((d) => [d, []])), sat: [...AVAILABILITY_WINDOWS], sun: [...AVAILABILITY_WINDOWS] } as unknown as WeeklyAvailability,
+  no_sundays: { ...FULL_AVAILABILITY, sun: [] },
 }
 
-const STUDENT: WeeklyAvailability = {
-  ...FULL_AVAILABILITY,
-  mon: ['afternoon', 'evening'],
-  tue: ['afternoon', 'evening'],
-  wed: ['afternoon', 'evening'],
-  thu: ['afternoon', 'evening'],
-  fri: ['afternoon', 'evening'],
-}
+const STAFF_TYPE: Readonly<Record<WorldStaff['contract'], StaffType>> = { FT: 'full_time', PT: 'part_time', FLOAT: 'float' }
 
 const MISSING = 'This item doesn’t exist or you don’t have access to it.'
 
@@ -99,30 +103,27 @@ export function createMasterDataStore() {
     id: d.id,
     storeId: d.storeId,
     name: d.name,
-    installedLanes: LANES[d.name]?.lanes ?? 6,
-    defaultHandleTimeMin: LANES[d.name]?.aht ?? 2,
+    installedLanes: departmentById(d.id)?.installedLanes ?? 6,
+    defaultHandleTimeMin: departmentById(d.id)?.handleTimeMin ?? 2,
     tradingHours: { open: '09:00', close: '22:00' },
     active: true,
     synthetic: true,
   }))
-  const staff: Mutable<StaffRecord>[] = MOCK_STAFF.map((m) => {
-    const partTime = m.employeeNo.startsWith('PT')
-    return {
-      id: m.id,
-      employeeNo: m.employeeNo,
-      name: m.name,
-      type: partTime ? 'part_time' : 'full_time',
-      storeId: m.storeId,
-      storeName: MOCK_STORES.find((s) => s.id === m.storeId)?.name ?? '',
-      departmentId: m.departmentId,
-      departmentName: MOCK_DEPARTMENTS.find((d) => d.id === m.departmentId)?.name ?? '',
-      preferredRestDay: partTime ? null : 'mon',
-      availability: partTime ? STUDENT : FULL_AVAILABILITY,
-      unavailableDates: partTime ? [{ id: `${m.id}-u1`, date: '2026-12-14', reason: 'Exam', source: 'manual' as const }] : [],
-      active: true,
-      synthetic: true,
-    }
-  })
+  const staff: Mutable<StaffRecord>[] = WORLD_STAFF.map((m) => ({
+    id: m.id,
+    employeeNo: m.employeeNo,
+    name: m.name,
+    type: STAFF_TYPE[m.contract],
+    storeId: m.storeId,
+    storeName: MOCK_STORES.find((s) => s.id === m.storeId)?.name ?? '',
+    departmentId: m.departmentId,
+    departmentName: MOCK_DEPARTMENTS.find((d) => d.id === m.departmentId)?.name ?? '',
+    preferredRestDay: m.preferredRestDay,
+    availability: AVAILABILITY[m.availability],
+    unavailableDates: m.unavailable.map((u, i) => ({ id: `${m.id}-u${i + 1}`, date: u.date, reason: u.reason, source: 'manual' as const })),
+    active: m.active,
+    synthetic: true,
+  }))
   let seq = 0
   const nextId = (prefix: string) => `${prefix}-new-${(seq += 1)}`
 
@@ -337,9 +338,12 @@ export function createMasterDataStore() {
   function homeArea(role: RoleCode, id: string): ApiResponse {
     const record = reach(role, id, 'staff_home_area', 'view')
     if (isResponse(record)) return record
-    const body: StaffHomeAreaResponse = record.employeeNo.startsWith('PT')
-      ? { staffId: id, shared: true, barangay: { code: '137404001', name: 'Bagong Pag-asa', city: 'Quezon City' }, maxTravelMin: 45, crossStoreOffers: true }
-      : { staffId: id, shared: false }
+    const world = staffById(id)
+    const area = world?.homeArea ? barangayByCode(world.homeArea) : undefined
+    const body: StaffHomeAreaResponse =
+      world && area
+        ? { staffId: id, shared: true, barangay: { code: area.code, name: area.name, city: area.city }, maxTravelMin: world.maxTravelMin, crossStoreOffers: world.crossStoreOffers }
+        : { staffId: id, shared: false }
     return ok(body)
   }
 

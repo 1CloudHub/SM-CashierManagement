@@ -2,7 +2,8 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { axe } from 'vitest-axe'
-import { ACTIVE_ROLE_HEADER } from '@/api'
+import { ACTIVE_ROLE_HEADER, createApiClient, createMockAdapter } from '@/api'
+import { createApprovalsClient } from './api'
 import { renderApp, useLaptopViewport } from '@/test/app'
 
 beforeEach(() => useLaptopViewport())
@@ -17,7 +18,6 @@ describe('SCR-033 Approval review — queue', () => {
     const link = await screen.findByRole('link', { name: 'Ber months 2026 v1' })
     const row = link.closest('tr')!
     expect(within(row).getByText('Awaiting you')).toBeInTheDocument()
-    expect(within(row).getByText('Approved')).toBeInTheDocument()
     expect(log.find((r) => r.path.startsWith('/approvals'))?.headers[ACTIVE_ROLE_HEADER]).toBe('FIN')
     expect(await axe(container)).toHaveNoViolations()
     await userEvent.click(link)
@@ -36,7 +36,6 @@ describe('SCR-033 Approval review — decisions', () => {
     const user = userEvent.setup()
     const { container } = renderApp({ path: REVIEW, role: 'FIN' })
     expect(await screen.findByRole('heading', { level: 1, name: 'Review: Ber months 2026 v1' })).toBeInTheDocument()
-    expect(tracker().getByText('L. Tan (HR), Sep 30, 2026, 10:00 AM')).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Budget (your step)' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Headcount (your step)' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Approve and publish plan' })).toBeNull()
@@ -52,7 +51,10 @@ describe('SCR-033 Approval review — decisions', () => {
 
   it('the Executive records budget outside the system, then approves and publishes (P10)', async () => {
     const user = userEvent.setup()
-    const { container } = renderApp({ path: REVIEW, role: 'EXE' })
+    // HR has approved the headcount; the budget is what the Executive records outside the system.
+    const adapter = createMockAdapter()
+    await createApprovalsClient(createApiClient({ adapter, getActiveRole: () => 'HR' })).decide('scn-ber-2026-v1', 'headcount', { decision: 'approve' })
+    const { container } = renderApp({ path: REVIEW, role: 'EXE', adapter })
     const publish = await screen.findByRole('button', { name: 'Approve and publish plan' })
     expect(publish).toBeDisabled()
     expect(screen.getByText('Plan buttons stay disabled until headcount and budget are both secured.')).toBeInTheDocument()
@@ -85,6 +87,7 @@ describe('SCR-033 Approval review — decisions', () => {
     const user = userEvent.setup()
     renderApp({ path: '/approvals?scenario=scn-xmas-2026-v3', role: 'HR' })
     expect(await screen.findByRole('heading', { level: 1, name: 'Review: Christmas 2026 v3' })).toBeInTheDocument()
+    expect(tracker().getByText('L. Tan (HR), Sep 17, 2026, 10:00 AM')).toBeInTheDocument()
     // Published: the tracker is read-only.
     expect(screen.queryByRole('region', { name: 'Your decision' })).toBeNull()
     await user.click(screen.getByRole('link', { name: 'All approvals' }))
