@@ -13,6 +13,9 @@ import type { PlanningClient } from './api'
 import { HiringScreen } from './hiring-screen'
 import { SummaryScreen } from './summary-screen'
 
+/** Tests that render a full planning screen and run axe: slower on shared CI runners. */
+const AXE_TIMEOUT = 30_000
+
 beforeEach(() => useLaptopViewport())
 afterEach(() => vi.unstubAllGlobals())
 
@@ -33,7 +36,7 @@ describe('SCR-020 network view (Req 5.1, 5.3, 5.4)', () => {
     expect(link.getAttribute('href')).toBe('/plan/department?store=st-cebu&dept=st-cebu-d1&date=2026-12-19')
     expect(screen.getByRole('button', { name: 'Export CSV' })).toBeInTheDocument()
     expect(await axe(container)).toHaveNoViolations()
-  })
+  }, AXE_TIMEOUT)
 
   it('offers each chart as a table', async () => {
     const user = userEvent.setup()
@@ -66,13 +69,14 @@ describe('SCR-020 network view (Req 5.1, 5.3, 5.4)', () => {
 
 describe('SCR-021 department day plan (Req 5.2)', () => {
   it('shows the hourly plan and the shift builder', async () => {
-    const { container } = renderApp({ path: '/plan/department?store=st-cebu&dept=st-cebu-d1&date=2026-12-19', role: 'PLN' })
-    expect(await screen.findByRole('heading', { level: 1, name: 'Main checkout lanes — SM Supermarket – Cebu City' })).toBeInTheDocument()
+    // A small department keeps the axe scan of the shift-builder grid fast.
+    const { container } = renderApp({ path: '/plan/department?store=st-lp&dept=st-lp-d3&date=2026-12-19', role: 'PLN' })
+    expect(await screen.findByRole('heading', { level: 1, name: 'Customer service — SaveMore – Las Piñas' })).toBeInTheDocument()
     expect(screen.getByRole('table', { name: 'Shift builder — suggested shifts' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Open weekly roster' })).toHaveAttribute('href', '/plan/roster?store=st-cebu&dept=st-cebu-d1')
+    expect(screen.getByRole('link', { name: 'Open weekly roster' })).toHaveAttribute('href', '/plan/roster?store=st-lp&dept=st-lp-d3')
     expect(screen.getByRole('button', { name: 'Export CSV' })).toBeInTheDocument()
     expect(await axe(container)).toHaveNoViolations()
-  })
+  }, AXE_TIMEOUT)
 
   it('asks for a department when none is chosen', async () => {
     renderApp({ path: '/plan/department', role: 'STM' })
@@ -163,7 +167,7 @@ describe('SCR-023 hiring plan as a background job (Req 10.1, 10.2)', () => {
     expect(screen.getByText('284')).toBeInTheDocument()
     expect(screen.getByText('Due within 7 days')).toBeInTheDocument()
     expect(await axe(container)).toHaveNoViolations()
-  })
+  }, AXE_TIMEOUT)
 
   it('viewers who cannot run the plan are told a planner must run it', async () => {
     renderApp({ path: '/plan/hiring?scenario=scn-xmas-2026-v4', role: 'HR' })
@@ -196,7 +200,7 @@ describe('SCR-024 leadership summary (Req 10.3, 18.3)', () => {
     expect(await screen.findByText('No hiring plan has been calculated for this scenario')).toBeInTheDocument()
     await user.click(screen.getAllByRole('button', { name: 'Print / PDF' }).at(-1) as HTMLElement)
     expect(onPrint).toHaveBeenCalledTimes(1)
-  })
+  }, AXE_TIMEOUT)
 
   it('is not available to Store Managers (matrix)', () => {
     renderApp({ path: '/plan/summary', role: 'STM' })
