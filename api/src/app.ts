@@ -29,7 +29,6 @@ import { registerRuleRoutes } from './routes/rules.js';
 import { registerScenarioRoutes } from './routes/scenarios.js';
 import { registerStaffRoutes } from './routes/staff.js';
 import { registerStaffSelfServiceRoutes } from './routes/staff-self-service.js';
-import { registerStaffRoutes } from './routes/staff.js';
 import { registerStoreRoutes } from './routes/stores.js';
 
 export interface AppDeps {

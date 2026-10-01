@@ -12,7 +12,7 @@ related: [NFR-001, DOM-001, TS-002, SEC-002, DEP-002]
 
 > **Purpose:** Records how LaneWise was verified against journeys J1–J11, correctness properties P1–P19, the DOM-001 parity suite and the NFR performance targets, with the results, the bugs fixed along the way and the gaps left as follow-ups.
 
-Verified on branch `feat/task-25-e2e-verification`. That branch is `main` (through #47, task 18) plus the open branches `fix/ui-data-rules-review` (#44) and `feat/admin-screens` (#45). Run date: 2026-10-01.
+Verified on branch `feat/task-25-e2e-verification`: `main` through #50, which includes task 18 (#47), the data and rules screen review (#44) and the admin screens (#45). Run date: 2026-10-01.
 
 ## How to reproduce
 
@@ -135,7 +135,6 @@ No sign-in was attempted, no account was created, and no credentials were used.
 
 | Area | Fix |
 |---|---|
-| shared | `CreateStaffRequest` was exported by both master data and self-service, so the shared package failed to build once both branches merged. The master-data type is now `CreateStaffRecordRequest`. |
 | api (demo) | None of the seeded rule-version payloads passed the rule API's validation, so "New draft" from a seeded version answered 422 and blocked J6. |
 | api (auth) | The demo role switcher defaults named a store code and cashier the seed doesn't create (`smsm-qc`, `PT-02`). As a result, Store Manager had an empty scope and Staff had no cashier, including on the deployed demo. |
 | frontend (a11y) | Overflowing table wrappers were not keyboard-focusable (axe `scrollable-region-focusable`). |

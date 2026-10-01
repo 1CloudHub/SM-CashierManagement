@@ -20,7 +20,6 @@ import { createOfferStore } from './mock-offers'
 import { createNotificationStore } from './mock-notifications'
 import { createSelfServiceStore } from './mock-self-service'
 import { createRosterStore } from './mock-rosters'
-import { createMasterDataStore } from './mock-master-data'
 import { createAdminStore } from './mock-admin'
 import { createScenarioStore } from './mock-scenarios'
 import { createSavedViewStore, mockContextOptions, mockSearch, type MockResult } from './mock-directory'
@@ -258,7 +257,6 @@ export function createMockAdapter({ latencyMs = 0, log }: MockAdapterOptions = {
   const rosters = createRosterStore()
   const offerStore = createOfferStore(rosters)
   const selfService = createSelfServiceStore(rosters)
-  const masterData = createMasterDataStore()
   const admin = createAdminStore()
   return async (request) => {
     log?.push(request)
