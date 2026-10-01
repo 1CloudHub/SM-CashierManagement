@@ -11,6 +11,7 @@ import { dispatchPendingEmails } from './notifications/dispatch.js';
 import { createSesSender, type EmailSender } from './notifications/email.js';
 import { healthHandler } from './routes/health.js';
 import { registerIngestionRoutes } from './routes/ingestion.js';
+import { registerLocationPrivacyRoutes } from './routes/location-privacy.js';
 import { registerMeRoutes } from './routes/me.js';
 import { registerNotificationRoutes } from './routes/notifications.js';
 import { registerSavedViewRoutes } from './routes/saved-views.js';
@@ -105,6 +106,7 @@ export function createApp(deps: AppDeps = depsFromEnv()): Router {
   registerIngestionRoutes(router, deps);
   registerRuleRoutes(router, deps);
   registerScenarioRoutes(router, deps);
+  registerLocationPrivacyRoutes(router, deps);
   registerNotificationRoutes(router, deps);
   return router.assertGuarded();
 }
