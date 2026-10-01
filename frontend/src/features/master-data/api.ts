@@ -8,7 +8,7 @@
  */
 import type {
   AddUnavailableDateRequest,
-  CreateStaffRequest,
+  CreateStaffRecordRequest,
   CreateStoreRequest,
   DepartmentSummary,
   StaffListQuery,
@@ -29,7 +29,7 @@ export interface MasterDataClient {
   updateStore(storeId: string, input: UpdateStoreRequest): Promise<StoreWithDepartments>
   updateDepartment(departmentId: string, input: UpdateDepartmentRequest): Promise<DepartmentSummary>
   listStaff(query?: StaffListQuery): Promise<StaffListResponse>
-  createStaff(input: CreateStaffRequest): Promise<StaffRecord>
+  createStaff(input: CreateStaffRecordRequest): Promise<StaffRecord>
   updateStaff(staffId: string, input: UpdateStaffRequest): Promise<StaffRecord>
   setAvailability(staffId: string, availability: WeeklyAvailability): Promise<StaffRecord>
   addUnavailableDate(staffId: string, input: AddUnavailableDateRequest): Promise<StaffRecord>
