@@ -89,6 +89,11 @@ describe('Data stack — network', () => {
     }
   });
 
+  it('reaches the SES API through a VPC endpoint so notification email works without NAT (task 19)', () => {
+    expect(prod.data.interfaceEndpoints).toContain('email');
+    expect(prod.data.natGateways).toBe(0);
+  });
+
   it('resolves availability zones at deploy time (no synth-time lookup)', () => {
     data.hasResourceProperties('AWS::EC2::Subnet', {
       AvailabilityZone: { 'Fn::Select': [0, { 'Fn::GetAZs': '' }] },

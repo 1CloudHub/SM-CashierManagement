@@ -226,7 +226,9 @@ export const environments: Record<EnvName, EnvironmentConfig> = {
     data: {
       maxAzs: 2,
       natGateways: 0,
-      interfaceEndpoints: ['secretsmanager', 'sqs', 'geo.routes'],
+      // `email`: the SES API, so the API Lambda (isolated subnets, no NAT) can
+      // send notification email (task 19).
+      interfaceEndpoints: ['secretsmanager', 'sqs', 'geo.routes', 'email'],
       // The pinned aws-cdk-lib (2.170.0) accepts 0.5 ACU at minimum; scale to
       // zero (0 ACU + auto-pause) needs a newer CDK — see infra/README.md.
       minCapacity: 0.5,
