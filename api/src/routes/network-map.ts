@@ -24,12 +24,13 @@ import { errors } from '../http/errors.js';
 import type { Router } from '../http/router.js';
 import type { RoutedRequest } from '../http/types.js';
 import { parseInput } from '../http/validation.js';
-import { publishedRosterGaps, type NetworkGapsSource } from '../network-map/gaps.js';
+import type { NetworkGapsSource } from '../network-map/gaps.js';
+import { networkViewGaps } from '../network-map/network-view-gaps.js';
 import { autoMatchProposal, networkMap, storeCandidates } from '../network-map/service.js';
 
 export interface NetworkMapDeps {
   readonly db: () => pg.Pool;
-  /** Gap/surplus source; the published-roster source until task 14's network view backs it. */
+  /** Gap/surplus source; defaults to the task 14 network view (falling back to published rosters). */
   readonly gapsSource?: NetworkGapsSource;
 }
 
@@ -74,7 +75,7 @@ function scopeOf(context: RequestContext) {
 }
 
 export function registerNetworkMapRoutes(router: Router, deps: NetworkMapDeps): Router {
-  const source = deps.gapsSource ?? publishedRosterGaps;
+  const source = deps.gapsSource ?? networkViewGaps;
   return router
     .get('/network-map', authorize('network_map', 'view'), async (request, context) => {
       const scope = scopeOf(context);

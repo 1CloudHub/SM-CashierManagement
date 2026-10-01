@@ -26,6 +26,7 @@ import {
   assertNetworkMapPrivacy,
   staffingStatus,
   type AutoMatchResponse,
+  type GapsSourceKind,
   type ExcludedMapCandidate,
   type MapCandidate,
   type MapStorePin,
@@ -59,6 +60,7 @@ export function windowOf(query: Pick<NetworkMapQuery, 'date' | 'dayPart'>): Time
 
 interface Loaded {
   readonly synthetic: boolean;
+  readonly kind: GapsSourceKind;
   readonly stores: readonly repo.MapStoreRecord[];
   readonly gaps: readonly StoreDepartmentGap[];
 }
@@ -66,7 +68,7 @@ interface Loaded {
 async function load(db: Queryable, scope: Scope, query: NetworkMapQuery, source: NetworkGapsSource): Promise<Loaded> {
   const synthetic = await repo.mapProvenance(db, scope);
   const stores = await repo.listMapStores(db, scope, { synthetic, ...(query.formats ? { formats: query.formats } : {}) });
-  const gaps = await source.gaps(db, {
+  const result = await source.gaps(db, {
     date: query.date,
     dayPart: query.dayPart,
     storeIds: stores.map((s) => s.id),
@@ -75,7 +77,7 @@ async function load(db: Queryable, scope: Scope, query: NetworkMapQuery, source:
   });
   // Defence in depth: never report a gap for a store outside the caller's list (P1).
   const ids = new Set(stores.map((s) => s.id));
-  return { synthetic, stores, gaps: gaps.filter((g) => ids.has(g.storeId)) };
+  return { synthetic, kind: result.kind, stores, gaps: result.gaps.filter((g) => ids.has(g.storeId)) };
 }
 
 function toPin(store: repo.MapStoreRecord, gaps: readonly StoreDepartmentGap[]): MapStorePin {
@@ -101,12 +103,12 @@ function toPin(store: repo.MapStoreRecord, gaps: readonly StoreDepartmentGap[]):
 
 /** `GET /network-map` */
 export async function networkMap(db: Queryable, scope: Scope, query: NetworkMapQuery, source: NetworkGapsSource): Promise<NetworkMapResponse> {
-  const { synthetic, stores, gaps } = await load(db, scope, query, source);
+  const { synthetic, kind, stores, gaps } = await load(db, scope, query, source);
   const [layer, departments] = await Promise.all([repo.countConsentedByBarangay(db, synthetic), repo.listDepartmentOptions(db, stores.map((s) => s.id))]);
   return assertNetworkMapPrivacy({
     query,
     rings: [...MAP_RING_MINUTES[query.mode]],
-    gapsSource: source.kind,
+    gapsSource: kind,
     stores: stores.map((s) => toPin(s, gaps)),
     staffLayer: layer.map((b) => ({ barangay: { code: b.code, name: b.name, city: b.city }, count: b.count })),
     departments,
@@ -227,7 +229,7 @@ export async function storeCandidates(
 
 /** `GET /network-map/auto-match` — a proposal for review; nothing is created or sent. */
 export async function autoMatchProposal(db: Queryable, scope: Scope, query: NetworkMapQuery, source: NetworkGapsSource): Promise<AutoMatchResponse> {
-  const { synthetic, stores, gaps } = await load(db, scope, query, source);
+  const { synthetic, kind, stores, gaps } = await load(db, scope, query, source);
   const window = windowOf(query);
   const openShifts = gaps.flatMap((g) => g.openShifts.map((slot) => toOpenShift(g.storeId, g, slot)));
   const surplus: SurplusSupply[] = gaps
@@ -255,7 +257,7 @@ export async function autoMatchProposal(db: Queryable, scope: Scope, query: Netw
   const name = (id: string) => names.get(id) ?? '';
   return assertNetworkMapPrivacy({
     query,
-    gapsSource: source.kind,
+    gapsSource: kind,
     travelSource: candidates.length === 0 ? 'matrix' : travelSource,
     offers: proposal.offers.map((o) => ({
       shiftId: o.shiftId,

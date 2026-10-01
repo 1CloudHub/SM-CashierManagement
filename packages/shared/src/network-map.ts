@@ -52,7 +52,7 @@ export function staffingStatus(required: number, rostered: number): { readonly s
   return { status: delta < 0 ? 'gap' : delta > 0 ? 'surplus' : 'balanced', delta };
 }
 
-/** Where gap/surplus figures come from: published-roster open shifts now, the task 14 network view later. */
+/** Where gap/surplus figures come from: the task 14 network view, or published-roster open shifts as the fallback. */
 export type GapsSourceKind = 'published_roster' | 'network_view';
 
 /** How travel minutes were obtained (design: straight-line fallback when the matrix is unavailable). */

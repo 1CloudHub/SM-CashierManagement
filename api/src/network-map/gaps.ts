@@ -1,15 +1,13 @@
 /**
  * Where the network map gets each store's staffing gap or surplus (task 16.1).
  *
- * The full picture — the Erlang C requirement per store, department and hour
- * — belongs to the network view (task 14, SCR-020). Until that lands, the map
- * reads the one gap signal already in the data: OPEN (unassigned) shifts on
- * published rosters. That source can report gaps but never a surplus, so
- * store-to-store moves appear only once task 14 backs this interface with a
- * `network_view` source (`required` from the requirement, `surplus` =
- * rostered − required where positive).
- *
- * TODO(task 14): add a `network_view` NetworkGapsSource and make it the default.
+ * Two sources:
+ *   - `publishedRosterGaps`: OPEN (unassigned) shifts on published rosters.
+ *     It reports gaps but never a surplus.
+ *   - `networkViewGaps` (./network-view-gaps.ts, the default): the task 14
+ *     network view's Erlang C requirement for the published scenario, with
+ *     surplus = rostered − required; falls back to the roster source when no
+ *     published, run scenario covers the date.
  */
 import { MAP_DAY_PART_HOURS, type GapsSourceKind, type IsoDate, type MapDayPart } from '@lanewise/shared';
 import type { Queryable } from '../db/pool.js';
@@ -46,14 +44,18 @@ export interface NetworkGapsQuery {
   readonly synthetic: boolean;
 }
 
-export interface NetworkGapsSource {
+export interface NetworkGaps {
+  /** Which source actually answered (a source may fall back to another). */
   readonly kind: GapsSourceKind;
-  gaps(db: Queryable, query: NetworkGapsQuery): Promise<StoreDepartmentGap[]>;
+  readonly gaps: readonly StoreDepartmentGap[];
+}
+
+export interface NetworkGapsSource {
+  gaps(db: Queryable, query: NetworkGapsQuery): Promise<NetworkGaps>;
 }
 
 /** Gaps from open shifts on published rosters; `required` = rostered + open. No surplus. */
 export const publishedRosterGaps: NetworkGapsSource = {
-  kind: 'published_roster',
   async gaps(db, q) {
     const [startHour, endHour] = MAP_DAY_PART_HOURS[q.dayPart];
     const shifts = await listPublishedShifts(db, {
@@ -77,7 +79,7 @@ export const publishedRosterGaps: NetworkGapsSource = {
       }
       groups.set(k, g);
     }
-    return [...groups.values()]
+    const gaps = [...groups.values()]
       .map((g) => ({
         storeId: g.storeId,
         departmentKey: g.key,
@@ -88,5 +90,6 @@ export const publishedRosterGaps: NetworkGapsSource = {
         surplus: 0,
       }))
       .sort((a, b) => (a.storeId < b.storeId ? -1 : a.storeId > b.storeId ? 1 : a.departmentKey < b.departmentKey ? -1 : 1));
+    return { kind: 'published_roster', gaps };
   },
 };

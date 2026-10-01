@@ -300,10 +300,9 @@ describe('a gaps source with a surplus (the task 14 network view seam)', () => {
   it('shows the surplus pin, lists the lender near a short store, and proposes a store-to-store move', async () => {
     // Stand-in for task 14: Aura has two spare Main-lane cashiers in the window.
     const withSurplus: NetworkGapsSource = {
-      kind: 'network_view',
       async gaps(pool, q) {
-        const gaps = await publishedRosterGaps.gaps(pool, q);
-        return gaps.map((g) => (g.storeId === w.stores.aura && g.departmentKey === 'main checkout lanes' ? { ...g, surplus: 2 } : g));
+        const { gaps } = await publishedRosterGaps.gaps(pool, q);
+        return { kind: 'network_view', gaps: gaps.map((g) => (g.storeId === w.stores.aura && g.departmentKey === 'main checkout lanes' ? { ...g, surplus: 2 } : g)) };
       },
     };
     const deps = { db: () => db.pool, rbac: { ...DEFAULT_RBAC_CONFIG, demoRoleSwitcher: false }, gapsSource: withSurplus };
