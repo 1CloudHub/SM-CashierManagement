@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { DemoCredit } from '@/components/brand'
 import { SkipLink } from '@/components/a11y/skip-link'
 import { SideNav, type NavSection } from '@/components/shell/side-nav'
 import { TopBar } from '@/components/shell/top-bar'
@@ -158,7 +159,7 @@ export function AppShell({
             aria-label={mainLabel ?? t('a11y.mainContent')}
             width={width}
             flush
-            className="mx-0 px-4 pt-4 pb-16 tablet:px-5 tablet:pt-5 laptop:px-8 laptop:pt-6 outline-none"
+            className="mx-0 flex min-h-[calc(100dvh-var(--lw-topbar-h))] flex-col px-4 pt-4 pb-6 tablet:px-5 tablet:pt-5 laptop:px-8 laptop:pt-6 outline-none"
           >
             <Stack gap={4}>
               {breadcrumbs && breadcrumbs.length > 0 && (
@@ -168,6 +169,9 @@ export function AppShell({
               {contextBar}
               {children}
             </Stack>
+            <footer className="mt-auto flex justify-end pt-12">
+              <DemoCredit label={t('brand.demoCredit')} newTabLabel={t('brand.opensNewTab')} />
+            </footer>
           </Page>
         </div>
       </div>

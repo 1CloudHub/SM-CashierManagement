@@ -9,6 +9,8 @@ import type { Bundle } from './types'
 export const appEn: Bundle = {
   // ── Shell ───────────────────────────────────────────────────────────────
   'shell.navLabel': 'Main',
+  'brand.demoCredit': 'Demo built by',
+  'brand.opensNewTab': '(opens in a new tab)',
   'shell.navCollapse': 'Collapse navigation',
   'shell.navExpand': 'Expand navigation',
   'shell.search.label': 'Search',
@@ -250,6 +252,8 @@ export const appEn: Bundle = {
 
 export const appFil: Bundle = {
   'shell.navLabel': 'Pangunahin',
+  'brand.demoCredit': 'Demo na binuo ng',
+  'brand.opensNewTab': '(magbubukas sa bagong tab)',
   'shell.navCollapse': 'Itago ang nabigasyon',
   'shell.navExpand': 'Ipakita ang nabigasyon',
   'shell.search.label': 'Maghanap',

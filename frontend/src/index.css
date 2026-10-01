@@ -16,6 +16,7 @@
   /* Colours — semantic only (raw ramps stay out of the utility layer). */
   --color-bg: var(--lw-bg);
   --color-surface: var(--lw-surface);
+  --color-partner-chip: var(--lw-partner-chip);
   --color-surface-2: var(--lw-surface-2);
   --color-text: var(--lw-text);
   --color-text-muted: var(--lw-text-muted);
