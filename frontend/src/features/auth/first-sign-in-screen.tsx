@@ -14,7 +14,8 @@ import { consumeReturnTo } from './return-to'
 
 type Step = 1 | 2 | 3
 const TOTAL_STEPS = 3
-const CODE_PATTERN = /^\d{6}$/
+// Cognito email one-time codes are 6 to 8 digits (the user pool sends 8).
+const CODE_PATTERN = /^\d{6,8}$/
 
 function codeMessageId(code: AuthFailureCode): string {
   switch (code) {
@@ -34,7 +35,7 @@ function codeMessageId(code: AuthFailureCode): string {
 /**
  * SCR-002 First sign-in / new device (requirement 1.4, 1.5, 1.7).
  *
- *   1. Verify email — a 6-digit one-time code (creates the account first when
+ *   1. Verify email — a 6–8 digit one-time code (creates the account first when
  *      self sign-up is on and the email is new; the pre-sign-up trigger
  *      refuses outside domains).
  *   2. Create a passkey — the code only ever unlocks this step; the app stays
@@ -250,7 +251,7 @@ function VerifyEmailStep({
               inputMode="numeric"
               autoComplete="one-time-code"
               pattern="[0-9]*"
-              maxLength={6}
+              maxLength={8}
               value={code}
               invalid={Boolean(codeError)}
               onChange={(e) => setCode(e.target.value)}
