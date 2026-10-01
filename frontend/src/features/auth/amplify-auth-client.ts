@@ -126,7 +126,8 @@ export function createAmplifyAuthClient(config: RuntimeAuthConfig): AuthClient {
     try {
       const user = await getCurrentUser()
       const attrs = await fetchUserAttributes()
-      return { userId: user.userId, email: attrs.email ?? user.signInDetails?.loginId ?? '' }
+      const email = attrs.email ?? user.signInDetails?.loginId ?? ''
+      return attrs.name ? { userId: user.userId, email, name: attrs.name } : { userId: user.userId, email }
     } catch {
       return null
     }

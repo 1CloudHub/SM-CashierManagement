@@ -10,6 +10,7 @@ import {
 import type { IsoDate } from '@lanewise/shared'
 import { Table2, ChartGantt } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Cluster } from '@/components/layout/cluster'
 import { Stack } from '@/components/layout/stack'
 import { cn } from '@/lib/utils'
@@ -293,17 +294,14 @@ export function DayTimeline({
             <div className={cn(rowGrid, 'sticky top-0 z-10 min-h-8 border-b border-outline bg-surface')}>
               <div className={metaCol}>
                 {editable && (
-                  <label className="grid min-h-tap min-w-tap place-items-center">
-                    <input
-                      type="checkbox"
-                      checked={allSelected}
-                      ref={(el) => {
-                        if (el) el.indeterminate = someSelected
-                      }}
-                      onChange={() => setSelected(allSelected ? [] : shiftIds)}
-                      aria-label={f.t('roster.select.all')}
-                    />
-                  </label>
+                  <Checkbox
+                    label={f.t('roster.select.all')}
+                    hideLabel
+                    className="shrink-0"
+                    checked={allSelected}
+                    indeterminate={someSelected}
+                    onChange={() => setSelected(allSelected ? [] : shiftIds)}
+                  />
                 )}
                 <b className="font-weight-bold">{f.t('roster.timeline.cashier')}</b>
                 <span className="ml-auto text-text-muted">{f.t('roster.timeline.skills')}</span>
@@ -376,14 +374,13 @@ export function DayTimeline({
                   <div className={metaCol}>
                     {editable &&
                       (shift ? (
-                        <label className="grid min-h-tap min-w-tap shrink-0 place-items-center">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => toggle(shift.id)}
-                            aria-label={f.t('roster.select.row', { cashier: `${cashier.id} ${cashier.name}` })}
-                          />
-                        </label>
+                        <Checkbox
+                          label={f.t('roster.select.row', { cashier: `${cashier.id} ${cashier.name}` })}
+                          hideLabel
+                          className="shrink-0"
+                          checked={isSelected}
+                          onChange={() => toggle(shift.id)}
+                        />
                       ) : (
                         <span className="min-w-tap shrink-0" />
                       ))}

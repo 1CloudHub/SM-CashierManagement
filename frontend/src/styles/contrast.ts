@@ -46,6 +46,8 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
   // Solid fills with their on-colours.
   { fg: 'on-primary', bg: 'primary', kind: 'text', use: 'primary button / key KPI' },
   { fg: 'on-primary-soft', bg: 'primary-soft', kind: 'text', use: 'selected / hover' },
+  { fg: 'on-primary', bg: 'primary-hover', kind: 'text', use: 'primary button hover' },
+  { fg: 'on-danger', bg: 'danger-hover', kind: 'text', use: 'danger button hover' },
   { fg: 'on-accent', bg: 'accent', kind: 'text', use: 'emphasis badge' },
   ...STATUSES.flatMap((s): ContrastPair[] => [
     { fg: `on-${s}`, bg: s, kind: 'text', use: `solid ${s} chip` },

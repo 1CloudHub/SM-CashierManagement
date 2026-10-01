@@ -10,16 +10,23 @@ import { cva } from 'class-variance-authority'
  * outline or ghost. `danger` is for destructive confirms. Accent red is
  * emphasis only and never a status, so it is not a button tone. Every size
  * keeps a ≥44px touch target (`min-h-tap`); `sm` only reduces padding/text.
+ *
+ * States use token colours, never opacity: hover on a solid fill steps to its
+ * `--lw-*-hover` token; disabled drops to the subtle outline,
+ * muted text and a surface-2 (or transparent) fill, keeping pointer events so
+ * `cursor-not-allowed` shows.
  */
 export const buttonVariants = cva(
-  'lw-btn inline-flex items-center justify-center gap-2 border whitespace-nowrap select-none font-weight-semibold rounded-none motion-interactive focus-visible:outline-focus-ring disabled:opacity-50 disabled:pointer-events-none aria-busy:pointer-events-none',
+  'lw-btn inline-flex items-center justify-center gap-2 border whitespace-nowrap select-none font-weight-semibold rounded-none motion-interactive focus-visible:outline-focus-ring disabled:cursor-not-allowed disabled:border-outline-subtle disabled:text-text-muted aria-busy:cursor-progress',
   {
     variants: {
       variant: {
-        primary: 'bg-primary text-on-primary border-primary hover:opacity-90',
-        secondary: 'bg-surface text-text border-outline hover:bg-surface-2',
-        ghost: 'bg-transparent text-text border-transparent hover:bg-surface-2',
-        danger: 'bg-danger text-on-danger border-danger hover:opacity-90',
+        primary:
+          'bg-primary text-on-primary border-primary hover:not-disabled:bg-primary-hover hover:not-disabled:border-primary-hover disabled:bg-surface-2',
+        secondary: 'bg-surface text-text border-outline hover:not-disabled:bg-surface-2 disabled:bg-surface-2',
+        ghost: 'bg-transparent text-text border-transparent hover:not-disabled:bg-surface-2 disabled:border-transparent',
+        danger:
+          'bg-danger text-on-danger border-danger hover:not-disabled:bg-danger-hover hover:not-disabled:border-danger-hover disabled:bg-surface-2',
       },
       size: {
         md: 'min-h-tap px-4 text-body',

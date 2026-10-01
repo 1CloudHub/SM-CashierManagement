@@ -88,6 +88,12 @@ export interface ErrorPageProps {
   onAction?: (action: RecoveryAction) => void
   /** `bare` centres the block full-screen (pre-auth / 401); `inline` sits in the shell. */
   layout?: 'inline' | 'bare'
+  /**
+   * Heading level of the error title. Defaults to 1 for `bare` (the block is
+   * the whole page) and 2 for `inline`. A screen whose only content is this
+   * page passes 1 so the error title is the page's single h1.
+   */
+  headingLevel?: 1 | 2
   className?: string
 }
 
@@ -105,6 +111,7 @@ export function ErrorPage({
   hrefs,
   onAction,
   layout = 'inline',
+  headingLevel = layout === 'bare' ? 1 : 2,
   className,
 }: ErrorPageProps) {
   const copy = resolveErrorCopy(kind, locale)
@@ -141,6 +148,8 @@ export function ErrorPage({
           onClick={
             onAction
               ? (e) => {
+                  // Leave modified clicks (new tab/window) to the browser.
+                  if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
                   e.preventDefault()
                   onAction(action)
                 }
@@ -178,6 +187,7 @@ export function ErrorPage({
       description={copy.description}
       referenceId={resolvedRef}
       action={<>{actionNodes}</>}
+      headingLevel={headingLevel}
       className={layout === 'inline' ? className : undefined}
     />
   )

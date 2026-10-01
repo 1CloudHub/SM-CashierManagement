@@ -2,6 +2,8 @@ import { useState } from 'react'
 import {
   Button,
   Card,
+  Checkbox,
+  Radio,
   CardHeader,
   CardTitle,
   Currency,
@@ -178,6 +180,13 @@ export function PrimitivesSection() {
           <Field label="Change note" error="A change note is required.">
             {(aria) => <Textarea {...aria} />}
           </Field>
+          <fieldset className="flex flex-col">
+            <legend className="text-label text-text">Colour by</legend>
+            <Radio name="gallery-colour" value="dept" label="Department" defaultChecked />
+            <Radio name="gallery-colour" value="role" label="Role" />
+            <Checkbox label="Show stale scenarios only" description="Hides scenarios whose inputs are current." />
+            <Checkbox label="Allow part-time" disabled />
+          </fieldset>
         </div>
       </Subsection>
 

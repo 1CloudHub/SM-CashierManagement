@@ -27,7 +27,7 @@ describe('SCR-033 Approval review — queue', () => {
 
   it('shows "No access" to roles outside the approval rows', () => {
     renderApp({ path: '/approvals', role: 'PLN' })
-    expect(screen.getByRole('heading', { level: 1, name: 'No access' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: /You do not have access/ })).toBeInTheDocument()
   })
 })
 

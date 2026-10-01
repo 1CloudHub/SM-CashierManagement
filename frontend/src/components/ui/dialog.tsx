@@ -1,5 +1,6 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { X } from 'lucide-react'
+import { useUiT } from '@/i18n/context'
 import { cn } from '@/lib/utils'
 import { Button } from './button'
 
@@ -15,7 +16,9 @@ import { Button } from './button'
  *     panels and the mobile nav.
  *
  * Every dialog/drawer needs a Title (labels the modal). Use DialogDescription
- * for the supporting line so it is announced. Motion drops to a short fade
+ * for the supporting line so it is announced. The overlay uses the --lw-scrim
+ * token (dark in both themes). A centred dialog is capped at the viewport
+ * height and scrolls; a drawer scrolls at full dynamic viewport height. Motion drops to a short fade
  * under prefers-reduced-motion (handled in motion.css).
  */
 export const Dialog = DialogPrimitive.Root
@@ -30,7 +33,7 @@ function Overlay({
   return (
     <DialogPrimitive.Overlay
       className={cn(
-        'fixed inset-0 z-40 bg-text/40 motion-safe:animate-fade-in',
+        'fixed inset-0 z-40 bg-scrim motion-safe:animate-fade-in',
         className,
       )}
       {...props}
@@ -53,6 +56,7 @@ export function DialogContent({
   children,
   ...props
 }: DialogContentProps) {
+  const t = useUiT()
   return (
     <DialogPortal>
       <Overlay />
@@ -60,8 +64,10 @@ export function DialogContent({
         className={cn(
           'fixed z-50 flex flex-col gap-4 border border-outline bg-surface p-6 focus-visible:outline-focus-ring',
           variant === 'dialog'
-            ? 'left-1/2 top-1/2 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 motion-safe:animate-dialog-in'
-            : 'right-0 top-0 h-full w-full max-w-md motion-panel',
+            ? // Centred: never taller than the viewport; long content scrolls
+            // inside the dialog (dvh tracks mobile browser chrome).
+            'left-1/2 top-1/2 max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto motion-safe:animate-dialog-in'
+            : 'right-0 top-0 h-dvh w-full max-w-md overflow-y-auto motion-panel',
           className,
         )}
         {...props}
@@ -72,7 +78,7 @@ export function DialogContent({
             <Button
               size="icon"
               variant="ghost"
-              aria-label="Close"
+              aria-label={t('ui.dialog.close')}
               className="absolute right-3 top-3"
             >
               <X aria-hidden="true" className="size-5" />

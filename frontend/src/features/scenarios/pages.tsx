@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useParams } from 'react-router'
 import { useApi } from '@/api'
 import { useActiveRole } from '@/app/active-role'
@@ -42,6 +42,7 @@ export function ScenarioListPage() {
         role={role}
         filters={filters}
         onFiltersChange={(f) => navigate(`${SCR_030.path}${filtersToSearch(f)}`, { replace: true })}
+        onNavigate={(path) => navigate(path)}
         onOpen={(id) => navigate(settingsPath(id))}
         onCompare={(id) => navigate(comparePath(id))}
       />
@@ -76,6 +77,7 @@ export function ScenarioComparePage() {
   const { location, navigate } = useRouter()
   const crumbs = useScreenCrumbs(SCR_032)
   const params = new URLSearchParams(location.search)
+  const onChange = useCallback((a: string | null, b: string | null) => navigate(comparePath(a, b), { replace: true }), [navigate])
   return (
     <AppLayout title={t(SCR_032.titleKey)} crumbs={crumbs}>
       <ScenarioCompareScreen
@@ -83,7 +85,7 @@ export function ScenarioComparePage() {
         role={role}
         a={params.get('a')}
         b={params.get('b')}
-        onChange={(a, b) => navigate(comparePath(a, b), { replace: true })}
+        onChange={onChange}
       />
     </AppLayout>
   )
