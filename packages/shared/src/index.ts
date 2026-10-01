@@ -13,5 +13,6 @@ export * from './rbac.js';
 export * from './roles.js';
 export * from './rules.js';
 export * from './scenario.js';
+export * from './scenario-planning.js';
 export * from './search.js';
 export * from './view-state.js';

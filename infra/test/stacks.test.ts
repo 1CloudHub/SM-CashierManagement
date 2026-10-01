@@ -329,6 +329,23 @@ describe('API stack', () => {
     );
   });
 
+  it('protects every task 11 scenario route with the Cognito authorizer', () => {
+    expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
+      expect.arrayContaining([
+        'GET /scenarios',
+        'POST /scenarios',
+        'GET /scenarios/compare',
+        'GET /scenarios/{scenarioId}',
+        'PATCH /scenarios/{scenarioId}',
+        'POST /scenarios/{scenarioId}/duplicate',
+        'POST /scenarios/{scenarioId}/refresh',
+        'POST /scenarios/{scenarioId}/run',
+        'POST /scenarios/{scenarioId}/submit',
+        'POST /scenarios/{scenarioId}/archive',
+      ]),
+    );
+  });
+
   it('passes the demo role switcher flag to the API and allows the X-Active-Role header in CORS', () => {
     api.hasResourceProperties('AWS::Lambda::Function', {
       Environment: { Variables: Match.objectLike({ DEMO_ROLE_SWITCHER: 'true' }) },

@@ -85,6 +85,17 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'POST', path: '/rule-versions/{versionId}/request-changes' },
   { method: 'POST', path: '/rule-versions/{versionId}/publish' },
   { method: 'GET', path: '/rule-versions/{versionId}/diff' },
+  // Task 11: scenarios — list, settings, runs, staleness refresh, compare (SCR-030/031/032).
+  { method: 'GET', path: '/scenarios' },
+  { method: 'POST', path: '/scenarios' },
+  { method: 'GET', path: '/scenarios/compare' },
+  { method: 'GET', path: '/scenarios/{scenarioId}' },
+  { method: 'PATCH', path: '/scenarios/{scenarioId}' },
+  { method: 'POST', path: '/scenarios/{scenarioId}/duplicate' },
+  { method: 'POST', path: '/scenarios/{scenarioId}/refresh' },
+  { method: 'POST', path: '/scenarios/{scenarioId}/run' },
+  { method: 'POST', path: '/scenarios/{scenarioId}/submit' },
+  { method: 'POST', path: '/scenarios/{scenarioId}/archive' },
 ];
 
 /** Request headers the SPA sends: the defaults plus the demo role switcher's `X-Active-Role`. */
