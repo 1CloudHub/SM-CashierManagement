@@ -96,6 +96,13 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'POST', path: '/scenarios/{scenarioId}/run' },
   { method: 'POST', path: '/scenarios/{scenarioId}/submit' },
   { method: 'POST', path: '/scenarios/{scenarioId}/archive' },
+  // Task 12: approvals — queue, tracker, step decisions, off-system record (SCR-033).
+  { method: 'GET', path: '/approvals' },
+  { method: 'GET', path: '/approvals/{scenarioId}' },
+  { method: 'POST', path: '/approvals/{scenarioId}/headcount' },
+  { method: 'POST', path: '/approvals/{scenarioId}/budget' },
+  { method: 'POST', path: '/approvals/{scenarioId}/plan' },
+  { method: 'POST', path: '/approvals/{scenarioId}/secured-outside' },
 ];
 
 /** Request headers the SPA sends: the defaults plus the demo role switcher's `X-Active-Role`. */
