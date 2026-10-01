@@ -15,6 +15,7 @@ import {
   SCENARIO_STATUSES,
   can,
   compareScenarioResults,
+  diffDepartmentOverrides,
   diffScenarioSettings,
   isStoreInScope,
   seesPublishedScenariosOnly,
@@ -36,7 +37,12 @@ import { ApiError, errors } from '../http/errors.js';
 import type { HttpMethod, Router } from '../http/router.js';
 import type { ApiResponse, RoutedRequest } from '../http/types.js';
 import { parseInput } from '../http/validation.js';
-import type { StoredRunResults } from '../scenarios/engine.js';
+import {
+  baseHourlyRateFromPins,
+  departmentBaselines,
+  settingDefaultsFromPins,
+  type StoredRunResults,
+} from '../scenarios/engine.js';
 
 export interface ScenarioRouteDeps {
   /** The database pool; throws a 503 `ApiError` when none is configured. */
@@ -80,6 +86,7 @@ const listQuery = z
     season: z.string().max(80).optional(),
     q: z.string().max(120).optional(),
     stale: z.enum(['true', 'false']).optional(),
+    owner: z.enum(['me']).optional(),
   })
   .passthrough();
 const compareQuery = z.object({ a: z.string(), b: z.string() }).passthrough();
@@ -96,7 +103,13 @@ function settingsOrError(value: unknown) {
   const result = validateScenarioSettings(value);
   if (!result.ok) {
     throw new ApiError('validation_failed', 'Some settings are missing or invalid.', {
-      details: result.issues.map((i) => ({ path: `body.settings.${i.path}`, message: i.message })),
+      details: result.issues.map((i) => ({
+        path:
+          i.index === undefined
+            ? `body.settings.${i.path}`
+            : `body.settings.${i.path}.${i.index}${i.field === undefined ? '' : `.${i.field}`}`,
+        message: i.message,
+      })),
     });
   }
   return result.settings;
@@ -138,6 +151,9 @@ export function resultsFor(principal: Principal, stored: StoredRunResults) {
   lanes.forEach((v, h) => {
     if (v > (lanes[peakHour] ?? 0)) peakHour = h;
   });
+  // Hires were added to stored results later: null when any in-scope store lacks them.
+  const seasonalHires = stores.every((s) => typeof s.hires === 'number') ? stores.reduce((sum, s) => sum + (s.hires ?? 0), 0) : null;
+  const needBy = stores.map((s) => s.firstNeededBy).filter((d): d is string => typeof d === 'string').sort();
   return {
     from: stored.from,
     to: stored.to,
@@ -146,6 +162,8 @@ export function resultsFor(principal: Principal, stored: StoredRunResults) {
     paidHours: stores.reduce((s, x) => s + x.paidHours, 0),
     cost: costFigure({ level: 'network' }, Math.round(stores.reduce((s, x) => s + x.cost, 0) * 100) / 100),
     peak: { date: stored.peakDay, hour: peakHour, lanesOpen: lanes[peakHour] ?? 0 },
+    seasonalHires,
+    firstNeededBy: needBy[0] ?? null,
     stores: stores.map((s) => ({
       storeId: s.storeId,
       storeName: s.storeName,
@@ -154,6 +172,7 @@ export function resultsFor(principal: Principal, stored: StoredRunResults) {
       paidHours: s.paidHours,
       cost: costFigure({ level: 'store', store: { id: s.storeId, regionId: s.regionId } }, s.cost),
       peakLanes: s.peakLanes,
+      hires: typeof s.hires === 'number' ? s.hires : null,
     })),
   };
 }
@@ -173,6 +192,7 @@ export function listItem(r: planning.ScenarioRecord) {
     planningFrom: r.planningFrom,
     planningTo: r.planningTo,
     dataAsOf: r.dataAsOf,
+    rulesAsOf: r.rulesAsOf,
     lastRunAt: r.lastRunAt,
     updatedAt: r.updatedAt,
     synthetic: r.synthetic,
@@ -182,14 +202,33 @@ export function listItem(r: planning.ScenarioRecord) {
 async function detail(pool: pg.Pool, principal: Principal, id: string) {
   const record = await planning.getScenarioRecord(pool, id);
   if (!record || !visible(principal, record)) throw errors.notFound();
-  const [snapshots, ruleVersions, run] = await Promise.all([
+  const [snapshots, ruleVersions, run, inputs] = await Promise.all([
     planning.getSnapshotPins(pool, id),
     planning.getRuleVersionPins(pool, id, record.synthetic),
     planning.getLatestRun(pool, id),
+    planning.getEngineInputs(pool, id),
   ]);
+  const scope = principal.scope;
+  const pos = inputs.snapshots.find((s) => s.datasetType === 'pos') ?? null;
+  // In-scope departments only (P1), like the stores in the results.
+  const departments = departmentBaselines(pos, record.settings.peakDay)
+    .filter((d) => scope !== null && isStoreInScope(scope, { id: d.storeId, regionId: d.regionId }))
+    .map((d) => ({
+      departmentId: d.departmentId,
+      departmentName: d.departmentName,
+      storeId: d.storeId,
+      storeName: d.storeName,
+      baselineTxPerDay: d.baselineTxPerDay,
+      handleTimeMin: d.handleTimeMin,
+      upliftPct: d.upliftPct,
+    }));
   return {
     ...listItem(record),
     settings: record.settings,
+    defaults: settingDefaultsFromPins(inputs.ruleVersions),
+    // The pinned wage rule's default (fallback) hourly rate; network-level cost (hidden for e.g. Store Managers).
+    baseHourlyRate: costFigure({ level: 'network' }, baseHourlyRateFromPins(inputs.ruleVersions)),
+    departments,
     snapshots,
     ruleVersions,
     latestRun: run && {
@@ -230,6 +269,7 @@ export const SCENARIO_ROUTES: readonly ScenarioRoute[] = [
         ...(q.season ? { season: q.season } : {}),
         ...(q.q ? { query: q.q } : {}),
         staleOnly: q.stale === 'true',
+        ...(q.owner === 'me' ? { ownerId: principal.userId } : {}),
       });
       return { statusCode: 200, body: { scenarios: records.map(listItem) } };
     },
@@ -269,6 +309,7 @@ export const SCENARIO_ROUTES: readonly ScenarioRoute[] = [
           a,
           b,
           settings: diffScenarioSettings(a.settings, b.settings),
+          departmentSettings: diffDepartmentOverrides(a.settings.departmentOverrides, b.settings.departmentOverrides),
           inputs: {
             snapshots: types.map((t) => ({
               datasetType: t,
