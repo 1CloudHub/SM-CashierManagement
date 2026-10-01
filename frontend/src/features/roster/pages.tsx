@@ -11,6 +11,7 @@ import { ContextBar } from '@/features/context/context-bar'
 import { useContextOptions } from '@/features/context/use-context-data'
 import { useI18n } from '@/i18n'
 import { createOffersClient } from '@/features/offers'
+import { createSelfServiceClient } from '@/features/self-service/api'
 import { createRosterClient } from './api'
 import { RosterScreen } from './roster-screen'
 
@@ -28,6 +29,7 @@ export function RosterPage() {
   const api = useApi()
   const client = useMemo(() => createRosterClient(api), [api])
   const offers = useMemo(() => createOffersClient(api), [api])
+  const selfService = useMemo(() => createSelfServiceClient(api), [api])
   const { role } = useActiveRole()
   const { location } = useRouter()
   const crumbs = useScreenCrumbs(SCR_022)
@@ -45,6 +47,7 @@ export function RosterPage() {
         departmentId={view.dept ?? null}
         isPhone={isPhone}
         offers={offers}
+        selfService={selfService}
         role={role}
       />
     </AppLayout>
