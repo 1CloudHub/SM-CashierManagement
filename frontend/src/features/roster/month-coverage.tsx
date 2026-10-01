@@ -89,7 +89,7 @@ export function MonthCoverage({
                   </>
                 )
                 const tile = cn(
-                  'flex min-h-16 w-full flex-col items-start gap-0.5 border-2 bg-surface p-1.5 text-left text-text',
+                  'flex min-h-16 w-full flex-col items-start gap-0.5 border bg-surface p-1.5 text-left text-text',
                   open > 0 ? 'border-danger' : 'border-outline-subtle',
                 )
                 return (

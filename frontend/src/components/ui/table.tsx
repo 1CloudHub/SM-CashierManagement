@@ -24,7 +24,7 @@ export function TableWrap({
   return (
     <div
       className={cn(
-        'relative max-h-[70vh] overflow-auto border-2 border-outline bg-surface',
+        'relative max-h-[70vh] overflow-auto border border-outline-subtle bg-surface',
         className,
       )}
       {...props}
@@ -80,7 +80,7 @@ export function TableRow({
 }: React.HTMLAttributes<HTMLTableRowElement>) {
   return (
     <tr
-      className={cn('border-b-2 border-outline-subtle last:border-b-0', className)}
+      className={cn('border-b border-outline-subtle last:border-b-0', className)}
       {...props}
     />
   )
@@ -95,7 +95,7 @@ export function TableHeaderCell({
     <th
       scope="col"
       className={cn(
-        'border-b-2 border-outline px-3 py-2 text-label uppercase text-text-muted',
+        'border-b border-outline px-3 py-2 text-label uppercase text-text-muted',
         numeric ? 'text-right' : 'text-left',
         className,
       )}
@@ -170,7 +170,7 @@ export function SortHeader({
       scope="col"
       aria-sort={ariaSort}
       className={cn(
-        'sticky top-0 z-20 border-b-2 border-outline bg-surface-2 p-0',
+        'sticky top-0 z-20 border-b border-outline bg-surface-2 p-0',
         className,
       )}
     >

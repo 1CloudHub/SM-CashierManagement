@@ -9,6 +9,8 @@ import type { Bundle } from './types'
 export const appEn: Bundle = {
   // ── Shell ───────────────────────────────────────────────────────────────
   'shell.navLabel': 'Main',
+  'shell.navCollapse': 'Collapse navigation',
+  'shell.navExpand': 'Expand navigation',
   'shell.search.label': 'Search',
   'shell.search.placeholder': 'Search stores, departments, scenarios, staff…',
   'shell.sampleData': 'Sample data — figures are simulated, not SM actuals.',
@@ -181,6 +183,8 @@ export const appEn: Bundle = {
 
 export const appFil: Bundle = {
   'shell.navLabel': 'Pangunahin',
+  'shell.navCollapse': 'Itago ang nabigasyon',
+  'shell.navExpand': 'Ipakita ang nabigasyon',
   'shell.search.label': 'Maghanap',
   'shell.search.placeholder': 'Maghanap ng tindahan, departamento, scenario, staff…',
   'shell.sampleData': 'Sample na datos — kunwaring mga numero, hindi aktuwal ng SM.',

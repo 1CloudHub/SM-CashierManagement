@@ -1,6 +1,6 @@
 /* LaneWise wireframe styles — built on the LaneWise brand and design system v0.5 (concept).
    Tokens mirror frontend/src/styles/tokens.css (--lw-*). Components use semantic tokens only.
-   Rules: square corners, no shadows or gradients, 2px outlines (never hairlines),
+   Rules: square corners, no shadows or gradients, 1px outlines (thin, modern; focus rings stay 3px),
    solid fills only for the primary action, the key number and the one urgent status.
    Accent red is emphasis, never status. Status always carries a word and an icon. */
 
@@ -66,7 +66,7 @@
   --lw-dur-fast: 120ms; --lw-dur-base: 200ms; --lw-dur-slow: 320ms; --lw-dur-shimmer: 1500ms;
   --lw-ease-standard: cubic-bezier(0.2, 0, 0, 1); --lw-ease-enter: cubic-bezier(0, 0, 0.2, 1); --lw-ease-exit: cubic-bezier(0.4, 0, 1, 1);
 
-  --lw-radius: 0; --lw-outline-w: 2px;
+  --lw-radius: 0; --lw-outline-w: 1px;
   --lw-space-1: 4px; --lw-space-2: 8px; --lw-space-3: 12px; --lw-space-4: 16px; --lw-space-5: 20px;
   --lw-space-6: 24px; --lw-space-8: 32px; --lw-space-10: 40px; --lw-space-12: 48px; --lw-space-16: 64px;
   --lw-gap-grid: var(--lw-space-4); --lw-pad-card: var(--lw-space-6);

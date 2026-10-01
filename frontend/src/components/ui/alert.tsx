@@ -46,7 +46,7 @@ export function Alert({
       role={assertive ? 'alert' : 'note'}
       aria-live={live ? (assertive ? 'assertive' : 'polite') : undefined}
       className={cn(
-        'flex items-start gap-3 border-2 p-3',
+        'flex items-start gap-3 border p-3',
         meta.soft,
         meta.outline,
         className,

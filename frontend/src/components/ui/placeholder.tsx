@@ -23,7 +23,7 @@ export function MediaPlaceholder({
       role="status"
       aria-live="polite"
       className={cn(
-        'flex flex-col items-center justify-center gap-3 border-2 border-outline-subtle bg-surface-2 p-6',
+        'flex flex-col items-center justify-center gap-3 border border-outline-subtle bg-surface-2 p-6',
         minHeightClass,
         className,
       )}

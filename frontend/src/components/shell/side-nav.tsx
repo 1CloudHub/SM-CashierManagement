@@ -17,8 +17,8 @@ import { Button } from '@/components/ui/button'
  * collapsed, section headings and text labels are hidden from view but each
  * link keeps its accessible name via `aria-label` + a `title` tooltip, so the
  * rail is still fully usable with a screen reader or on hover. A built-in
- * toggle button (shown when `onToggleCollapsed` is provided) exposes the state
- * with `aria-expanded` / `aria-controls`.
+ * icon toggle at the top of the nav (shown when `onToggleCollapsed` is
+ * provided) exposes the state with `aria-expanded` / `aria-controls`.
  */
 export interface NavItem {
   label: string
@@ -41,6 +41,8 @@ export function SideNav({
   label = 'Main',
   collapsed = false,
   onToggleCollapsed,
+  collapseLabel = 'Collapse navigation',
+  expandLabel = 'Expand navigation',
 }: {
   sections: NavSection[]
   className?: string
@@ -48,8 +50,11 @@ export function SideNav({
   label?: string
   /** Render as an icon-only rail. Parent-owned so it can persist. */
   collapsed?: boolean
-  /** When provided, renders a collapse/expand toggle at the foot of the nav. */
+  /** When provided, renders an icon collapse/expand toggle at the top of the nav. */
   onToggleCollapsed?: () => void
+  /** Accessible names for the toggle (from the i18n bundle). */
+  collapseLabel?: string
+  expandLabel?: string
 }) {
   return (
     <nav
@@ -57,11 +62,31 @@ export function SideNav({
       aria-label={label}
       data-collapsed={collapsed || undefined}
       className={cn(
-        'flex flex-col gap-4 border-r-2 border-outline bg-surface py-3 motion-base',
+        'flex flex-col gap-4 border-r border-outline bg-surface py-3 motion-base',
         collapsed ? 'w-16' : 'w-full',
         className,
       )}
     >
+      {onToggleCollapsed && (
+        <div className={cn('flex px-2', collapsed ? 'justify-center px-0' : 'justify-end')}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={collapsed ? expandLabel : collapseLabel}
+            title={collapsed ? expandLabel : collapseLabel}
+            aria-expanded={!collapsed}
+            aria-controls={id}
+            onClick={onToggleCollapsed}
+          >
+            {collapsed ? (
+              <PanelLeftOpen aria-hidden="true" className="size-5" />
+            ) : (
+              <PanelLeftClose aria-hidden="true" className="size-5" />
+            )}
+          </Button>
+        </div>
+      )}
+
       <div className="flex flex-1 flex-col gap-4">
         {sections.map((section, i) => (
           <div key={i}>
@@ -73,7 +98,7 @@ export function SideNav({
             {/* When collapsed, a thin rule stands in for the (hidden) heading so
                 groups stay visually separated. */}
             {section.title && collapsed && i > 0 && (
-              <hr className="mx-3 mb-1 border-t-2 border-outline-subtle" />
+              <hr className="mx-3 mb-1 border-t border-outline-subtle" />
             )}
             <ul>
               {section.items.map((item) => (
@@ -107,28 +132,6 @@ export function SideNav({
         ))}
       </div>
 
-      {onToggleCollapsed && (
-        <div className={cn('mt-auto px-2', collapsed && 'px-0 text-center')}>
-          <Button
-            variant="ghost"
-            size={collapsed ? 'icon' : 'sm'}
-            aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-            aria-expanded={!collapsed}
-            aria-controls={id}
-            onClick={onToggleCollapsed}
-            className={cn('w-full', collapsed && 'w-auto')}
-          >
-            {collapsed ? (
-              <PanelLeftOpen aria-hidden="true" className="size-5" />
-            ) : (
-              <>
-                <PanelLeftClose aria-hidden="true" className="size-5" />
-                <span>Collapse</span>
-              </>
-            )}
-          </Button>
-        </div>
-      )}
     </nav>
   )
 }

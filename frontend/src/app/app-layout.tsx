@@ -88,6 +88,8 @@ export function AppLayout({
       <AppShell
         nav={nav}
         navLabel={t('shell.navLabel')}
+        navCollapseLabel={t('shell.navCollapse')}
+        navExpandLabel={t('shell.navExpand')}
         mainLabel={t('a11y.mainContent')}
         skipLinkLabel={t('a11y.skipToMain')}
         breadcrumbs={breadcrumbs}

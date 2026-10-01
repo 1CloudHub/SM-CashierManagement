@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useCallback, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import {
   Dialog,
@@ -27,6 +27,9 @@ import { useMediaQuery } from './use-media-query'
  *   - Laptop (≥1024) / Desktop (≥1440): expanded left nav beside the content.
  *   - Tablet (600–1023): the nav collapses to an icon-only rail (SideNav
  *     `collapsed`).
+ *   - Tablet and up, the user can collapse/expand the docked nav with the
+ *     icon toggle at its top; the choice overrides the breakpoint default and
+ *     persists per browser (localStorage `lw.nav.collapsed`).
  *   - Mobile (<600): the nav moves into a ≡ drawer (TopBar menu toggle opens a
  *     left Drawer), and global search becomes an icon that opens a full-screen
  *     search dialog.
@@ -63,6 +66,9 @@ export interface AppShellProps {
   mainLabel?: string
   /** Label for the skip link (from the i18n bundle; sensible default). */
   skipLinkLabel?: string
+  /** Accessible names for the nav collapse/expand toggle (i18n). */
+  navCollapseLabel?: string
+  navExpandLabel?: string
   children?: ReactNode
 }
 
@@ -78,14 +84,23 @@ export function AppShell({
   navLabel = 'Main',
   mainLabel = 'Main content',
   skipLinkLabel,
+  navCollapseLabel,
+  navExpandLabel,
   children,
 }: AppShellProps) {
   const [navOpen, setNavOpen] = useState(false)
+  const [navCollapsedPref, setNavCollapsedPref] = useState<boolean | null>(readNavPref)
   const [searchOpen, setSearchOpen] = useState(false)
 
   // Design breakpoints (tokens): tablet 600, laptop 1024.
   const isTabletUp = useMediaQuery('(min-width: 37.5rem)')
   const isLaptopUp = useMediaQuery('(min-width: 64rem)')
+  const navCollapsed = navCollapsedPref ?? !isLaptopUp
+  const toggleNav = useCallback(() => {
+    const next = !navCollapsed
+    setNavCollapsedPref(next)
+    writeNavPref(next)
+  }, [navCollapsed])
 
   return (
     <div className="min-h-screen bg-bg text-text">
@@ -109,7 +124,10 @@ export function AppShell({
           <SideNav
             sections={nav}
             label={navLabel}
-            collapsed={!isLaptopUp}
+            collapsed={navCollapsed}
+            onToggleCollapsed={toggleNav}
+            collapseLabel={navCollapseLabel}
+            expandLabel={navExpandLabel}
           />
         )}
 
@@ -175,4 +193,24 @@ export function AppShell({
       )}
     </div>
   )
+}
+
+const NAV_PREF_KEY = 'lw.nav.collapsed'
+
+/** The user's persisted collapse choice, or null to follow the breakpoint. */
+function readNavPref(): boolean | null {
+  try {
+    const v = window.localStorage.getItem(NAV_PREF_KEY)
+    return v === 'true' ? true : v === 'false' ? false : null
+  } catch {
+    return null
+  }
+}
+
+function writeNavPref(collapsed: boolean): void {
+  try {
+    window.localStorage.setItem(NAV_PREF_KEY, String(collapsed))
+  } catch {
+    // Storage unavailable (private mode): the choice lasts for this session only.
+  }
 }

@@ -58,7 +58,7 @@ export function DialogContent({
       <Overlay />
       <DialogPrimitive.Content
         className={cn(
-          'fixed z-50 flex flex-col gap-4 border-2 border-outline bg-surface p-6 focus-visible:outline-focus-ring',
+          'fixed z-50 flex flex-col gap-4 border border-outline bg-surface p-6 focus-visible:outline-focus-ring',
           variant === 'dialog'
             ? 'left-1/2 top-1/2 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 motion-safe:animate-dialog-in'
             : 'right-0 top-0 h-full w-full max-w-md motion-panel',

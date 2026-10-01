@@ -228,7 +228,7 @@
 
   /* Visible, token-driven focus for every interactive element. */
   :where(a, button, input, select, textarea, [tabindex]):focus-visible {
-    outline: var(--lw-outline-w) solid var(--lw-focus-ring);
+    outline: var(--lw-focus-w) solid var(--lw-focus-ring);
     outline-offset: 2px;
   }
 }
