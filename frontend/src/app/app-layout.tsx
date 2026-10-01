@@ -4,6 +4,7 @@ import type { NavSection } from '@/components/shell'
 import { Alert } from '@/components/ui/alert'
 import type { Crumb } from '@/components/ui/breadcrumbs'
 import { useDocumentTitle } from '@/features/auth/use-document-title'
+import { NotificationBell } from '@/features/notifications/notification-bell'
 import { GlobalSearch } from '@/features/search/global-search'
 import { LanguageSwitcher, useI18n } from '@/i18n'
 import { canAccess, navForRole, screenForPath } from './access'
@@ -16,8 +17,9 @@ import { useRouter } from './router'
 /**
  * The signed-in frame (design.md › App shell): AppShell wired to the active
  * role — nav filtered to what the role may open (requirement 2.3), "Viewing
- * as" switcher, language, account menu, global search, breadcrumb, sample-data
- * banner and page title. Screens render inside it.
+ * as" switcher, language, notifications bell (task 19), account menu, global
+ * search, breadcrumb, sample-data banner and page title. Screens render inside
+ * it.
  */
 
 export const GLOBAL_SEARCH_ID = 'global-search'
@@ -97,6 +99,7 @@ export function AppLayout({
           <>
             <LanguageSwitcher />
             <RoleSwitcher />
+            <NotificationBell />
             {slots.account}
           </>
         }
