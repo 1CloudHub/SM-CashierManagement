@@ -12,7 +12,7 @@ export function Card({
   return (
     <div
       data-slot="card"
-      className={cn('border-2 border-outline bg-surface p-4', className)}
+      className={cn('border border-outline-subtle bg-surface p-4', className)}
       {...props}
     />
   )

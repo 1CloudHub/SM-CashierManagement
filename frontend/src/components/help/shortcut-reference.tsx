@@ -47,7 +47,7 @@ export function ShortcutReference() {
             {group.items.map((s) => (
               <div
                 key={s.id}
-                className="flex items-center justify-between gap-4 border-b-2 border-outline-subtle py-2 last:border-b-0"
+                className="flex items-center justify-between gap-4 border-b border-outline-subtle py-2 last:border-b-0"
               >
                 <dt className="text-body text-text">{t(s.descriptionId)}</dt>
                 <dd className="shrink-0">

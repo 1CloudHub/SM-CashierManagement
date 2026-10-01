@@ -80,7 +80,7 @@ export function LayoutSection() {
         <Sidebar
           sideLabel="Scenario settings"
           side={
-            <div className="border-2 border-outline bg-surface-2 p-4">
+            <div className="border border-outline bg-surface-2 p-4">
               <p className="text-label uppercase text-text-muted">
                 Settings
               </p>
@@ -90,7 +90,7 @@ export function LayoutSection() {
             </div>
           }
         >
-          <div className="border-2 border-outline bg-surface p-4">
+          <div className="border border-outline bg-surface p-4">
             <p className="text-body text-text-muted">
               Main content track. On tablet and mobile the side track moves
               below (or into an overlay drawer).

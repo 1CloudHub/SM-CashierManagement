@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
  * `<label>` — use Field or a plain associated <label> (UX-004).
  */
 const baseControl =
-  'w-full min-h-tap border-2 border-outline bg-surface text-text text-body px-3 rounded-none motion-interactive placeholder:text-text-muted focus-visible:outline-focus-ring disabled:opacity-50 aria-invalid:border-danger'
+  'w-full min-h-tap border border-outline bg-surface text-text text-body px-3 rounded-none motion-interactive placeholder:text-text-muted focus-visible:outline-focus-ring disabled:opacity-50 aria-invalid:border-danger'
 
 export interface InputProps
   extends React.InputHTMLAttributes<HTMLInputElement> {

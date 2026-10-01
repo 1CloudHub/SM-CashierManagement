@@ -247,7 +247,7 @@ function ConsentPrompt({
       ) : (
         <p className="text-body text-text-muted">{t('homeArea.notShared')}</p>
       )}
-      <div role="group" aria-labelledby={headingId} className="border-2 border-outline bg-surface-2 p-4">
+      <div role="group" aria-labelledby={headingId} className="border border-outline bg-surface-2 p-4">
         <Stack gap={2}>
           <h3 id={headingId} className="text-h3 text-text">
             {t('homeArea.consent.heading')}

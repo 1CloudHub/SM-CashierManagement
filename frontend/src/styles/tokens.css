@@ -14,7 +14,7 @@
  *
  * Brand theming (task 22, SG-004 "Swapping the brand"): the LaneWise v0.5
  * concept (primary #1d4ed8, accent #dc2626, slate neutrals, square corners,
- * 2px outlines, no shadows). SM brand + legal sign-off is pending (Q8/Q28),
+ * thin 1px outlines with 2px focus rings, no shadows). SM brand + legal sign-off is pending (Q8/Q28),
  * so the brand is isolated here: to re-brand, replace the ramps and the
  * --lw-brand* / --lw-appbar* roles below (and the BrandMark component's
  * geometry if the logo changes), then run `npm test` — the contrast suite
@@ -263,6 +263,9 @@
   --lw-margin-tablet: 1.5rem; /* 24px */
   --lw-margin-desktop: 2rem; /* 32px */
   --lw-container-laptop: 80rem; /* 1280px */
+  --lw-topbar-h: 3.5rem; /* 56px app bar (wireframe) */
+  --lw-sidenav-w: 14.5rem; /* 232px expanded side nav */
+  --lw-sidenav-rail-w: 4.5rem; /* 72px icon rail */
   --lw-container-desktop: 100rem; /* 1600px */
 
   /* ---------------------------------------------------------------------
@@ -273,7 +276,8 @@
   --lw-radius-sm: 0px;
   --lw-radius-lg: 0px;
   --lw-radius-full: 9999px; /* pills/avatars only */
-  --lw-outline-w: 2px; /* outlines are always 2px, never hairlines */
+  --lw-outline-w: 1px; /* component borders: thin 1px lines (contrast comes from colour) */
+  --lw-focus-w: 2px; /* focus indicators stay 2px (WCAG 2.4.13) */
 
   /* Elevation is expressed as surface stepping, not shadows. */
   --lw-shadow: none;
