@@ -250,7 +250,7 @@ export function ShiftEditor({
                     {draft.activities.map((a, i) => (
                       <li
                         key={`${a.kind}-${a.startMin}`}
-                        className="flex items-center justify-between gap-2 border-b-2 border-outline-subtle py-1 text-body-sm"
+                        className="flex items-center justify-between gap-2 border-b border-outline-subtle py-1 text-body-sm"
                       >
                         <span>
                           <b className="font-weight-bold">{f.activityLetter(a.kind)}</b>{' '}

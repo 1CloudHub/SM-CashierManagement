@@ -253,3 +253,40 @@ describe('AppShell (laptop and up)', () => {
     expect(await axe(container)).toHaveNoViolations()
   })
 })
+
+describe('AppShell (laptop) collapsible nav', () => {
+  beforeEach(() => {
+    setViewport(() => true)
+    window.localStorage.clear()
+  })
+
+  it('collapses and expands the docked nav from its icon toggle and remembers the choice', async () => {
+    const { unmount } = render(
+      <AppShell nav={NAV}>
+        <h1>Home</h1>
+      </AppShell>,
+    )
+    const nav = screen.getByRole('navigation', { name: 'Main' })
+    expect(within(nav).getByText('Network view')).toBeVisible()
+
+    const collapse = screen.getByRole('button', { name: 'Collapse navigation' })
+    expect(collapse).toHaveAttribute('aria-expanded', 'true')
+    await userEvent.click(collapse)
+
+    expect(nav).toHaveAttribute('data-collapsed', 'true')
+    expect(within(nav).queryByText('Network view')).not.toBeInTheDocument()
+    expect(within(nav).getByRole('link', { name: 'Network view' })).toBeInTheDocument()
+    expect(window.localStorage.getItem('lw.nav.collapsed')).toBe('true')
+    unmount()
+
+    render(
+      <AppShell nav={NAV}>
+        <h1>Home</h1>
+      </AppShell>,
+    )
+    const expand = screen.getByRole('button', { name: 'Expand navigation' })
+    expect(expand).toHaveAttribute('aria-expanded', 'false')
+    await userEvent.click(expand)
+    expect(screen.getByRole('navigation', { name: 'Main' })).not.toHaveAttribute('data-collapsed')
+  })
+})

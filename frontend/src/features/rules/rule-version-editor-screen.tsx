@@ -344,11 +344,11 @@ function Editor({ client, role, versionId, onBack }: RuleVersionEditorScreenProp
       {v.isCostRule ? (
         <Section title={t('rules.editor.steps')}>
           <ol className="grid gap-3 sm:grid-cols-3">
-            <li className="border-2 border-outline p-3">
+            <li className="border border-outline p-3">
               <span className="block text-label text-text">1 · {t('rules.editor.step.submitted')}</span>
               <span className="text-body-sm text-text-muted">{stepState(submittedDone, !submittedDone)}</span>
             </li>
-            <li className="border-2 border-outline p-3">
+            <li className="border border-outline p-3">
               <span className="block text-label text-text">2 · {t('rules.editor.step.finance')}</span>
               <span className="block text-body-sm text-text-muted">
                 {stepState(financeDone, v.status === 'submitted')}
@@ -356,7 +356,7 @@ function Editor({ client, role, versionId, onBack }: RuleVersionEditorScreenProp
               </span>
               <span className="text-body-sm text-text-muted">{t('rules.editor.step.requiredNote')}</span>
             </li>
-            <li className="border-2 border-outline p-3">
+            <li className="border border-outline p-3">
               <span className="block text-label text-text">3 · {t('rules.editor.step.published')}</span>
               <span className="text-body-sm text-text-muted">{stepState(publishedDone, v.status === 'approved')}</span>
             </li>

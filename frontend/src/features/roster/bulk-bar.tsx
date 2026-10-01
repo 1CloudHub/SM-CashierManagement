@@ -19,7 +19,7 @@ export function BulkBar({
   const f = useRosterFormat()
   if (count === 0) return null
   const btn =
-    'min-h-tap border-2 border-bg bg-transparent px-3 text-body-sm font-weight-bold text-bg motion-interactive hover:bg-bg hover:text-text focus-visible:outline-focus-ring'
+    'min-h-tap border border-bg bg-transparent px-3 text-body-sm font-weight-bold text-bg motion-interactive hover:bg-bg hover:text-text focus-visible:outline-focus-ring'
   return (
     <div
       role="group"

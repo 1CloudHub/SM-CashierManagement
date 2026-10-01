@@ -56,7 +56,7 @@ export function RosterZoom({
           <div
             role="group"
             aria-label={f.t('roster.nav.label')}
-            className="inline-flex items-center gap-1 border-2 border-outline bg-surface px-1"
+            className="inline-flex items-center gap-1 border border-outline bg-surface px-1"
           >
             <Button
               size="icon"
