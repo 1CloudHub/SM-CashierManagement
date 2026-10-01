@@ -5,7 +5,7 @@ import { App } from 'aws-cdk-lib';
 import { Annotations, Match, Template } from 'aws-cdk-lib/assertions';
 import { describe, expect, it } from 'vitest';
 import { type EnvironmentConfig, resolveEnvironment, validateDomain } from '../config/environments';
-import { ApiStack, DEFAULT_API_BUNDLE_DIR, PROTECTED_ROUTES } from '../lib/api-stack';
+import { API_COGNITO_ADMIN_ACTIONS, ApiStack, DEFAULT_API_BUNDLE_DIR, PROTECTED_ROUTES } from '../lib/api-stack';
 import { AuthStack, DEFAULT_PRE_SIGN_UP_BUNDLE_DIR, TOKEN_POLICY } from '../lib/auth-stack';
 import { DeployPipelineStack } from '../lib/deploy-pipeline-stack';
 import { PipelineIamStack } from '../lib/pipeline-iam-stack';
@@ -378,6 +378,49 @@ describe('API stack', () => {
         'POST /approvals/{scenarioId}/secured-outside',
       ]),
     );
+  });
+
+  it('protects every user administration and audit log route with the Cognito authorizer', () => {
+    expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
+      expect.arrayContaining([
+        'GET /admin/scope-options',
+        'GET /admin/users',
+        'POST /admin/users',
+        'GET /admin/users/{userId}',
+        'PATCH /admin/users/{userId}',
+        'POST /admin/users/{userId}/deactivate',
+        'POST /admin/users/{userId}/resend',
+        'GET /audit-events',
+        'GET /audit-events/export',
+      ]),
+    );
+    for (const path of ['/admin/users/{userId}/deactivate', '/audit-events/export']) {
+      const resources = Object.values(api.findResources('AWS::ApiGateway::Resource')).map(
+        (r) => (r as { Properties: { PathPart: string } }).Properties.PathPart,
+      );
+      expect(resources).toContain(path.split('/').at(-1));
+    }
+  });
+
+  it('passes the user pool to the API and grants only the Cognito admin actions it uses, on that pool', () => {
+    api.hasResourceProperties('AWS::Lambda::Function', {
+      Environment: { Variables: Match.objectLike({ COGNITO_USER_POOL_ID: Match.anyValue() }) },
+    });
+    expect([...API_COGNITO_ADMIN_ACTIONS].sort()).toEqual([
+      'cognito-idp:AdminCreateUser',
+      'cognito-idp:AdminDisableUser',
+      'cognito-idp:AdminEnableUser',
+      'cognito-idp:AdminUserGlobalSignOut',
+    ]);
+    const statements = Object.values(api.findResources('AWS::IAM::Policy')).flatMap(
+      (p) => (p as { Properties: { PolicyDocument: { Statement: { Action: string | string[]; Resource: unknown }[] } } }).Properties.PolicyDocument.Statement,
+    );
+    const cognito = statements.filter((st) => [st.Action].flat().some((a) => a.startsWith('cognito-idp:')));
+    expect(cognito).toHaveLength(1);
+    expect([cognito[0]?.Action].flat().sort()).toEqual([...API_COGNITO_ADMIN_ACTIONS].sort());
+    // Scoped to the imported pool ARN, never a wildcard.
+    expect(JSON.stringify(cognito[0]?.Resource)).not.toContain('"*"');
+    expect(JSON.stringify(cognito[0]?.Resource)).toContain('UserPool');
   });
 
   it('passes the demo role switcher flag to the API and allows the X-Active-Role header in CORS', () => {
