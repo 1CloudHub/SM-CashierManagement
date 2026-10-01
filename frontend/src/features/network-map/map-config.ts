@@ -4,9 +4,11 @@
  * The deploy writes `map: { region, mapName, apiKey }` into
  * `/runtime-config.json` (infra/buildspec-cdk-deploy.yml): the map name and a
  * referer-restricted, read-only browser key. Locally the same can come from
- * `VITE_MAP_REGION` / `VITE_MAP_NAME` / `VITE_MAP_API_KEY`. In mock mode, in
- * tests, or when nothing is configured the screen uses its schematic map,
- * which needs no network.
+ * `VITE_MAP_REGION` / `VITE_MAP_NAME` / `VITE_MAP_API_KEY`. The base map is
+ * independent of where the data comes from, so the deployed demo (mock data)
+ * still shows Amazon Location tiles when the deploy provided a key; in local
+ * mock mode, in tests, or when nothing is configured the screen uses its
+ * schematic map, which needs no network.
  */
 export interface MapRuntimeConfig {
   readonly region: string
@@ -34,13 +36,12 @@ export function mapStyleUrl(config: MapRuntimeConfig): string {
 }
 
 /**
- * Loads the map settings: `/runtime-config.json` → `map`, then Vite env vars.
- * Resolves `null` in mock mode or when neither is present/valid.
+ * Loads the map settings: `/runtime-config.json` → `map`, then (outside mock
+ * mode) Vite env vars. Resolves `null` when neither is present/valid.
  */
 export async function loadMapConfig(
   options: { readonly mock: boolean; readonly fetch?: typeof fetch; readonly env?: Record<string, unknown> },
 ): Promise<MapRuntimeConfig | null> {
-  if (options.mock) return null
   const fetchImpl = options.fetch ?? ((...args: Parameters<typeof fetch>) => fetch(...args))
   try {
     const res = await fetchImpl('/runtime-config.json', { cache: 'no-store' })
@@ -51,6 +52,7 @@ export async function loadMapConfig(
   } catch {
     // Fall through to the build-time env (local dev).
   }
+  if (options.mock) return null
   const env = options.env ?? import.meta.env
   return parseMapConfig({ region: env.VITE_MAP_REGION, mapName: env.VITE_MAP_NAME, apiKey: env.VITE_MAP_API_KEY })
 }
