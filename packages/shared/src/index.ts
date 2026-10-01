@@ -14,6 +14,7 @@ export * from './network-map.js';
 export * from './provenance.js';
 export * from './rbac.js';
 export * from './roles.js';
+export * from './roster.js';
 export * from './rules.js';
 export * from './scenario.js';
 export * from './scenario-planning.js';
