@@ -225,6 +225,14 @@ describe('API stack', () => {
     });
   });
 
+  it('grants API Gateway one API-wide invoke permission (stays under the 20 KB Lambda policy limit)', () => {
+    api.resourceCountIs('AWS::Lambda::Permission', 1);
+    api.hasResourceProperties('AWS::Lambda::Permission', {
+      Action: 'lambda:InvokeFunction',
+      Principal: 'apigateway.amazonaws.com',
+    });
+  });
+
   it('protects every other route with the Cognito user-pool authorizer (feature routes secure by default)', () => {
     api.resourceCountIs('AWS::ApiGateway::Authorizer', 1);
     api.hasResourceProperties('AWS::ApiGateway::Authorizer', {
