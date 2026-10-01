@@ -6,10 +6,12 @@ import { createPool } from './db/pool.js';
 import { errors } from './http/errors.js';
 import { Router } from './http/router.js';
 import { createS3Storage, type IngestionStorage } from './ingestion/storage.js';
+import { createInProcessQueue, createSqsQueue, type JobQueue } from './jobs/queue.js';
 import { healthHandler } from './routes/health.js';
 import { registerIngestionRoutes } from './routes/ingestion.js';
 import { registerLocationPrivacyRoutes } from './routes/location-privacy.js';
 import { registerMeRoutes } from './routes/me.js';
+import { registerPlanningRoutes } from './routes/planning.js';
 import { registerSavedViewRoutes } from './routes/saved-views.js';
 import { registerSearchRoutes } from './routes/search.js';
 import { registerRuleRoutes } from './routes/rules.js';
@@ -22,22 +24,34 @@ export interface AppDeps {
   readonly rbac: RbacConfig;
   /** Ingestion object storage (created lazily); throws `service_unavailable` when unconfigured. */
   readonly storage: () => IngestionStorage;
+  /**
+   * Background-job queue (task 14.2): SQS when `JOBS_QUEUE_URL` is set, else
+   * jobs run in-process. Omitted (tests) => in-process over `db`.
+   */
+  readonly jobs?: () => JobQueue;
 }
 
 /**
  * Production dependencies: `DATABASE_URL` (pool created on first use), the
- * RBAC env flags and the uploads bucket `UPLOADS_BUCKET` (infra/lib/data-stack.ts).
+ * RBAC env flags, the uploads bucket `UPLOADS_BUCKET` (infra/lib/data-stack.ts)
+ * and the jobs queue `JOBS_QUEUE_URL` (infra/lib/jobs-stack.ts).
  */
 export function depsFromEnv(env: NodeJS.ProcessEnv = process.env): AppDeps {
   let pool: pg.Pool | null = null;
   let storage: IngestionStorage | null = null;
+  let queue: JobQueue | null = null;
+  const db = () => {
+    if (pool) return pool;
+    const connectionString = env.DATABASE_URL;
+    if (!connectionString) throw errors.serviceUnavailable();
+    pool = createPool({ connectionString, max: 2 });
+    return pool;
+  };
   return {
-    db: () => {
-      if (pool) return pool;
-      const connectionString = env.DATABASE_URL;
-      if (!connectionString) throw errors.serviceUnavailable();
-      pool = createPool({ connectionString, max: 2 });
-      return pool;
+    db,
+    jobs: () => {
+      queue ??= env.JOBS_QUEUE_URL ? createSqsQueue(env.JOBS_QUEUE_URL) : createInProcessQueue(db);
+      return queue;
     },
     rbac: rbacConfigFromEnv(env),
     storage: () => {
@@ -69,5 +83,7 @@ export function createApp(deps: AppDeps = depsFromEnv()): Router {
   registerRuleRoutes(router, deps);
   registerScenarioRoutes(router, deps);
   registerLocationPrivacyRoutes(router, deps);
+  const inProcess = createInProcessQueue(deps.db);
+  registerPlanningRoutes(router, { db: deps.db, jobs: deps.jobs ?? (() => inProcess) });
   return router.assertGuarded();
 }
