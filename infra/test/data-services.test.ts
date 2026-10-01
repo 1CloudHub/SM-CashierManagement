@@ -1,3 +1,4 @@
+import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { App } from 'aws-cdk-lib';
@@ -7,7 +8,7 @@ import { resolveEnvironment, type EnvironmentConfig } from '../config/environmen
 import { ApiStack } from '../lib/api-stack';
 import { AuthStack } from '../lib/auth-stack';
 import { DataStack } from '../lib/data-stack';
-import { JobsStack } from '../lib/jobs-stack';
+import { API_WORKER_BUNDLE_DIR, JobsStack, assertWorkerBundle } from '../lib/jobs-stack';
 import { LocationStack } from '../lib/location-stack';
 import { grantSesSend, sesEnvironment } from '../lib/notifications';
 
@@ -24,7 +25,7 @@ function synth(config: EnvironmentConfig = resolveEnvironment('prod')) {
     dbSecret: data.dbSecret,
     dbEnvironment: data.dbEnvironment,
   });
-  const location = new LocationStack(app, 'Test-Location', { config });
+  const location = new LocationStack(app, 'Test-Location', { config, mapReferers: ['https://lanewise.example.com'] });
   const api = new ApiStack(app, 'Test-Api', {
     config,
     userPool: auth.userPool,
@@ -256,6 +257,13 @@ describe('Jobs stack', () => {
       ScalingConfig: { MaximumConcurrency: prod.jobs.maxConcurrency },
     });
   });
+
+  it('deploys the task 14.2 worker bundled from /api, and refuses to synth without it', () => {
+    expect(assertWorkerBundle(API_WORKER_BUNDLE_DIR)).toBe(API_WORKER_BUNDLE_DIR);
+    expect(() => assertWorkerBundle('/nonexistent/jobs-worker')).toThrow(/Jobs worker bundle not found/);
+    const source = fs.readFileSync(path.join(__dirname, '..', 'bin', 'infra.ts'), 'utf8');
+    expect(source).toMatch(/workerBundleDir: assertWorkerBundle\(API_WORKER_BUNDLE_DIR\)/);
+  });
 });
 
 describe('Location stack', () => {
@@ -268,6 +276,25 @@ describe('Location stack', () => {
       CalculatorName: 'lanewise-prod-routes',
       DataSource: prod.location.dataSource,
     });
+  });
+
+  it('creates a browser map key that can only read this map, only from the SPA origins (task 16.1)', () => {
+    location.resourceCountIs('AWS::Location::APIKey', 1);
+    location.hasResourceProperties('AWS::Location::APIKey', {
+      KeyName: 'lanewise-prod-map-key',
+      NoExpiry: true,
+      Restrictions: {
+        AllowActions: ['geo:GetMap*'],
+        AllowResources: [{ 'Fn::GetAtt': [Match.stringLikeRegexp('^Map'), 'Arn'] }],
+        AllowReferers: ['https://lanewise.example.com/*'],
+      },
+    });
+    location.hasOutput('MapApiKeyName', { Value: 'lanewise-prod-map-key' });
+  });
+
+  it('creates no browser map key without SPA origins', () => {
+    const bare = Template.fromStack(new LocationStack(new App(), 'Bare-Location', { config: resolveEnvironment('prod') }));
+    bare.resourceCountIs('AWS::Location::APIKey', 0);
   });
 });
 

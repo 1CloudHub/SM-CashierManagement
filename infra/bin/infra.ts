@@ -5,7 +5,7 @@ import { ApiStack } from '../lib/api-stack';
 import { AuthStack } from '../lib/auth-stack';
 import { DataStack } from '../lib/data-stack';
 import { DeployPipelineStack } from '../lib/deploy-pipeline-stack';
-import { JobsStack } from '../lib/jobs-stack';
+import { API_WORKER_BUNDLE_DIR, JobsStack, assertWorkerBundle } from '../lib/jobs-stack';
 import { LocationStack } from '../lib/location-stack';
 import { grantSesSend, sesEnvironment } from '../lib/notifications';
 import { PipelineIamStack } from '../lib/pipeline-iam-stack';
@@ -58,12 +58,16 @@ const jobs = new JobsStack(app, `${prefix}-Jobs`, {
   appSecurityGroup: data.appSecurityGroup,
   dbSecret: data.dbSecret,
   dbEnvironment: data.dbEnvironment,
+  // Task 14.2: hiring plans and long rosters, bundled from /api.
+  workerBundleDir: assertWorkerBundle(API_WORKER_BUNDLE_DIR),
   description: `LaneWise background jobs (SQS + worker Lambda) — ${config.envName}.`,
 });
 
 const location = new LocationStack(app, `${prefix}-Location`, {
   env,
   config,
+  // Browser map key for the SPA's network map (task 16.1), restricted to the SPA origins.
+  mapReferers: spa.spaOrigins,
   description: `LaneWise Amazon Location Service (map + route calculator) — ${config.envName}.`,
 });
 

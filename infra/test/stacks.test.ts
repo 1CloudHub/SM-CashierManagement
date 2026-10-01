@@ -326,6 +326,10 @@ describe('API stack', () => {
         'GET /staff/{staffId}/home-area',
       ]),
     );
+    // Task 16 network map routes (api/src/routes/network-map.ts).
+    expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
+      expect.arrayContaining(['GET /network-map', 'GET /network-map/stores/{storeId}/candidates', 'GET /network-map/auto-match']),
+    );
     for (const route of PROTECTED_ROUTES) {
       const match = declared.filter((d) => d.key === `${route.method} ${route.path}`);
       expect(match, `${route.method} ${route.path}`).toHaveLength(1);
@@ -363,6 +367,25 @@ describe('API stack', () => {
         'POST /scenarios/{scenarioId}/run',
         'POST /scenarios/{scenarioId}/submit',
         'POST /scenarios/{scenarioId}/archive',
+      ]),
+    );
+  });
+
+  it('protects every task 14 planning route with the Cognito authorizer', () => {
+    expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
+      expect.arrayContaining([
+        'GET /scenarios/{scenarioId}/network',
+        'GET /scenarios/{scenarioId}/network/export',
+        'GET /scenarios/{scenarioId}/departments/{departmentId}/day',
+        'GET /scenarios/{scenarioId}/departments/{departmentId}/day/export',
+        'GET /scenarios/{scenarioId}/hiring-plan',
+        'POST /scenarios/{scenarioId}/hiring-plan/jobs',
+        'GET /scenarios/{scenarioId}/hiring-plan/jobs/{jobId}',
+        'GET /scenarios/{scenarioId}/hiring-plan/export',
+        'POST /scenarios/{scenarioId}/rosters/jobs',
+        'GET /scenarios/{scenarioId}/rosters/jobs/{jobId}',
+        'GET /scenarios/{scenarioId}/summary',
+        'GET /scenarios/{scenarioId}/summary/export',
       ]),
     );
   });
@@ -882,10 +905,16 @@ describe('CodeBuild role deploy grants', () => {
       PolicyDocument: {
         Statement: Match.arrayWith([
           Match.objectLike({ Action: 'cloudformation:DescribeStacks', Effect: 'Allow' }),
+          // Task 16.1: read the SPA map key for runtime-config.json, LaneWise keys only.
+          Match.objectLike({ Action: 'geo:DescribeKey', Effect: 'Allow' }),
           Match.objectLike({ Action: 'cloudfront:CreateInvalidation', Effect: 'Allow' }),
         ]),
       },
     });
+    const mapKeyGrant = Object.values(pipelineIam.findResources('AWS::IAM::Policy'))
+      .flatMap((p) => (p as { Properties: { PolicyDocument: { Statement: { Sid?: string; Resource: unknown }[] } } }).Properties.PolicyDocument.Statement)
+      .find((st) => st.Sid === 'ReadLaneWiseMapKey');
+    expect(JSON.stringify(mapKeyGrant?.Resource)).toContain(':api-key/lanewise-*');
   });
 });
 
