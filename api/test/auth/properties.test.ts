@@ -223,13 +223,18 @@ describe('P12 active-role enforcement', () => {
             expect(after).toEqual(before);
             return;
           }
-          // Authorised: the handler ran. Task-9 routes addressed with random
-          // ids/bodies legitimately answer 201/404/409 too — never 401/403/5xx.
-          const featureOutcome =
-            request.guard.kind === 'authorize' && request.guard.resource === 'data_ingestion'
-              ? res.status < 500 && res.status !== 401 && res.status !== 403
-              : res.status === 200 || res.status === 422;
+          // Authorised: the handler ran. Task-9 ingestion routes addressed with
+          // random ids/bodies legitimately answer 201/404/409 too; other routes
+          // may answer 404 only for an unknown object whose path parameter is
+          // not a scope target (e.g. a rule version id). Never 401/403/5xx.
+          const isIngestion = request.guard.kind === 'authorize' && request.guard.resource === 'data_ingestion';
+          const unscopedParam = request.targetId !== null && request.guard.kind === 'authorize' && !request.guard.scopeTarget;
+          const accepted = [200, 422, ...(unscopedParam ? [404] : [])];
+          const featureOutcome = isIngestion
+            ? res.status < 500 && res.status !== 401 && res.status !== 403
+            : accepted.includes(res.status);
           expect(featureOutcome, `${request.method} ${request.path}: ${res.raw}`).toBe(true);
+          if (res.status === 404 && !isIngestion) expect(after).toEqual(before);
           // CSV downloads record one export audit event (P7), so only they may write on GET.
           const isExport = /\/(export|report)$/.test(request.pattern);
           if (request.method === 'GET' && !isExport) {
