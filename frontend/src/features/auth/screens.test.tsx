@@ -125,12 +125,12 @@ describe('SCR-002 First sign-in / new device', () => {
     await user.click(screen.getByRole('button', { name: 'Send code' }))
     expect(client.startEmailCode).toHaveBeenCalledWith('juan@smretail.com')
 
-    expect(await screen.findByText('We sent a 6-digit code to juan@smretail.com.')).toBeInTheDocument()
+    expect(await screen.findByText('We sent a one-time code to juan@smretail.com.')).toBeInTheDocument()
     // Focus moves into the code field once the code is sent.
     await waitFor(() => expect(screen.getByLabelText(/^code/i)).toHaveFocus())
-    await user.type(screen.getByLabelText(/^code/i), '123456')
+    await user.type(screen.getByLabelText(/^code/i), '12345678')
     await user.click(screen.getByRole('button', { name: 'Verify code' }))
-    expect(client.confirmEmailCode).toHaveBeenCalledWith('123456')
+    expect(client.confirmEmailCode).toHaveBeenCalledWith('12345678')
 
     await screen.findByRole('heading', { name: 'Create a passkey' })
     // Completed steps carry a visible check and an sr-only "completed".
