@@ -106,6 +106,13 @@ export const PROTECTED_ROUTES: readonly { readonly method: string; readonly path
   { method: 'DELETE', path: '/me/home-area' },
   { method: 'GET', path: '/me/home-area/barangays' },
   { method: 'GET', path: '/staff/{staffId}/home-area' },
+  // Task 12: approvals — queue, tracker, step decisions, off-system record (SCR-033).
+  { method: 'GET', path: '/approvals' },
+  { method: 'GET', path: '/approvals/{scenarioId}' },
+  { method: 'POST', path: '/approvals/{scenarioId}/headcount' },
+  { method: 'POST', path: '/approvals/{scenarioId}/budget' },
+  { method: 'POST', path: '/approvals/{scenarioId}/plan' },
+  { method: 'POST', path: '/approvals/{scenarioId}/secured-outside' },
   // Task 14: network view, department day plan, hiring plan and long-roster
   // background jobs, leadership summary (SCR-020/021/023/024).
   { method: 'GET', path: '/scenarios/{scenarioId}/network' },
