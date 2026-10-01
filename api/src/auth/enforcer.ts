@@ -37,7 +37,7 @@ export function createEnforcer(deps: EnforcerDeps): Enforcer {
     if (!can(principal.activeRole, guard.resource, guard.action)) throw errors.forbidden();
     if (guard.scopeTarget) {
       const id = request.params[guard.scopeTarget.param];
-      if (id === undefined || !(await isTargetInScope(db, principal.scope, guard.scopeTarget, id))) {
+      if (id === undefined || !(await isTargetInScope(db, principal, guard.scopeTarget, id))) {
         throw errors.notFoundOrNoAccess();
       }
     }

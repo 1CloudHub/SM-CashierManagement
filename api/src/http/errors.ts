@@ -52,7 +52,11 @@ export const errors = {
     }),
   unsupportedMediaType: () =>
     new ApiError('unsupported_media_type', 'Request body must be application/json.'),
-  payloadTooLarge: () => new ApiError('payload_too_large', 'Request body is too large.'),
+  payloadTooLarge: (message = 'Request body is too large.') => new ApiError('payload_too_large', message),
+  conflict: (message: string) => new ApiError('conflict', message),
+  validationFailed: (message: string, details: readonly ApiErrorDetail[] = []) =>
+    new ApiError('validation_failed', message, { details }),
+  /** A dependency (database, storage) is not configured or unreachable. */
   serviceUnavailable: () =>
     new ApiError('service_unavailable', 'The service is temporarily unavailable. Try again shortly.'),
 } as const;

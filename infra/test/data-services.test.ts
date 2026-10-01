@@ -39,9 +39,8 @@ function synth(config: EnvironmentConfig = resolveEnvironment('prod')) {
     },
   });
   data.dbSecret.grantRead(api.apiFunction);
-  data.uploadsBucket.grantPut(api.apiFunction);
-  data.uploadsBucket.grantRead(api.apiFunction);
-  jobs.queue.grantSendMessages(api.apiFunction);
+  data.grantIngestionAccess(api.apiFunction);
+    jobs.queue.grantSendMessages(api.apiFunction);
   location.grantMap(api.apiFunction);
   location.grantRoutes(api.apiFunction);
   grantSesSend(api, api.apiFunction, config.notifications);
@@ -107,7 +106,7 @@ describe('Data stack — Aurora PostgreSQL', () => {
   it('runs Aurora PostgreSQL 16 Serverless v2 at the configured capacity', () => {
     data.hasResourceProperties('AWS::RDS::DBCluster', {
       Engine: 'aurora-postgresql',
-      EngineVersion: '16.4',
+      EngineVersion: '16.8',
       DatabaseName: 'lanewise',
       StorageEncrypted: true,
       DeletionProtection: true,
@@ -130,9 +129,10 @@ describe('Data stack — Aurora PostgreSQL', () => {
 
   it('generates the credentials into Secrets Manager (no plaintext password)', () => {
     data.hasResourceProperties('AWS::SecretsManager::Secret', {
-      Name: 'lanewise/prod/db-master',
       GenerateSecretString: Match.objectLike({ GenerateStringKey: 'password' }),
     });
+    // No fixed name, so a retained secret from an earlier stack can't block a create.
+    data.hasResourceProperties('AWS::SecretsManager::Secret', { Name: Match.absent() });
     const cluster = Object.values(data.findResources('AWS::RDS::DBCluster'))[0] as {
       Properties: { MasterUserPassword: unknown };
     };
@@ -223,7 +223,8 @@ describe('Data stack — uploads bucket', () => {
       LifecycleConfiguration: {
         Rules: Match.arrayWith([
           Match.objectLike({ AbortIncompleteMultipartUpload: { DaysAfterInitiation: 1 } }),
-          Match.objectLike({ ExpirationInDays: prod.data.uploadRetentionDays }),
+          // Raw uploads expire; snapshot data pinned by scenarios never does (task 9).
+          Match.objectLike({ Prefix: 'uploads/', ExpirationInDays: prod.data.uploadRetentionDays }),
         ]),
       },
       CorsConfiguration: {
@@ -308,6 +309,19 @@ describe('API wiring (task 24)', () => {
     // Never destructive on the uploads bucket or the queue.
     expect(has('s3:DeleteObject*')).toBe(false);
     expect(has('sqs:DeleteMessage')).toBe(false);
+  });
+
+  it('grants the API only Put/Get under uploads/ and snapshots/ on the uploads bucket (task 9)', () => {
+    const s3 = statements(api).filter((s) => actionsOf(s).some((a) => a.startsWith('s3:')));
+    const actions = s3.flatMap(actionsOf).sort();
+    expect(actions).toEqual(['s3:GetObject', 's3:ListBucket', 's3:PutObject']);
+    const objects = s3.find((s) => actionsOf(s).includes('s3:PutObject'));
+    expect(actionsOf(objects!).sort()).toEqual(['s3:GetObject', 's3:PutObject']);
+    const resources = JSON.stringify(objects!.Resource);
+    expect(resources).toContain('/uploads/*');
+    expect(resources).toContain('/snapshots/*');
+    const list = s3.find((s) => actionsOf(s).includes('s3:ListBucket'));
+    expect(list!.Condition).toEqual({ StringLike: { 's3:prefix': ['uploads/*'] } });
   });
 
   it('limits SES sending to the verified identity and its From addresses', () => {

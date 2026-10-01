@@ -14,7 +14,7 @@ import { SpaHostingStack } from '../lib/spa-hosting-stack';
 
 function synth() {
   const app = new App();
-  const config = resolveEnvironment('prod');
+  const config = withDomain();
   const spa = new SpaHostingStack(app, 'Test-SpaHosting', { config });
   // Mirrors bin/infra.ts.
   const auth = new AuthStack(app, 'Test-Auth', {
@@ -50,6 +50,21 @@ function synth() {
 
 const DOMAIN = 'lanewise.prototypes.1cloudhub.com';
 const ZONE_ID = 'Z10306162UR77DOLJD1L3';
+
+/**
+ * Prod config with the custom domain switched on. Prod currently has the custom
+ * domain paused (config/environments.ts); these tests keep the domain code path
+ * covered so it can be re-enabled by config alone.
+ */
+function withDomain(): EnvironmentConfig {
+  const base = resolveEnvironment('prod');
+  return {
+    ...base,
+    domainName: DOMAIN,
+    hostedZone: { id: ZONE_ID, name: 'prototypes.1cloudhub.com' },
+    auth: { ...base.auth, relyingPartyId: DOMAIN },
+  };
+}
 
 /** Prod config with the custom domain, relying party and SES sender removed. */
 function withoutDomainOrEmail(): EnvironmentConfig {
@@ -162,14 +177,14 @@ describe('SPA custom domain (prod: lanewise.prototypes.1cloudhub.com)', () => {
     expect(
       () =>
         new SpaHostingStack(new App(), 'Test-Spa-WrongRegion', {
-          config: resolveEnvironment('prod'),
+          config: withDomain(),
           env: { region: 'ap-southeast-1' },
         }),
     ).toThrowError(/us-east-1/);
   });
 
   it('validates that a custom domain has a hosted zone and sits inside it', () => {
-    const base = resolveEnvironment('prod');
+    const base = withDomain();
     expect(() => validateDomain(base)).not.toThrow();
     expect(() => validateDomain({ ...base, hostedZone: undefined })).toThrowError(/hostedZone/);
     expect(() => validateDomain({ ...base, domainName: 'lanewise.1cloudhub.com' })).toThrowError(/not in hosted zone/);
@@ -264,7 +279,31 @@ describe('API stack', () => {
       return { key: `${p.HttpMethod} ${p.ResourceId.Ref ? pathOf(p.ResourceId.Ref) : '/'}`, auth: p.AuthorizationType };
     });
     expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
-      expect.arrayContaining(['GET /me', 'PUT /me/active-role', 'GET /stores', 'GET /stores/{storeId}']),
+      expect.arrayContaining([
+        'GET /me',
+        'PUT /me/active-role',
+        'GET /stores',
+        'GET /stores/{storeId}',
+        'GET /search',
+        'GET /saved-views',
+        'POST /saved-views',
+        'PATCH /saved-views/{viewId}',
+        'DELETE /saved-views/{viewId}',
+        // Task 9 (data ingestion, snapshots, provenance).
+        'GET /datasets',
+        'GET /datasets/provenance',
+        'POST /ingestions/uploads',
+        'POST /ingestions',
+        'GET /ingestions',
+        'GET /ingestions/export',
+        'GET /ingestions/{ingestionId}',
+        'GET /ingestions/{ingestionId}/report',
+        'POST /ingestions/{ingestionId}/load',
+        'POST /ingestions/{ingestionId}/cancel',
+        'GET /snapshots',
+        'GET /snapshots/{snapshotId}',
+        'PATCH /snapshots/{snapshotId}',
+      ]),
     );
     // Task 15 location-privacy routes (api/src/routes/location-privacy.ts).
     expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
@@ -284,6 +323,40 @@ describe('API stack', () => {
       expect(match, `${route.method} ${route.path}`).toHaveLength(1);
       expect(match[0]?.auth).toBe('COGNITO_USER_POOLS');
     }
+  });
+
+  it('protects every task 10 rule route with the Cognito authorizer', () => {
+    expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
+      expect.arrayContaining([
+        'GET /rule-sets',
+        'GET /rule-sets/{ruleSetId}/versions',
+        'POST /rule-sets/{ruleSetId}/versions',
+        'GET /rule-versions/{versionId}',
+        'PATCH /rule-versions/{versionId}',
+        'POST /rule-versions/{versionId}/submit',
+        'POST /rule-versions/{versionId}/approve',
+        'POST /rule-versions/{versionId}/request-changes',
+        'POST /rule-versions/{versionId}/publish',
+        'GET /rule-versions/{versionId}/diff',
+      ]),
+    );
+  });
+
+  it('protects every task 11 scenario route with the Cognito authorizer', () => {
+    expect(PROTECTED_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual(
+      expect.arrayContaining([
+        'GET /scenarios',
+        'POST /scenarios',
+        'GET /scenarios/compare',
+        'GET /scenarios/{scenarioId}',
+        'PATCH /scenarios/{scenarioId}',
+        'POST /scenarios/{scenarioId}/duplicate',
+        'POST /scenarios/{scenarioId}/refresh',
+        'POST /scenarios/{scenarioId}/run',
+        'POST /scenarios/{scenarioId}/submit',
+        'POST /scenarios/{scenarioId}/archive',
+      ]),
+    );
   });
 
   it('passes the demo role switcher flag to the API and allows the X-Active-Role header in CORS', () => {
@@ -341,9 +414,9 @@ describe('API stack', () => {
     expect(
       () =>
         new ApiStack(app, 'Test-Api-NoBundle', {
-          config: resolveEnvironment('prod'),
+          config: withDomain(),
           userPool: new AuthStack(app, 'Test-Auth-ForNoBundle', {
-            config: resolveEnvironment('prod'),
+            config: withDomain(),
             relyingPartyId: 'lanewise.example.com',
           }).userPool,
           apiBundleDir: path.join(os.tmpdir(), 'lanewise-missing-bundle'),
@@ -421,7 +494,7 @@ describe('auth stack (task 7)', () => {
 
   it('enables email OTP (sent through SES) when an SES identity is configured', () => {
     const app = new App();
-    const base = resolveEnvironment('prod');
+    const base = withDomain();
     const config = {
       ...base,
       auth: {
@@ -510,7 +583,7 @@ describe('auth stack (task 7)', () => {
     expect(
       () =>
         new AuthStack(new App(), 'Test-Auth-NoBundle', {
-          config: resolveEnvironment('prod'),
+          config: withDomain(),
           relyingPartyId: 'x.example.com',
           preSignUpBundleDir: path.join(os.tmpdir(), 'lanewise-missing-bundle'),
         }),

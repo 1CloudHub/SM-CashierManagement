@@ -5,20 +5,32 @@ import { publicRoute } from './auth/guards.js';
 import { createPool } from './db/pool.js';
 import { errors } from './http/errors.js';
 import { Router } from './http/router.js';
+import { createS3Storage, type IngestionStorage } from './ingestion/storage.js';
 import { healthHandler } from './routes/health.js';
+import { registerIngestionRoutes } from './routes/ingestion.js';
 import { registerLocationPrivacyRoutes } from './routes/location-privacy.js';
 import { registerMeRoutes } from './routes/me.js';
+import { registerSavedViewRoutes } from './routes/saved-views.js';
+import { registerSearchRoutes } from './routes/search.js';
+import { registerRuleRoutes } from './routes/rules.js';
+import { registerScenarioRoutes } from './routes/scenarios.js';
 import { registerStoreRoutes } from './routes/stores.js';
 
 export interface AppDeps {
   /** The database pool (created lazily); throws `service_unavailable` when unconfigured. */
   readonly db: () => pg.Pool;
   readonly rbac: RbacConfig;
+  /** Ingestion object storage (created lazily); throws `service_unavailable` when unconfigured. */
+  readonly storage: () => IngestionStorage;
 }
 
-/** Production dependencies: `DATABASE_URL` (pool created on first use) and the RBAC env flags. */
+/**
+ * Production dependencies: `DATABASE_URL` (pool created on first use), the
+ * RBAC env flags and the uploads bucket `UPLOADS_BUCKET` (infra/lib/data-stack.ts).
+ */
 export function depsFromEnv(env: NodeJS.ProcessEnv = process.env): AppDeps {
   let pool: pg.Pool | null = null;
+  let storage: IngestionStorage | null = null;
   return {
     db: () => {
       if (pool) return pool;
@@ -28,6 +40,13 @@ export function depsFromEnv(env: NodeJS.ProcessEnv = process.env): AppDeps {
       return pool;
     },
     rbac: rbacConfigFromEnv(env),
+    storage: () => {
+      if (storage) return storage;
+      const bucket = env.UPLOADS_BUCKET;
+      if (!bucket) throw errors.serviceUnavailable();
+      storage = createS3Storage(bucket);
+      return storage;
+    },
   };
 }
 
@@ -44,6 +63,11 @@ export function createApp(deps: AppDeps = depsFromEnv()): Router {
   const router = new Router({ enforcer: createEnforcer(deps) }).get('/health', publicRoute(), healthHandler);
   registerMeRoutes(router, deps);
   registerStoreRoutes(router, deps);
+  registerSearchRoutes(router, deps);
+  registerSavedViewRoutes(router, deps);
+  registerIngestionRoutes(router, deps);
+  registerRuleRoutes(router, deps);
+  registerScenarioRoutes(router, deps);
   registerLocationPrivacyRoutes(router, deps);
   return router.assertGuarded();
 }

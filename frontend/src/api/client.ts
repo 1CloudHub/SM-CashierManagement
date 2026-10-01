@@ -3,10 +3,16 @@ import {
   type ApiErrorBody,
   type ApiErrorCode,
   type ApiErrorDetail,
+  type CreateSavedViewRequest,
   type HealthResponse,
   type RoleCode,
+  type SavedView,
+  type SavedViewListResponse,
+  type SavedViewScreen,
+  type SearchResponse,
+  type UpdateSavedViewRequest,
 } from '@lanewise/shared'
-import type { HomeSummary } from './types'
+import type { ContextOptions, HomeSummary } from './types'
 
 /**
  * Typed API client (task 8.2).
@@ -89,6 +95,14 @@ export interface ApiClient {
   request<T>(method: HttpMethod, path: string, options?: RequestOptions): Promise<T>
   getHealth(options?: RequestOptions): Promise<HealthResponse>
   getHome(options?: RequestOptions): Promise<HomeSummary>
+  /** Global search (task 20); every hit is in the active role's scope (P1). */
+  search(query: string, limit?: number, options?: RequestOptions): Promise<SearchResponse>
+  getContextOptions(options?: RequestOptions): Promise<ContextOptions>
+  /** The caller's own saved views, optionally for one screen. */
+  listSavedViews(screen?: SavedViewScreen, options?: RequestOptions): Promise<SavedViewListResponse>
+  createSavedView(body: CreateSavedViewRequest, options?: RequestOptions): Promise<SavedView>
+  updateSavedView(id: string, body: UpdateSavedViewRequest, options?: RequestOptions): Promise<SavedView>
+  deleteSavedView(id: string, options?: RequestOptions): Promise<SavedView>
 }
 
 export function createApiClient({ adapter, getActiveRole, getAuthToken }: ApiClientOptions): ApiClient {
@@ -110,6 +124,18 @@ export function createApiClient({ adapter, getActiveRole, getAuthToken }: ApiCli
     request,
     getHealth: (options) => request<HealthResponse>('GET', '/health', options),
     getHome: (options) => request<HomeSummary>('GET', '/home', options),
+    search: (query, limit, options) => {
+      const params = new URLSearchParams({ q: query })
+      if (limit !== undefined) params.set('limit', String(limit))
+      return request<SearchResponse>('GET', `/search?${params.toString()}`, options)
+    },
+    getContextOptions: (options) => request<ContextOptions>('GET', '/context-options', options),
+    listSavedViews: (screen, options) =>
+      request<SavedViewListResponse>('GET', screen ? `/saved-views?screen=${encodeURIComponent(screen)}` : '/saved-views', options),
+    createSavedView: (body, options) => request<SavedView>('POST', '/saved-views', { ...options, body }),
+    updateSavedView: (id, body, options) =>
+      request<SavedView>('PATCH', `/saved-views/${encodeURIComponent(id)}`, { ...options, body }),
+    deleteSavedView: (id, options) => request<SavedView>('DELETE', `/saved-views/${encodeURIComponent(id)}`, options),
   }
 }
 

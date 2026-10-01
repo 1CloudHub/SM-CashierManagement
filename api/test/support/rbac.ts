@@ -11,6 +11,7 @@ import { DEFAULT_RBAC_CONFIG } from '../../src/auth/config.js';
 import { scopeToColumns } from '../../src/db/repositories/users.js';
 import { createLambdaHandler } from '../../src/lambda.js';
 import type { Router } from '../../src/http/router.js';
+import { MemoryStorage } from './memory-storage.js';
 
 export const uniq = (): string => randomBytes(4).toString('hex');
 
@@ -29,7 +30,8 @@ export interface CallResult {
 }
 
 export function makeClient(pool: pg.Pool, demoRoleSwitcher: boolean) {
-  const deps: AppDeps = { db: () => pool, rbac: { ...DEFAULT_RBAC_CONFIG, demoRoleSwitcher } };
+  const storage = new MemoryStorage();
+  const deps: AppDeps = { db: () => pool, rbac: { ...DEFAULT_RBAC_CONFIG, demoRoleSwitcher }, storage: () => storage };
   return { ...routerClient(createApp(deps)), deps };
 }
 
@@ -41,13 +43,16 @@ export function routerClient(router: Router) {
     if (options.role !== undefined) headers['X-Active-Role'] = options.role;
     if (options.body !== undefined) headers['Content-Type'] = 'application/json';
     const email = options.email === undefined ? null : options.email;
+    // API Gateway delivers the query string separately from the path.
+    const [path, search] = options.path.split('?', 2) as [string, string | undefined];
+    const query = search === undefined ? null : Object.fromEntries(new URLSearchParams(search));
     const event = {
       httpMethod: options.method ?? 'GET',
-      path: options.path,
+      path,
       resource: '/{proxy+}',
       headers,
       multiValueHeaders: {},
-      queryStringParameters: null,
+      queryStringParameters: query,
       multiValueQueryStringParameters: null,
       pathParameters: null,
       stageVariables: null,

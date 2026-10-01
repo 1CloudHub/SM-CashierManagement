@@ -11,11 +11,12 @@ version: 0.2
 #   install  -> restore deps (shared types, API, frontend, infra, domain,
 #               matching);
 #               dependency-free repo scripts need no install.
-#   build    -> build @lanewise/shared (consumed by the API and the SPA),
+#   build    -> build @lanewise/shared (consumed by the API and the SPA) and
+#               the staffing domain (consumed by the API's demo seed), then
 #               type-check and bundle the API Lambda + the Cognito pre-sign-up
-#               trigger (api/dist/{lambda,pre-sign-up}), build the SPA,
-#               type-check/emit the CDK app, build the staffing domain and
-#               cross-store matching packages.
+#               trigger + the migrate/seed CLIs (api/dist/*), build the SPA,
+#               type-check/emit the CDK app, build the cross-store matching
+#               package.
 #               Both bundles must exist before cdk synth / infra tests.
 #   lint     -> ESLint (shared + API + frontend + infra + domain + matching) +
 #               docs-conventions.
@@ -47,20 +48,22 @@ phases:
     commands:
       - echo "install — restoring dependencies"
       - cd "$CODEBUILD_SRC_DIR/packages/shared" && npm ci
+      - cd "$CODEBUILD_SRC_DIR/packages/domain" && npm ci
       - cd "$CODEBUILD_SRC_DIR/api" && npm ci
       - cd "$CODEBUILD_SRC_DIR/frontend" && npm ci
       - cd "$CODEBUILD_SRC_DIR/infra" && npm ci
-      - cd "$CODEBUILD_SRC_DIR/packages/domain" && npm ci
       - cd "$CODEBUILD_SRC_DIR/packages/matching" && npm ci
 
   build:
     commands:
       - echo "build — shared types + API bundle + SPA + CDK app"
       - cd "$CODEBUILD_SRC_DIR/packages/shared" && npm run build
+      # The API depends on @lanewise/domain (file:) for the demo seed (task 23),
+      # so the domain package is built before the API.
+      - cd "$CODEBUILD_SRC_DIR/packages/domain" && npm run build
       - cd "$CODEBUILD_SRC_DIR/api" && npm run build
       - cd "$CODEBUILD_SRC_DIR/frontend" && npm run build
       - cd "$CODEBUILD_SRC_DIR/infra" && npm run build
-      - cd "$CODEBUILD_SRC_DIR/packages/domain" && npm run build
       - cd "$CODEBUILD_SRC_DIR/packages/matching" && npm run build
 
   pre_build:
