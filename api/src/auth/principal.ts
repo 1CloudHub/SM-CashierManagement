@@ -33,7 +33,7 @@ export async function findAppUser(db: Queryable, email: string): Promise<AppUser
 /**
  * Resolves the principal for a signed-in identity. Returns `null` when the
  * user has no `app_user` row yet (demo self sign-up before the first role
- * choice). Throws 403 for a disabled user or an `X-Active-Role` header naming
+ * choice). Throws 403 for a disabled (deactivated) user or an `X-Active-Role` header naming
  * a role the user may not select.
  */
 export async function resolvePrincipal(
@@ -49,7 +49,8 @@ export async function resolvePrincipal(
     if (!check.ok) throw errors.forbidden();
     return null;
   }
-  if (user.status !== 'active') throw errors.forbidden();
+  // An invited user has verified their work email by signing in; `GET /me` marks them active.
+  if (user.status === 'disabled') throw errors.forbidden();
 
   const assignments = await listRoleAssignments(db, user.id);
   const active = resolveActiveRole({

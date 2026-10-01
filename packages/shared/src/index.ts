@@ -2,6 +2,7 @@
  * @lanewise/shared — shared domain types, DTOs and tiny pure helpers.
  * No runtime dependencies; safe to import from the API and the SPA.
  */
+export * from './admin.js';
 export * from './api.js';
 export * from './approvals.js';
 export * from './audit.js';

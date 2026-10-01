@@ -3,14 +3,17 @@ import { rbacConfigFromEnv, type RbacConfig } from './auth/config.js';
 import { createEnforcer } from './auth/enforcer.js';
 import type { RequestContext } from './context.js';
 import { publicRoute } from './auth/guards.js';
+import { userDirectoryFromEnv, type UserDirectory } from './auth/user-directory.js';
 import { createPool } from './db/pool.js';
 import { errors } from './http/errors.js';
 import { Router } from './http/router.js';
 import { createS3Storage, type IngestionStorage } from './ingestion/storage.js';
+import { registerAdminUserRoutes } from './routes/admin-users.js';
 import { dispatchPendingEmails } from './notifications/dispatch.js';
 import { createSesSender, type EmailSender } from './notifications/email.js';
 import { createInProcessQueue, createSqsQueue, type JobQueue } from './jobs/queue.js';
 import { registerApprovalRoutes } from './routes/approvals.js';
+import { registerAuditLogRoutes } from './routes/audit-log.js';
 import { healthHandler } from './routes/health.js';
 import { registerIngestionRoutes } from './routes/ingestion.js';
 import { registerLocationPrivacyRoutes } from './routes/location-privacy.js';
@@ -32,6 +35,11 @@ export interface AppDeps {
   readonly rbac: RbacConfig;
   /** Ingestion object storage (created lazily); throws `service_unavailable` when unconfigured. */
   readonly storage: () => IngestionStorage;
+  /**
+   * The Cognito user pool for invitations and deactivation (SCR-070/071);
+   * `null` (or absent) changes the app user only.
+   */
+  readonly directory?: () => UserDirectory | null;
   /**
    * Background-job queue (task 14.2): SQS when `JOBS_QUEUE_URL` is set, else
    * jobs run in-process. Omitted (tests) => in-process over `db`.
@@ -58,10 +66,10 @@ export function appBaseUrlFromEnv(env: NodeJS.ProcessEnv): string {
 
 /**
  * Production dependencies: `DATABASE_URL` (pool created on first use), the
- * RBAC env flags, the uploads bucket `UPLOADS_BUCKET` (infra/lib/data-stack.ts)
- * the jobs queue `JOBS_QUEUE_URL` (infra/lib/jobs-stack.ts) and the SES sender
- * `SES_FROM_ADDRESS` / `SES_REGION` (infra/lib/notifications.ts).
- * and the jobs queue `JOBS_QUEUE_URL` (infra/lib/jobs-stack.ts).
+ * RBAC env flags, the uploads bucket `UPLOADS_BUCKET` (infra/lib/data-stack.ts),
+ * the jobs queue `JOBS_QUEUE_URL` (infra/lib/jobs-stack.ts), the SES sender
+ * `SES_FROM_ADDRESS` / `SES_REGION` (infra/lib/notifications.ts) and the user
+ * pool `COGNITO_USER_POOL_ID` (infra/lib/api-stack.ts).
  */
 export function depsFromEnv(env: NodeJS.ProcessEnv = process.env): AppDeps {
   let pool: pg.Pool | null = null;
@@ -75,6 +83,7 @@ export function depsFromEnv(env: NodeJS.ProcessEnv = process.env): AppDeps {
     pool = createPool({ connectionString, max: 2 });
     return pool;
   };
+  let directory: UserDirectory | null | undefined;
   return {
     db,
     jobs: () => {
@@ -98,6 +107,10 @@ export function depsFromEnv(env: NodeJS.ProcessEnv = process.env): AppDeps {
       return sender;
     },
     appBaseUrl: appBaseUrlFromEnv(env),
+    directory: () => {
+      if (directory === undefined) directory = userDirectoryFromEnv(env);
+      return directory;
+    },
   };
 }
 
@@ -133,5 +146,7 @@ export function createApp(deps: AppDeps = depsFromEnv()): Router {
   registerNetworkMapRoutes(router, deps);
   registerRosterRoutes(router, deps);
   registerOfferRoutes(router, deps);
+  registerAdminUserRoutes(router, deps);
+  registerAuditLogRoutes(router, deps);
   return router.assertGuarded();
 }
