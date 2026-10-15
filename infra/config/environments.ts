@@ -53,8 +53,24 @@ export interface EnvironmentConfig {
   readonly location: LocationConfig;
   /** Amazon SES sending for the notifications service (task 24, for task 19). */
   readonly notifications: NotificationsConfig;
+  /**
+   * SM Atrium demo portal (AtriumStack): the proposal's "front door", signing
+   * in against this pool and opening LaneWise plus the proposal decks.
+   * Undefined => no Atrium stack.
+   */
+  readonly atrium?: AtriumConfig;
   /** Tags applied to every stack/resource in this environment. */
   readonly tags: Record<string, string>;
+}
+
+export interface AtriumConfig {
+  /** Custom domain, e.g. `atrium.prototypes.1cloudhub.com`. Used only once `hostedZone` is set. */
+  readonly domainName: string;
+  /**
+   * Route 53 public hosted zone for `domainName`, delegated from the company
+   * 1cloudhub.com zone (like LaneWise's). Undefined => CloudFront domain only.
+   */
+  readonly hostedZone?: HostedZoneConfig;
 }
 
 export interface HostedZoneConfig {
@@ -207,9 +223,12 @@ export const environments: Record<EnvName, EnvironmentConfig> = {
     auth: {
       // Demo deployment: self sign-up on for the allowlisted domains (Q15).
       selfSignUp: true,
-      // Passkeys are bound to the custom domain. Set before any passkey was
-      // registered; changing it later invalidates every registered passkey.
-      relyingPartyId: 'lanewise.prototypes.1cloudhub.com',
+      // Passkeys are bound to the parent domain so one passkey works on both
+      // lanewise.prototypes.1cloudhub.com and atrium.prototypes.1cloudhub.com.
+      // Moved from 'lanewise.prototypes.1cloudhub.com' for SM Atrium (accepted:
+      // passkeys registered before the move stop working; users re-register via
+      // an email code). Changing it again invalidates every registered passkey.
+      relyingPartyId: 'prototypes.1cloudhub.com',
       // One-time codes via SES (us-east-1): the 1cloudhub.com domain identity is
       // verified (DKIM) and the account is out of the SES sandbox.
       email: {
@@ -241,6 +260,13 @@ export const environments: Record<EnvName, EnvironmentConfig> = {
       sesIdentity: '1cloudhub.com',
       fromAddress: 'noreply@1cloudhub.com',
       sesRegion: undefined,
+    },
+    // SM Atrium demo portal. Set `hostedZone` once the atrium zone exists and
+    // is delegated (infra/README.md › SM Atrium); until then it is served on
+    // its CloudFront domain.
+    atrium: {
+      domainName: 'atrium.prototypes.1cloudhub.com',
+      hostedZone: undefined,
     },
     tags: { ...BASE_TAGS, Environment: 'prod' },
   },

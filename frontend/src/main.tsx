@@ -4,6 +4,7 @@ import './index.css'
 import { DevApp } from './app/dev-app'
 import { AuthNotConfigured, Root } from './app/root'
 import { createAmplifyAuthClient } from './features/auth/amplify-auth-client'
+import { ATRIUM_HANDOFF_PATH, receiveAtriumHandoff } from './features/auth/atrium-handoff'
 import { loadRuntimeConfig } from './features/auth/runtime-config'
 import { initTheme } from './lib/theme'
 
@@ -17,6 +18,12 @@ const root = createRoot(document.getElementById('root')!)
 // Without them, production fails closed; `npm run dev` runs the app shell
 // without sign-in (mock API; gallery at /gallery) so UI work needs no AWS.
 const config = await loadRuntimeConfig()
+
+// SM Atrium single sign-in: take over the session Atrium hands to this tab
+// before Amplify starts, then continue at the app root.
+if (config && window.location.pathname === ATRIUM_HANDOFF_PATH) {
+  await receiveAtriumHandoff({ origins: config.atriumOrigins ?? [], clientId: config.userPoolClientId })
+}
 
 root.render(
   <StrictMode>

@@ -2,6 +2,7 @@
 import { App, Tags } from 'aws-cdk-lib';
 import { resolveEnvironment } from '../config/environments';
 import { ApiStack } from '../lib/api-stack';
+import { AtriumStack } from '../lib/atrium-stack';
 import { AuthStack } from '../lib/auth-stack';
 import { DataStack } from '../lib/data-stack';
 import { DeployPipelineStack } from '../lib/deploy-pipeline-stack';
@@ -37,6 +38,18 @@ const auth = new AuthStack(app, `${prefix}-Auth`, {
   relyingPartyId: config.auth.relyingPartyId ?? config.domainName ?? spa.distribution.distributionDomainName,
   description: `LaneWise authentication (Cognito passkeys + domain allowlist) — ${config.envName}.`,
 });
+
+// SM Atrium demo portal: signs in against the LaneWise pool + SPA client so a
+// single sign-in carries into LaneWise, and serves the proposal decks.
+const atrium = config.atrium
+  ? new AtriumStack(app, `${prefix}-Atrium`, {
+      env,
+      config,
+      userPool: auth.userPool,
+      userPoolClient: auth.userPoolClient,
+      description: `SM Atrium demo portal (S3 + CloudFront, content API) — ${config.envName}.`,
+    })
+  : undefined;
 
 // Feature data services (task 24): VPC + Aurora PostgreSQL + migrations +
 // uploads bucket, the background-job queue/worker, and Amazon Location.
@@ -147,6 +160,7 @@ for (const [key, value] of Object.entries(config.tags)) {
 
 void spa;
 void auth;
+void atrium;
 void data;
 void jobs;
 void location;

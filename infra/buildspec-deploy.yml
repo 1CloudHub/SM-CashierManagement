@@ -33,6 +33,7 @@ phases:
       - cd "$CODEBUILD_SRC_DIR/packages/matching" && npm ci
       - cd "$CODEBUILD_SRC_DIR/api" && npm ci
       - cd "$CODEBUILD_SRC_DIR/frontend" && npm ci
+      - cd "$CODEBUILD_SRC_DIR/atrium" && npm ci
       - cd "$CODEBUILD_SRC_DIR/infra" && npm ci
 
   build:
@@ -45,6 +46,7 @@ phases:
       - cd "$CODEBUILD_SRC_DIR/packages/matching" && npm run build
       - cd "$CODEBUILD_SRC_DIR/api" && npm run build
       - cd "$CODEBUILD_SRC_DIR/frontend" && npm run build
+      - cd "$CODEBUILD_SRC_DIR/atrium" && npm run build
       - cd "$CODEBUILD_SRC_DIR/infra" && npm run build
       - echo "cdk synth — validate the cloud assembly before deploy"
       - cd "$CODEBUILD_SRC_DIR/infra" && npx cdk synth
