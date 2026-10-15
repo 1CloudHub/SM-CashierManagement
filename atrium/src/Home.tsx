@@ -242,11 +242,10 @@ export function Home({ user, lang, onLang, onOpen, onSignOut, notice }: Props) {
           {APPS.map((a, j) => {
             const n = badge(a)
             return (
-              <button key={a.id} type="button" className="app-tile" onClick={() => openApp(a)} aria-label={`${a.name[lang]} (${(j + 1) % 10})${a.live ? '' : `, ${t.concept}`}`}>
+              <button key={a.id} type="button" className={`app-tile ${a.live ? 'live' : 'concept'}`} onClick={() => openApp(a)} aria-label={`${a.name[lang]} (${(j + 1) % 10})${a.live ? '' : `, ${t.concept}`}`}>
                 <span className="app-ico" style={{ background: a.color }}>
                   <Icon d={a.icon} size={26} stroke="#FFFFFF" />
-                  {n > 0 && <em className="badge">{n}</em>}
-                  {a.live && <i className="live-dot" aria-hidden="true" />}
+                  {a.live && n > 0 && <em className="badge">{n}</em>}
                 </span>
                 <span>{a.name[lang]}</span>
               </button>
@@ -369,10 +368,9 @@ export function Home({ user, lang, onLang, onOpen, onSignOut, notice }: Props) {
             </div>
             <div className="drawer-grid">
               {APPS.map((a) => (
-                <button key={a.id} type="button" className="app-tile big" onClick={() => openApp(a)}>
+                <button key={a.id} type="button" className={`app-tile big ${a.live ? 'live' : 'concept'}`} onClick={() => openApp(a)}>
                   <span className="app-ico" style={{ background: a.color }}>
                     <Icon d={a.icon} size={28} stroke="#FFFFFF" />
-                    {a.live && <i className="live-dot" aria-hidden="true" />}
                   </span>
                   <span>{a.name[lang]}</span>
                   <span className="label faint">{a.live ? t.live : t.concept}</span>

@@ -29,7 +29,7 @@ describe('Home', () => {
   it('opens the proposal from its queue item', () => {
     const { onOpen } = setup()
     fireEvent.click(screen.getByRole('button', { name: /SM Atrium proposal to review/ }))
-    fireEvent.click(screen.getByRole('button', { name: /Open the CIO summary/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Open the Exec summary/ }))
     expect(onOpen).toHaveBeenCalledWith('exec')
   })
 
