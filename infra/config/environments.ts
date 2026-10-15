@@ -261,12 +261,12 @@ export const environments: Record<EnvName, EnvironmentConfig> = {
       fromAddress: 'noreply@1cloudhub.com',
       sesRegion: undefined,
     },
-    // SM Atrium demo portal. Set `hostedZone` once the atrium zone exists and
-    // is delegated (infra/README.md › SM Atrium); until then it is served on
-    // its CloudFront domain.
+    // SM Atrium demo portal on its own zone in this account, delegated by an
+    // NS record in the company 1cloudhub.com zone (account 272858488437), like
+    // LaneWise's.
     atrium: {
       domainName: 'atrium.prototypes.1cloudhub.com',
-      hostedZone: undefined,
+      hostedZone: { id: 'Z01869941NTG36EPQ0S1L', name: 'atrium.prototypes.1cloudhub.com' },
     },
     tags: { ...BASE_TAGS, Environment: 'prod' },
   },
