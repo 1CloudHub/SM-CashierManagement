@@ -51,7 +51,7 @@ export function App({ config, auth }: { config: AtriumConfig; auth: AtriumAuth }
     return (
       <DeckViewer
         id={view.id}
-        title={view.id === 'proposal' ? 'SM Atrium · Proposal' : 'SM Atrium · CIO summary'}
+        title={view.id === 'proposal' ? 'SM Atrium · Proposal' : 'SM Atrium · Exec summary'}
         apiUrl={config.apiUrl}
         auth={auth}
         t={t}

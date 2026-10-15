@@ -104,7 +104,17 @@ kbd { font-family: var(--mono); font-size: 11px; font-weight: 500; border: 1px s
 .app-tile:hover .app-ico { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(11, 29, 116, 0.22); }
 .app-tile.big .app-ico { width: 60px; height: 60px; border-radius: 16px; }
 .badge { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; border: 2px solid var(--tray); background: var(--orange); color: var(--navy); font: 600 10.5px/16px var(--mono); font-style: normal; text-align: center; }
-.live-dot { position: absolute; bottom: -3px; right: -3px; width: 10px; height: 10px; border-radius: 50%; background: #6fd1a6; border: 2px solid var(--tray); }
+/* Live apps glow like an active notification; concept apps step back. */
+.app-tile.live { font-weight: 600; }
+.app-tile.live .app-ico { box-shadow: 0 4px 14px rgba(11, 29, 116, 0.28); }
+.app-tile.live .app-ico::after { content: ''; position: absolute; inset: -5px; border-radius: 18px; border: 2px solid var(--orange); opacity: 0; pointer-events: none; animation: atrium-ring 2.4s ease-out infinite; }
+.app-tile.big.live .app-ico::after { border-radius: 20px; }
+.app-tile.live .badge { animation: atrium-badge 2.4s ease-out infinite; }
+.app-tile.concept { color: var(--faint); font-weight: 400; }
+.app-tile.concept .app-ico { opacity: 0.32; filter: grayscale(0.75); box-shadow: none; }
+.app-tile.concept:hover .app-ico, .app-tile.concept:focus-visible .app-ico { opacity: 0.6; }
+@keyframes atrium-ring { 0% { opacity: 0.75; transform: scale(0.94); } 70%, 100% { opacity: 0; transform: scale(1.16); } }
+@keyframes atrium-badge { 0% { box-shadow: 0 0 0 0 rgba(238, 118, 35, 0.55); } 70%, 100% { box-shadow: 0 0 0 8px rgba(238, 118, 35, 0); } }
 
 /* answer */
 .answer { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; padding: 12px 20px; background: #f1f8f8; border-bottom: 1px solid #cde7e9; }
@@ -192,4 +202,6 @@ kbd { font-family: var(--mono); font-size: 11px; font-weight: 500; border: 1px s
 }
 @media (prefers-reduced-motion: reduce) {
   .app-ico { transition: none; }
+  .app-tile.live .app-ico::after { animation: none; opacity: 0.6; transform: none; }
+  .app-tile.live .badge { animation: none; }
 }
