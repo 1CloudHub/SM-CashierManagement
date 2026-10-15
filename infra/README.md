@@ -234,3 +234,41 @@ Per ADR-0004 / DEP-005 this is a configuration + wiring change only:
   CodePipeline/CodeBuild pipeline (tasks 3.2–3.5).
 - The SPA bucket is created empty; the pipeline uploads `frontend/dist` and
   invalidates CloudFront on deploy.
+
+## SM Atrium (demo portal)
+
+`lib/atrium-stack.ts` (`LaneWise-prod-Atrium`) hosts the SM Atrium portal from
+the SM Retail proposal (`atrium/`): S3 + CloudFront for the SPA, a private
+content bucket for the proposal decks and an HTTP API whose `GET /content/{id}`
+route sits behind a Cognito JWT authorizer (LaneWise's pool and SPA client).
+Atrium signs in with the same pool and client as LaneWise, so the session can
+be handed to LaneWise (`frontend/src/features/auth/atrium-handoff.ts`).
+
+**Passkeys.** `auth.relyingPartyId` is `prototypes.1cloudhub.com`, the parent of
+both `lanewise.` and `atrium.`, so one passkey works on both. Moving it from
+`lanewise.prototypes.1cloudhub.com` invalidated earlier passkeys; users
+re-register one after signing in with an email code.
+
+**Custom domain (one-off).** Until `config.atrium.hostedZone` is set, Atrium is
+served on its CloudFront domain. To move it to `atrium.prototypes.1cloudhub.com`:
+
+1. Create a public hosted zone `atrium.prototypes.1cloudhub.com` in this account
+   (`aws route53 create-hosted-zone --name atrium.prototypes.1cloudhub.com --caller-reference atrium-$(date +%s)`).
+2. Add an NS record for it in the company `1cloudhub.com` zone (account
+   272858488437), pointing at the new zone's four name servers, the same way
+   `lanewise.prototypes.1cloudhub.com` is delegated.
+3. Put the zone id in `config/environments.ts` › `prod.atrium.hostedZone` and
+   merge. ACM validates by DNS once the delegation is live.
+
+**Decks.** The proposal decks carry SM branding and are never committed (this
+repository is public). Upload them after the stack exists:
+
+```bash
+scripts/atrium-publish-content.sh path/to/sm-retail-platform-deck.html path/to/sm-platform-exec-summary.html
+```
+
+**Deploy.** The pipeline must build `atrium/` and, after `cdk deploy`, write
+`atrium/dist/runtime-config.json` (pool + client ids, `AtriumApiUrl`, LaneWise
+`SpaUrl`), sync it to `AtriumSpaBucketName` and invalidate
+`AtriumDistributionId`; LaneWise's runtime config gains `atriumOrigins`
+(`AtriumOrigins` output). See the PR that added Atrium for the buildspec steps.

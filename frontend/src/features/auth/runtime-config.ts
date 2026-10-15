@@ -14,6 +14,8 @@ export interface RuntimeAuthConfig {
   readonly userPoolClientId: string
   readonly selfSignUp: boolean
   readonly apiUrl: string | null
+  /** SM Atrium origins allowed to hand a session over (atrium-handoff.ts). */
+  readonly atriumOrigins?: readonly string[]
 }
 
 const POOL_ID = /^[a-z]{2}(?:-[a-z]+)+-\d_[A-Za-z0-9]+$/
@@ -28,11 +30,15 @@ export function parseRuntimeConfig(raw: unknown): RuntimeAuthConfig | null {
   if (typeof userPoolId !== 'string' || !POOL_ID.test(userPoolId)) return null
   if (typeof userPoolClientId !== 'string' || !CLIENT_ID.test(userPoolClientId)) return null
   const apiUrl = typeof r.apiUrl === 'string' && r.apiUrl.startsWith('https://') ? r.apiUrl : null
+  const atriumOrigins = Array.isArray(r.atriumOrigins)
+    ? r.atriumOrigins.filter((o): o is string => typeof o === 'string' && /^https:\/\/[a-z0-9.-]+$/i.test(o))
+    : []
   return {
     userPoolId,
     userPoolClientId,
     selfSignUp: r.selfSignUp === true || r.selfSignUp === 'true',
     apiUrl,
+    ...(atriumOrigins.length > 0 ? { atriumOrigins } : {}),
   }
 }
 
