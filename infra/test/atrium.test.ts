@@ -58,10 +58,17 @@ describe('SM Atrium', () => {
     });
   });
 
-  it('serves the CloudFront domain until the atrium hosted zone is configured', () => {
-    const { template, stack } = synth(prod);
+  it('serves the CloudFront domain when no atrium hosted zone is configured', () => {
+    const { template, stack } = synth({ ...prod, atrium: { domainName: 'atrium.prototypes.1cloudhub.com' } });
     template.resourceCountIs('AWS::CertificateManager::Certificate', 0);
     expect(stack.origins).toHaveLength(1);
+  });
+
+  it('prod serves atrium.prototypes.1cloudhub.com from its delegated zone', () => {
+    const { template, stack } = synth(prod);
+    template.hasResourceProperties('AWS::CertificateManager::Certificate', { DomainName: 'atrium.prototypes.1cloudhub.com' });
+    template.hasResourceProperties('AWS::Route53::RecordSet', { Name: 'atrium.prototypes.1cloudhub.com.', Type: 'A', HostedZoneId: 'Z01869941NTG36EPQ0S1L' });
+    expect(stack.origins).toEqual(['https://atrium.prototypes.1cloudhub.com', expect.stringMatching(/^https:\/\//)]);
   });
 
   it('adds the custom domain once the hosted zone is set', () => {
