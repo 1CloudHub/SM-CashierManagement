@@ -33,6 +33,7 @@ env:
     AUTH_STACK_NAME: LaneWise-prod-Auth
     API_STACK_NAME: LaneWise-prod-Api
     LOCATION_STACK_NAME: LaneWise-prod-Location
+    ATRIUM_STACK_NAME: LaneWise-prod-Atrium
 
 phases:
   install:
@@ -93,7 +94,9 @@ phases:
         if [ -n "$MAP_KEY_NAME" ] && [ "$MAP_KEY_NAME" != "None" ]; then
           MAP_API_KEY=$(aws location describe-key --key-name "$MAP_KEY_NAME" --query Key --output text || true)
         fi
-        node -e 'const e=process.env; const region=e.USER_POOL_ID.split("_")[0]; const ok=(v)=>v&&v!=="None"; const map=ok(e.MAP_NAME)&&ok(e.MAP_API_KEY)?{map:{region, mapName:e.MAP_NAME, apiKey:e.MAP_API_KEY}}:{}; require("fs").writeFileSync(process.argv[1], JSON.stringify({region, userPoolId:e.USER_POOL_ID, userPoolClientId:e.USER_POOL_CLIENT_ID, selfSignUp:e.SELF_SIGN_UP_ENABLED==="true", apiUrl:e.API_URL, ...map}, null, 2));' "$CODEBUILD_SRC_DIR/frontend/dist/runtime-config.json"
+        # SM Atrium: the origins LaneWise accepts a session handoff from. Best-effort.
+        export ATRIUM_ORIGINS=$(stack_output "$ATRIUM_STACK_NAME" AtriumOrigins || true)
+        node -e 'const e=process.env; const region=e.USER_POOL_ID.split("_")[0]; const ok=(v)=>v&&v!=="None"; const map=ok(e.MAP_NAME)&&ok(e.MAP_API_KEY)?{map:{region, mapName:e.MAP_NAME, apiKey:e.MAP_API_KEY}}:{}; const atrium=ok(e.ATRIUM_ORIGINS)?{atriumOrigins:e.ATRIUM_ORIGINS.split(",")}:{}; require("fs").writeFileSync(process.argv[1], JSON.stringify({region, userPoolId:e.USER_POOL_ID, userPoolClientId:e.USER_POOL_CLIENT_ID, selfSignUp:e.SELF_SIGN_UP_ENABLED==="true", apiUrl:e.API_URL, ...map, ...atrium}, null, 2));' "$CODEBUILD_SRC_DIR/frontend/dist/runtime-config.json"
         cat "$CODEBUILD_SRC_DIR/frontend/dist/runtime-config.json"
       # Upload the built SPA. --delete removes stale assets no longer in dist.
       - aws s3 sync "$CODEBUILD_SRC_DIR/frontend/dist" "s3://$SPA_BUCKET" --delete
@@ -104,3 +107,23 @@ phases:
       - aws s3 cp "$CODEBUILD_SRC_DIR/frontend/dist/runtime-config.json" "s3://$SPA_BUCKET/runtime-config.json" --cache-control "no-cache, must-revalidate" --content-type "application/json"
       # Invalidate the CloudFront cache so the new SPA is served immediately.
       - aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths "/*"
+      # SM Atrium portal: runtime config (same pool + client as LaneWise, the
+      # Atrium content API, the LaneWise URL), then publish + invalidate.
+      - |
+        stack_output() {
+          aws cloudformation describe-stacks --stack-name "$1" \
+            --query "Stacks[0].Outputs[?OutputKey=='$2'].OutputValue" --output text
+        }
+        export USER_POOL_ID=$(stack_output "$AUTH_STACK_NAME" UserPoolId)
+        export USER_POOL_CLIENT_ID=$(stack_output "$AUTH_STACK_NAME" UserPoolClientId)
+        export SELF_SIGN_UP_ENABLED=$(stack_output "$AUTH_STACK_NAME" SelfSignUpEnabled)
+        export ATRIUM_API_URL=$(stack_output "$ATRIUM_STACK_NAME" AtriumApiUrl)
+        export LANEWISE_URL=$(stack_output "$SPA_STACK_NAME" SpaUrl)
+        ATRIUM_BUCKET=$(stack_output "$ATRIUM_STACK_NAME" AtriumSpaBucketName)
+        ATRIUM_DISTRIBUTION_ID=$(stack_output "$ATRIUM_STACK_NAME" AtriumDistributionId)
+        node -e 'const e=process.env; require("fs").writeFileSync(process.argv[1], JSON.stringify({userPoolId:e.USER_POOL_ID, userPoolClientId:e.USER_POOL_CLIENT_ID, selfSignUp:e.SELF_SIGN_UP_ENABLED==="true", apiUrl:e.ATRIUM_API_URL, laneWiseUrl:e.LANEWISE_URL}, null, 2));' "$CODEBUILD_SRC_DIR/atrium/dist/runtime-config.json"
+        cat "$CODEBUILD_SRC_DIR/atrium/dist/runtime-config.json"
+        aws s3 sync "$CODEBUILD_SRC_DIR/atrium/dist" "s3://$ATRIUM_BUCKET" --delete
+        aws s3 cp "$CODEBUILD_SRC_DIR/atrium/dist/index.html" "s3://$ATRIUM_BUCKET/index.html" --cache-control "no-cache, must-revalidate" --content-type "text/html"
+        aws s3 cp "$CODEBUILD_SRC_DIR/atrium/dist/runtime-config.json" "s3://$ATRIUM_BUCKET/runtime-config.json" --cache-control "no-cache, must-revalidate" --content-type "application/json"
+        aws cloudfront create-invalidation --distribution-id "$ATRIUM_DISTRIBUTION_ID" --paths "/*"

@@ -52,6 +52,7 @@ phases:
       - cd "$CODEBUILD_SRC_DIR/packages/matching" && npm ci
       - cd "$CODEBUILD_SRC_DIR/api" && npm ci
       - cd "$CODEBUILD_SRC_DIR/frontend" && npm ci
+      - cd "$CODEBUILD_SRC_DIR/atrium" && npm ci
       - cd "$CODEBUILD_SRC_DIR/infra" && npm ci
 
   build:
@@ -65,6 +66,7 @@ phases:
       - cd "$CODEBUILD_SRC_DIR/packages/matching" && npm run build
       - cd "$CODEBUILD_SRC_DIR/api" && npm run build
       - cd "$CODEBUILD_SRC_DIR/frontend" && npm run build
+      - cd "$CODEBUILD_SRC_DIR/atrium" && npm run build
       - cd "$CODEBUILD_SRC_DIR/infra" && npm run build
 
   pre_build:
@@ -73,6 +75,7 @@ phases:
       - cd "$CODEBUILD_SRC_DIR/packages/shared" && npm run lint
       - cd "$CODEBUILD_SRC_DIR/api" && npm run lint
       - cd "$CODEBUILD_SRC_DIR/frontend" && npm run lint
+      - cd "$CODEBUILD_SRC_DIR/atrium" && npm run lint
       - cd "$CODEBUILD_SRC_DIR/infra" && npm run lint
       - cd "$CODEBUILD_SRC_DIR/packages/domain" && npm run lint
       - cd "$CODEBUILD_SRC_DIR/packages/matching" && npm run lint
@@ -92,6 +95,7 @@ phases:
       # server instead.
       - cd "$CODEBUILD_SRC_DIR/api" && npm test
       - cd "$CODEBUILD_SRC_DIR/frontend" && npm test
+      - cd "$CODEBUILD_SRC_DIR/atrium" && npm test
       - cd "$CODEBUILD_SRC_DIR/infra" && npm test
       # Staffing domain: unit + property tests and the v3 parity suite (task 6.4).
       - cd "$CODEBUILD_SRC_DIR/packages/domain" && npm test

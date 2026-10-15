@@ -267,8 +267,8 @@ repository is public). Upload them after the stack exists:
 scripts/atrium-publish-content.sh path/to/sm-retail-platform-deck.html path/to/sm-platform-exec-summary.html
 ```
 
-**Deploy.** The pipeline must build `atrium/` and, after `cdk deploy`, write
-`atrium/dist/runtime-config.json` (pool + client ids, `AtriumApiUrl`, LaneWise
-`SpaUrl`), sync it to `AtriumSpaBucketName` and invalidate
-`AtriumDistributionId`; LaneWise's runtime config gains `atriumOrigins`
-(`AtriumOrigins` output). See the PR that added Atrium for the buildspec steps.
+**Deploy.** The pipeline builds, lints and tests `atrium/` with the rest. After
+`cdk deploy`, `buildspec-cdk-deploy.yml` writes `atrium/dist/runtime-config.json`
+(pool + client ids, `AtriumApiUrl`, LaneWise `SpaUrl`), syncs it to
+`AtriumSpaBucketName` and invalidates `AtriumDistributionId`; LaneWise's runtime
+config gains `atriumOrigins` (the `AtriumOrigins` output).
